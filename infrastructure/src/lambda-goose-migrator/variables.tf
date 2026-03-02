@@ -77,6 +77,18 @@ variable "db_cluster_id" {
   type        = string
 }
 
+variable "db_schema" {
+  description = "Database schema name for environment isolation (e.g., hometest_dev, hometest_staging)"
+  type        = string
+  default     = "public"
+}
+
+variable "app_user_secret_name" {
+  description = "Secrets Manager secret name to store the schema-scoped app_user credentials"
+  type        = string
+  default     = ""
+}
+
 variable "subnet_ids" {
   description = "List of subnet IDs for Lambda VPC config"
   type        = list(string)

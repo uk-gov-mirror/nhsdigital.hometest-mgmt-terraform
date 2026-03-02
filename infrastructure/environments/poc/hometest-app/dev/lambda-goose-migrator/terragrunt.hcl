@@ -1,14 +1,23 @@
-# Terragrunt config for Goose Lambda
+# ---------------------------------------------------------------------------------------------------------------------
+# TERRAGRUNT CONFIGURATION FOR DEV ENVIRONMENT GOOSE MIGRATOR
+#
+# Runs database migrations for the 'dev' schema in the shared Aurora cluster.
+# Creates a schema-scoped app_user with credentials stored in Secrets Manager.
+#
+# Deployment: cd poc/hometest-app/dev/lambda-goose-migrator && terragrunt apply
+# Or invoke the Lambda after deployment to run pending migrations.
+# ---------------------------------------------------------------------------------------------------------------------
+
 include "root" {
   path = find_in_parent_folders("root.hcl")
 }
 
 terraform {
-  source = "../../../..//src/lambda-goose-migrator"
+  source = "${get_repo_root()}/infrastructure//src/lambda-goose-migrator"
 }
 
 dependency "aurora-postgres" {
-  config_path = "../aurora-postgres"
+  config_path = "${get_terragrunt_dir()}/../../../core/aurora-postgres"
 
   mock_outputs = {
     cluster_master_username = "mock-user"
@@ -21,7 +30,7 @@ dependency "aurora-postgres" {
 }
 
 dependency "network" {
-  config_path = "../network"
+  config_path = "${get_terragrunt_dir()}/../../../core/network"
 
   mock_outputs = {
     private_subnet_ids           = ["subnet-mock1", "subnet-mock2", "subnet-mock3"]
@@ -31,18 +40,27 @@ dependency "network" {
   mock_outputs_allowed_terraform_commands = ["validate", "plan"]
 }
 
+locals {
+  # Parent directory is the environment name (e.g., dev, uat)
+  environment = basename(dirname(get_terragrunt_dir()))
+  # Schema name derived from environment: hometest_dev, hometest_uat, etc.
+  db_schema = "hometest_${local.environment}"
+}
+
 inputs = {
-  # Pass DB connection info as separate variables for Lambda to construct the URL
+  # Override environment name for the Lambda function name
+  environment = local.environment
+
+  # Pass DB connection info
   db_username   = dependency.aurora-postgres.outputs.cluster_master_username
   db_address    = dependency.aurora-postgres.outputs.cluster_endpoint
   db_port       = dependency.aurora-postgres.outputs.cluster_port
   db_name       = dependency.aurora-postgres.outputs.cluster_database_name
   db_cluster_id = dependency.aurora-postgres.outputs.cluster_id
 
-  # Schema configuration - core migrator uses 'hometest' as default schema
-  # Per-environment migrators override this (see hometest-app/<env>/lambda-goose-migrator/)
-  db_schema            = "hometest"
-  app_user_secret_name = "nhs-hometest/core/app-user-db-secret"
+  # Schema-per-environment configuration
+  db_schema            = local.db_schema
+  app_user_secret_name = "nhs-hometest/${local.environment}/app-user-db-secret"
 
   # Network configuration for Lambda
   subnet_ids = dependency.network.outputs.private_subnet_ids

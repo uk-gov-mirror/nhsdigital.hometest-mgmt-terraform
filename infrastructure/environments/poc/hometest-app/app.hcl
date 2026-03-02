@@ -39,6 +39,10 @@ locals {
   base_domain = "hometest.service.nhs.uk"
   env_domain  = "${local.environment}.${local.base_domain}"
 
+  # Schema-per-environment: each env gets its own schema in the shared Aurora DB
+  db_schema            = "hometest_${local.environment}"
+  app_user_secret_name = "nhs-hometest/${local.environment}/app-user-db-secret"
+
   # ---------------------------------------------------------------------------
   # SOURCE PATHS
   # Override these in child terragrunt.hcl locals if needed
@@ -292,7 +296,9 @@ inputs = {
     "arn:aws:secretsmanager:eu-west-2:781863586270:secret:nhs-hometest/dev/preventex-dev-client-secret-*",
     "arn:aws:secretsmanager:eu-west-2:781863586270:secret:nhs-hometest/dev/sh24-dev-client-secret-*",
     "arn:aws:secretsmanager:eu-west-2:781863586270:secret:nhs-hometest/dev/nhs-login-private-key-*",
-    "arn:aws:secretsmanager:eu-west-2:781863586270:secret:rds!cluster-*"
+    "arn:aws:secretsmanager:eu-west-2:781863586270:secret:rds!cluster-*",
+    # Schema-scoped app_user secret (created by goose migrator)
+    "arn:aws:secretsmanager:eu-west-2:781863586270:secret:nhs-hometest/*/app-user-db-secret-*"
   ]
 
   # KMS keys for secrets encrypted with different keys than shared_services KMS
@@ -344,11 +350,12 @@ inputs = {
       environment = {
         NODE_OPTIONS   = "--enable-source-maps"
         ENVIRONMENT    = local.environment
-        DB_USERNAME    = dependency.aurora_postgres.outputs.cluster_master_username
+        DB_USERNAME    = "app_user_${local.db_schema}"
         DB_ADDRESS     = dependency.aurora_postgres.outputs.cluster_endpoint
         DB_PORT        = tostring(dependency.aurora_postgres.outputs.cluster_port)
         DB_NAME        = dependency.aurora_postgres.outputs.cluster_database_name
-        DB_SECRET_NAME = dependency.aurora_postgres.outputs.cluster_master_user_secret_name
+        DB_SECRET_NAME = local.app_user_secret_name
+        DB_SCHEMA      = local.db_schema
       }
     }
 
@@ -364,11 +371,12 @@ inputs = {
       environment = {
         NODE_OPTIONS   = "--enable-source-maps"
         ENVIRONMENT    = local.environment
-        DB_USERNAME    = dependency.aurora_postgres.outputs.cluster_master_username
+        DB_USERNAME    = "app_user_${local.db_schema}"
         DB_ADDRESS     = dependency.aurora_postgres.outputs.cluster_endpoint
         DB_PORT        = tostring(dependency.aurora_postgres.outputs.cluster_port)
         DB_NAME        = dependency.aurora_postgres.outputs.cluster_database_name
-        DB_SECRET_NAME = dependency.aurora_postgres.outputs.cluster_master_user_secret_name
+        DB_SECRET_NAME = local.app_user_secret_name
+        DB_SCHEMA      = local.db_schema
       }
     }
 
@@ -444,11 +452,12 @@ inputs = {
         NODE_OPTIONS              = "--enable-source-maps"
         ENVIRONMENT               = local.environment
         ORDER_PLACEMENT_QUEUE_URL = "https://sqs.${local.aws_region}.amazonaws.com/${local.account_id}/${local.project_name}-${local.environment}-order-placement"
-        DB_USERNAME               = dependency.aurora_postgres.outputs.cluster_master_username
+        DB_USERNAME               = "app_user_${local.db_schema}"
         DB_ADDRESS                = dependency.aurora_postgres.outputs.cluster_endpoint
         DB_PORT                   = tostring(dependency.aurora_postgres.outputs.cluster_port)
         DB_NAME                   = dependency.aurora_postgres.outputs.cluster_database_name
-        DB_SECRET_NAME            = dependency.aurora_postgres.outputs.cluster_master_user_secret_name
+        DB_SECRET_NAME            = local.app_user_secret_name
+        DB_SCHEMA                 = local.db_schema
       }
     }
   }

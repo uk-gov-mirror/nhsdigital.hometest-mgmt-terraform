@@ -24,11 +24,13 @@ module "goose_migrator_lambda" {
   tags = local.common_tags
 
   environment_variables = {
-    DB_USERNAME   = var.db_username
-    DB_ADDRESS    = var.db_address
-    DB_PORT       = var.db_port
-    DB_NAME       = var.db_name
-    DB_SECRET_ARN = data.aws_rds_cluster.db.master_user_secret[0].secret_arn
+    DB_USERNAME          = var.db_username
+    DB_ADDRESS           = var.db_address
+    DB_PORT              = var.db_port
+    DB_NAME              = var.db_name
+    DB_SECRET_ARN        = data.aws_rds_cluster.db.master_user_secret[0].secret_arn
+    DB_SCHEMA            = var.db_schema
+    APP_USER_SECRET_NAME = var.app_user_secret_name
   }
 
   architectures = ["arm64"]

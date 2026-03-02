@@ -165,6 +165,7 @@ The module uses the `terraform-aws-modules/lambda/aws` module with a custom buil
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
+| <a name="input_app_user_secret_name"></a> [app\_user\_secret\_name](#input\_app\_user\_secret\_name) | Secrets Manager secret name to store the schema-scoped app\_user credentials | `string` | `""` | no |
 | <a name="input_aws_account_id"></a> [aws\_account\_id](#input\_aws\_account\_id) | AWS account ID | `string` | n/a | yes |
 | <a name="input_aws_account_shortname"></a> [aws\_account\_shortname](#input\_aws\_account\_shortname) | AWS account short name/alias for resource naming | `string` | n/a | yes |
 | <a name="input_aws_allowed_regions"></a> [aws\_allowed\_regions](#input\_aws\_allowed\_regions) | List of AWS regions allowed for resource deployment | `list(string)` | <pre>[<br/>  "eu-west-2",<br/>  "us-east-1"<br/>]</pre> | no |
@@ -173,6 +174,7 @@ The module uses the `terraform-aws-modules/lambda/aws` module with a custom buil
 | <a name="input_db_cluster_id"></a> [db\_cluster\_id](#input\_db\_cluster\_id) | DB CLuster ID | `string` | n/a | yes |
 | <a name="input_db_name"></a> [db\_name](#input\_db\_name) | Database name | `string` | n/a | yes |
 | <a name="input_db_port"></a> [db\_port](#input\_db\_port) | Database port | `string` | n/a | yes |
+| <a name="input_db_schema"></a> [db\_schema](#input\_db\_schema) | Database schema name for environment isolation (e.g., hometest\_dev, hometest\_staging) | `string` | `"public"` | no |
 | <a name="input_db_username"></a> [db\_username](#input\_db\_username) | Database username | `string` | n/a | yes |
 | <a name="input_environment"></a> [environment](#input\_environment) | Environment name (e.g., dev, staging, prod) | `string` | n/a | yes |
 | <a name="input_project_name"></a> [project\_name](#input\_project\_name) | Project name used for resource naming | `string` | n/a | yes |
