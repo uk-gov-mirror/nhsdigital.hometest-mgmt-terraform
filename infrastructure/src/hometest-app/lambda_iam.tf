@@ -48,6 +48,10 @@ module "lambda_iam" {
 
   aurora_cluster_resource_ids = var.lambda_aurora_cluster_resource_ids
 
+  managed_policy_arns = [
+    "arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy",
+  ]
+
   tags = local.common_tags
 
   depends_on = [module.sqs_events, module.sqs_order_results, module.sqs_order_placement, module.sqs_notifications]

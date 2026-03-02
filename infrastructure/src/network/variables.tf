@@ -112,20 +112,22 @@ variable "interface_endpoints" {
   description = "List of AWS services to create Interface VPC Endpoints for"
   type        = list(string)
   default = [
-    "lambda",         # Lambda service endpoint
-    "execute-api",    # API Gateway
-    "secretsmanager", # Secrets Manager
-    # "ssm",              # Systems Manager
-    # "ssmmessages",      # SSM Messages
-    # "ec2messages",      # EC2 Messages
-    "logs",       # CloudWatch Logs
-    "monitoring", # CloudWatch Monitoring
-    "sqs",        # SQS
-    # "sns",              # SNS
-    "kms",     # KMS
-    "sts",     # STS, IAM
-    "ecr.api", # ECR API
-    "ecr.dkr"  # ECR Docker Registry
+    # Required: Lambda reads secrets (NHS Login key, supplier credentials) from within the VPC
+    "secretsmanager",
+    # Required: Lambda writes CloudWatch Logs directly via the Logs API from within the VPC
+    "logs",
+    # Required: order-result-lambda sends to SQS; order-router-lambda reads from SQS
+    "sqs",
+    # Required: Lambda decrypts KMS-encrypted secrets
+    "kms",
+    # Required: Lambda credential refresh inside the VPC - avoids NAT gateway for STS token calls
+    "sts",
+    # NOT included - removed as unnecessary:
+    # "lambda"      - API Gateway/SQS invoke Lambda via Lambda service (not VPC network); nothing inside VPC calls Lambda invoke API
+    # "execute-api" - API Gateway is REGIONAL (public); no in-VPC clients call the API GW URL
+    # "monitoring"  - No custom PutMetricData calls; Lambda auto-metrics go through the Lambda service
+    # "ecr.api"     - Lambdas use ZIP packages (not container images); ECR is not accessed at runtime
+    # "ecr.dkr"     - Same as above
   ]
 }
 

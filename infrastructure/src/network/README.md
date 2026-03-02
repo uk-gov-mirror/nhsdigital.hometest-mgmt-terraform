@@ -640,7 +640,7 @@ No modules.
 | <a name="input_health_check_port"></a> [health\_check\_port](#input\_health\_check\_port) | The port for the health check | `number` | `443` | no |
 | <a name="input_health_check_request_interval"></a> [health\_check\_request\_interval](#input\_health\_check\_request\_interval) | The number of seconds between health checks (10 or 30) | `number` | `30` | no |
 | <a name="input_health_check_type"></a> [health\_check\_type](#input\_health\_check\_type) | The type of health check (HTTP, HTTPS, HTTP\_STR\_MATCH, HTTPS\_STR\_MATCH, TCP) | `string` | `"HTTPS"` | no |
-| <a name="input_interface_endpoints"></a> [interface\_endpoints](#input\_interface\_endpoints) | List of AWS services to create Interface VPC Endpoints for | `list(string)` | <pre>[<br/>  "lambda",<br/>  "execute-api",<br/>  "secretsmanager",<br/>  "logs",<br/>  "monitoring",<br/>  "sqs",<br/>  "kms",<br/>  "sts",<br/>  "ecr.api",<br/>  "ecr.dkr"<br/>]</pre> | no |
+| <a name="input_interface_endpoints"></a> [interface\_endpoints](#input\_interface\_endpoints) | List of AWS services to create Interface VPC Endpoints for | `list(string)` | <pre>[<br/>  "secretsmanager",<br/>  "logs",<br/>  "sqs",<br/>  "kms",<br/>  "sts"<br/>]</pre> | no |
 | <a name="input_private_zone_name"></a> [private\_zone\_name](#input\_private\_zone\_name) | The domain name for the private hosted zone (defaults to route53\_zone\_name if not specified) | `string` | `""` | no |
 | <a name="input_project_name"></a> [project\_name](#input\_project\_name) | Project name used for resource naming | `string` | n/a | yes |
 | <a name="input_route53_zone_name"></a> [route53\_zone\_name](#input\_route53\_zone\_name) | The domain name for the Route 53 hosted zone | `string` | `"hometest.service.nhs.uk"` | no |

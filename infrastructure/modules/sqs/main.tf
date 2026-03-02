@@ -4,7 +4,7 @@
 ################################################################################
 
 locals {
-  queue_name = "${var.project_name}-${var.environment}-${var.queue_name_suffix}"
+  queue_name = "${var.project_name}-${var.aws_account_shortname}-${var.environment}-${var.queue_name_suffix}"
   dlq_name   = var.create_dlq ? "${local.queue_name}-dlq" : null
 
   common_tags = merge(

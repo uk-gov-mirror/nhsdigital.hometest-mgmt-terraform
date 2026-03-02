@@ -90,6 +90,23 @@ variable "runtime" {
   default     = "nodejs20.x"
 }
 
+variable "architectures" {
+  description = "Instruction set architecture for the Lambda function (x86_64 or arm64)"
+  type        = list(string)
+  default     = ["arm64"]
+
+  validation {
+    condition     = length(var.architectures) == 1 && contains(["x86_64", "arm64"], var.architectures[0])
+    error_message = "Architectures must be a single-element list of either 'x86_64' or 'arm64'."
+  }
+}
+
+variable "layers" {
+  description = "List of Lambda layer ARNs to attach (max 5)"
+  type        = list(string)
+  default     = []
+}
+
 variable "timeout" {
   description = "Function timeout in seconds"
   type        = number

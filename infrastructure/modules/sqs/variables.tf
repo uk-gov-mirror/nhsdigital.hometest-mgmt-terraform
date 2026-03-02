@@ -16,6 +16,11 @@ variable "project_name" {
   }
 }
 
+variable "aws_account_shortname" {
+  description = "Short name of the AWS account (e.g. poc, dev, prod)"
+  type        = string
+}
+
 variable "environment" {
   description = "Environment name (dev, staging, prod)"
   type        = string

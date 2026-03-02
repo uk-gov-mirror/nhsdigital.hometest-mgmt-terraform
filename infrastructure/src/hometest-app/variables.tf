@@ -122,6 +122,17 @@ variable "lambda_runtime" {
   default     = "nodejs20.x"
 }
 
+variable "lambda_architecture" {
+  description = "Instruction set architecture for Lambda functions (x86_64 or arm64)"
+  type        = string
+  default     = "arm64"
+
+  validation {
+    condition     = contains(["x86_64", "arm64"], var.lambda_architecture)
+    error_message = "lambda_architecture must be either 'x86_64' or 'arm64'."
+  }
+}
+
 variable "lambda_timeout" {
   description = "Lambda timeout in seconds"
   type        = number

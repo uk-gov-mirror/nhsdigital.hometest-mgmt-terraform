@@ -21,7 +21,9 @@ module "goose_migrator_lambda" {
   vpc_subnet_ids         = var.subnet_ids
   vpc_security_group_ids = var.security_group_ids
 
-  tags = local.common_tags
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-lambda-goose-migrator"
+  })
 
   environment_variables = {
     DB_USERNAME          = var.db_username

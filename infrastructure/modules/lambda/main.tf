@@ -69,6 +69,8 @@ resource "aws_lambda_function" "this" {
   runtime       = var.runtime
   timeout       = var.timeout
   memory_size   = var.memory_size
+  architectures = var.architectures
+  layers        = length(var.layers) > 0 ? var.layers : null
 
   # Deployment package priority:
   # 1. Placeholder (for initial deployment)
@@ -199,20 +201,3 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
     ResourceType = "cloudwatch-alarm"
   })
 }
-
-# * Failed to execute "terraform apply -auto-approve" in ./.terragrunt-cache/Omq22eG3YTbbRpQQRiuSifYiqLI/R-jNQY0q8KEUNT6OtV-g2bdzJkU/src/hometest-app
-#   ╷
-#   │ Error: creating Lambda Function (nhs-hometest-dev1-api2-handler): operation error Lambda: CreateFunction, https response error StatusCode: 400, RequestID: 1d444545-512a-490c-b759-3af233f5e51f, InvalidParameterValueException: The provided execution role does not have permissions to call CreateNetworkInterface on EC2
-#   │
-#   │   with module.api2_lambda.aws_lambda_function.this,
-#   │   on ../../modules/lambda/main.tf line 64, in resource "aws_lambda_function" "this":
-#   │   64: resource "aws_lambda_function" "this" {
-#   │
-#   ╵
-#   ╷
-#   │ Error: creating Lambda Function (nhs-hometest-dev1-api1-handler): operation error Lambda: CreateFunction, https response error StatusCode: 400, RequestID: bd03209b-d3fa-4704-9b7a-cbd929bc9934, InvalidParameterValueException: The provided execution role does not have permissions to call CreateNetworkInterface on EC2
-#   │
-#   │   with module.api1_lambda.aws_lambda_function.this,
-#   │   on ../../modules/lambda/main.tf line 64, in resource "aws_lambda_function" "this":
-#   │   64: resource "aws_lambda_function" "this" {
-#   │

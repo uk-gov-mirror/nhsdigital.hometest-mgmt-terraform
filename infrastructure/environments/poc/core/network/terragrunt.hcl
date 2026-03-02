@@ -16,6 +16,6 @@ terraform {
 
 # poc is non-production - use single NAT gateway to reduce costs (~$65/month saving vs one per AZ)
 # For production environments, remove this override to restore per-AZ NAT gateways (HA)
-# inputs = {
-#   single_nat_gateway = true
-# }
+inputs = {
+  single_nat_gateway = true
+}
