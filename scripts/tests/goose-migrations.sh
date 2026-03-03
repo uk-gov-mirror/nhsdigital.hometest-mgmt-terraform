@@ -132,15 +132,14 @@ psql_appuser() {
     psql -U "${APP_USERNAME}" -d "${POSTGRES_DB}" "$@"
 }
 
-# Run goose as the master user with search_path set to the target schema.
-# Mirrors how HandleRequest sets search_path before calling goose.Up.
-# Uses URL-style DSN so search_path can be passed as a query parameter,
-# which pgx (the Go driver goose uses) handles natively.
+# Run goose as the master user. search_path is already configured at the
+# role level (ALTER ROLE ... SET search_path) in setup_schema_and_user,
+# so goose will create its tables in the target schema automatically.
 run_goose() {
   local cmd="$1"
   shift
   GOOSE_DRIVER=postgres \
-  GOOSE_DBSTRING="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable&search_path=${POSTGRES_SCHEMA}" \
+  GOOSE_DBSTRING="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable" \
   goose -dir "${MIGRATIONS_DIR}" "${cmd}" "$@"
 }
 
@@ -173,7 +172,10 @@ setup_schema_and_user() {
     -- 3. Default search_path for this role (mirrors ALTER ROLE ... SET search_path in main.go)
     ALTER ROLE ${APP_USERNAME} SET search_path TO ${POSTGRES_SCHEMA};
 
-    -- 4. Schema-scoped grants
+    -- 4. Set master user search_path so goose creates tables in the target schema
+    ALTER ROLE ${POSTGRES_USER} SET search_path TO ${POSTGRES_SCHEMA};
+
+    -- 5. Schema-scoped grants
     GRANT USAGE ON SCHEMA ${POSTGRES_SCHEMA} TO ${APP_USERNAME};
     GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA ${POSTGRES_SCHEMA} TO ${APP_USERNAME};
     GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA ${POSTGRES_SCHEMA} TO ${APP_USERNAME};
