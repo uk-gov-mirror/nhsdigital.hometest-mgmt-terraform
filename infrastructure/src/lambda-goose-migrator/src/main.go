@@ -206,9 +206,67 @@ type Response struct {
 	Message string `json:"message"`
 }
 
+// Event struct for Lambda invocation payload
+type Event struct {
+	Action string `json:"action"` // "migrate" (default) or "teardown"
+}
+
+// teardownSchemaAndUser drops the schema and its app_user role.
+// This is called during environment destruction to clean up database resources.
+func teardownSchemaAndUser(db *sql.DB, schema string) error {
+	appUsername := fmt.Sprintf("app_user_%s", schema)
+
+	log.Printf("Tearing down schema '%s' and user '%s'...", schema, appUsername)
+
+	// Revoke all privileges and drop schema (CASCADE drops all objects in the schema)
+	teardownSQL := []string{
+		fmt.Sprintf("DROP SCHEMA IF EXISTS %s CASCADE", schema),
+	}
+
+	for _, stmt := range teardownSQL {
+		log.Printf("Executing: %s", stmt)
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("failed to execute '%s': %w", stmt, err)
+		}
+	}
+	log.Printf("Dropped schema '%s'", schema)
+
+	// Revoke all remaining privileges and drop the role
+	var roleExists bool
+	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = $1)", appUsername).Scan(&roleExists)
+	if err != nil {
+		return fmt.Errorf("failed to check if role %s exists: %w", appUsername, err)
+	}
+
+	if roleExists {
+		// Reassign owned objects to current user (postgres) and drop owned
+		revokeSQL := []string{
+			fmt.Sprintf("REASSIGN OWNED BY %s TO CURRENT_USER", appUsername),
+			fmt.Sprintf("DROP OWNED BY %s", appUsername),
+			fmt.Sprintf("DROP ROLE %s", appUsername),
+		}
+		for _, stmt := range revokeSQL {
+			log.Printf("Executing: %s", stmt)
+			if _, err := db.Exec(stmt); err != nil {
+				return fmt.Errorf("failed to execute '%s': %w", stmt, err)
+			}
+		}
+		log.Printf("Dropped role '%s'", appUsername)
+	} else {
+		log.Printf("Role '%s' does not exist, nothing to drop", appUsername)
+	}
+
+	return nil
+}
+
 // HandleRequest is the handler function for the Lambda function
-func HandleRequest(ctx context.Context) (Response, error) {
-	log.Println("Starting Goose migration Lambda handler")
+func HandleRequest(ctx context.Context, event Event) (Response, error) {
+	action := event.Action
+	if action == "" {
+		action = "migrate"
+	}
+
+	log.Printf("Starting Goose migration Lambda handler (action: %s)", action)
 
 	schema := os.Getenv("DB_SCHEMA")
 	appUserSecretName := os.Getenv("APP_USER_SECRET_NAME")
@@ -232,6 +290,21 @@ func HandleRequest(ctx context.Context) (Response, error) {
 		return Response{"Failed to connect to DB"}, err
 	}
 	defer db.Close()
+
+	// Handle teardown action — drops schema and user for environment cleanup
+	if action == "teardown" {
+		if schema == "public" {
+			return Response{"Cannot teardown public schema"}, fmt.Errorf("cannot teardown public schema")
+		}
+		if err := teardownSchemaAndUser(db, schema); err != nil {
+			log.Printf("Failed to teardown schema and user: %s", err.Error())
+			return Response{"Failed to teardown schema and user"}, err
+		}
+		log.Printf("Teardown successful (schema: %s)", schema)
+		return Response{fmt.Sprintf("Teardown successful (schema: %s)", schema)}, nil
+	}
+
+	// --- Migrate action (default) ---
 
 	// Step 1: Create schema and app_user (runs as master user)
 	if schema != "public" {

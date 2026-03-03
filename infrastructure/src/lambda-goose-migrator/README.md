@@ -195,4 +195,6 @@ The module uses the `terraform-aws-modules/lambda/aws` module with a custom buil
 | <a name="output_app_user_secret_arn"></a> [app\_user\_secret\_arn](#output\_app\_user\_secret\_arn) | ARN of the Secrets Manager secret containing app\_user credentials |
 | <a name="output_app_user_secret_name"></a> [app\_user\_secret\_name](#output\_app\_user\_secret\_name) | Name of the Secrets Manager secret containing app\_user credentials |
 | <a name="output_app_username"></a> [app\_username](#output\_app\_username) | The database username for the schema-scoped app\_user |
+| <a name="output_function_arn"></a> [function\_arn](#output\_function\_arn) | ARN of the Lambda function |
+| <a name="output_function_name"></a> [function\_name](#output\_function\_name) | Name of the Lambda function for invocation |
 <!-- END_TF_DOCS -->
