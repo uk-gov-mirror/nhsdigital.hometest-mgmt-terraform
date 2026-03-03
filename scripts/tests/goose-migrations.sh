@@ -1,6 +1,14 @@
 #!/bin/bash
 
-# Test Goose database migrations against a local PostgreSQL container
+# Test Goose database migrations against a local PostgreSQL container,
+# replicating the exact behaviour of the lambda-goose-migrator Lambda:
+#
+#   1. Connect as master user
+#   2. Create a named schema (DB_SCHEMA) if it doesn't exist
+#   3. Create app_user_<schema> role, grant schema-scoped privileges
+#   4. Set search_path to the schema, run goose migrations
+#   5. Verify app_user can connect and perform DML — but cannot see other schemas
+#   6. Test rollback and idempotent re-apply
 #
 # Usage:
 #   ./scripts/tests/goose-migrations.sh
@@ -10,12 +18,14 @@
 #   - mise installed (will install goose automatically)
 #
 # Environment variables (optional):
-#   POSTGRES_IMAGE    - PostgreSQL Docker image (default: postgres:16)
-#   POSTGRES_USER     - Database user (default: testuser)
-#   POSTGRES_PASSWORD - Database password (default: testpassword)
-#   POSTGRES_DB       - Database name (default: testdb)
-#   POSTGRES_PORT     - Host port to map (default: 5432)
-#   KEEP_CONTAINER    - Set to "true" to keep container after tests (default: false)
+#   POSTGRES_IMAGE     - PostgreSQL Docker image (default: postgres:16)
+#   POSTGRES_USER      - Master DB user (default: testuser)
+#   POSTGRES_PASSWORD  - Master DB password (default: testpassword)
+#   POSTGRES_DB        - Database name (default: testdb)
+#   POSTGRES_PORT      - Host port to map (default: 5432)
+#   POSTGRES_SCHEMA    - Target schema, mirroring DB_SCHEMA in the Lambda (default: hometest)
+#   APP_USER_PASSWORD  - Password for app_user_<schema> (default: appuserpassword)
+#   KEEP_CONTAINER     - Set to "true" to keep container after tests (default: false)
 
 set -euo pipefail
 
@@ -32,7 +42,12 @@ POSTGRES_USER="${POSTGRES_USER:-testuser}"
 POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-testpassword}"
 POSTGRES_DB="${POSTGRES_DB:-testdb}"
 POSTGRES_PORT="${POSTGRES_PORT:-5432}"
+POSTGRES_SCHEMA="${POSTGRES_SCHEMA:-hometest}"
+APP_USER_PASSWORD="${APP_USER_PASSWORD:-appuserpassword}"
 KEEP_CONTAINER="${KEEP_CONTAINER:-false}"
+
+# Derived — mirrors the naming convention in main.go: app_user_<schema>
+APP_USERNAME="app_user_${POSTGRES_SCHEMA}"
 
 CONTAINER_NAME="goose-migrations-test-$$"
 
@@ -105,12 +120,135 @@ ensure_goose() {
   return 1
 }
 
+# psql as master user.
+psql_master() {
+  docker exec -e PGPASSWORD="${POSTGRES_PASSWORD}" "${CONTAINER_NAME}" \
+    psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" "$@"
+}
+
+# psql as app_user_<schema> (limited role).
+psql_appuser() {
+  docker exec -e PGPASSWORD="${APP_USER_PASSWORD}" "${CONTAINER_NAME}" \
+    psql -U "${APP_USERNAME}" -d "${POSTGRES_DB}" "$@"
+}
+
+# Run goose as the master user with search_path set to the target schema.
+# Mirrors how HandleRequest sets search_path before calling goose.Up.
 run_goose() {
   local cmd="$1"
   shift
   GOOSE_DRIVER=postgres \
-  GOOSE_DBSTRING="host=localhost port=${POSTGRES_PORT} user=${POSTGRES_USER} password=${POSTGRES_PASSWORD} dbname=${POSTGRES_DB} sslmode=disable" \
+  GOOSE_DBSTRING="host=localhost port=${POSTGRES_PORT} user=${POSTGRES_USER} password=${POSTGRES_PASSWORD} dbname=${POSTGRES_DB} sslmode=disable search_path=${POSTGRES_SCHEMA}" \
   goose -dir "${MIGRATIONS_DIR}" "${cmd}" "$@"
+}
+
+# Replicate setupSchemaAndUser from main.go:
+#   - CREATE SCHEMA IF NOT EXISTS
+#   - CREATE ROLE app_user_<schema> LOGIN PASSWORD '...'
+#   - GRANT USAGE ON SCHEMA
+#   - GRANT SELECT/INSERT/UPDATE/DELETE ON ALL TABLES
+#   - GRANT USAGE/SELECT/UPDATE ON ALL SEQUENCES
+#   - ALTER DEFAULT PRIVILEGES (so future tables are also covered)
+#   - ALTER ROLE ... SET search_path TO <schema>
+setup_schema_and_user() {
+  log_info "Setting up schema '${POSTGRES_SCHEMA}' and role '${APP_USERNAME}'..."
+
+  psql_master -v ON_ERROR_STOP=1 <<-SQL
+    -- 1. Create schema
+    CREATE SCHEMA IF NOT EXISTS ${POSTGRES_SCHEMA};
+
+    -- 2. Create app_user role (idempotent)
+    DO \$\$
+    BEGIN
+      IF NOT EXISTS (SELECT 1 FROM pg_catalog.pg_roles WHERE rolname = '${APP_USERNAME}') THEN
+        CREATE ROLE ${APP_USERNAME} LOGIN PASSWORD '${APP_USER_PASSWORD}';
+      ELSE
+        ALTER ROLE ${APP_USERNAME} PASSWORD '${APP_USER_PASSWORD}';
+      END IF;
+    END
+    \$\$;
+
+    -- 3. Default search_path for this role (mirrors ALTER ROLE ... SET search_path in main.go)
+    ALTER ROLE ${APP_USERNAME} SET search_path TO ${POSTGRES_SCHEMA};
+
+    -- 4. Schema-scoped grants
+    GRANT USAGE ON SCHEMA ${POSTGRES_SCHEMA} TO ${APP_USERNAME};
+    GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA ${POSTGRES_SCHEMA} TO ${APP_USERNAME};
+    GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA ${POSTGRES_SCHEMA} TO ${APP_USERNAME};
+    ALTER DEFAULT PRIVILEGES IN SCHEMA ${POSTGRES_SCHEMA}
+      GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${APP_USERNAME};
+    ALTER DEFAULT PRIVILEGES IN SCHEMA ${POSTGRES_SCHEMA}
+      GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO ${APP_USERNAME};
+SQL
+
+  log_info "Schema '${POSTGRES_SCHEMA}' and role '${APP_USERNAME}' ready."
+}
+
+verify_tables_in_schema() {
+  log_info "=== Verifying tables exist in schema '${POSTGRES_SCHEMA}' (not public) ==="
+
+  local table_count
+  table_count=$(psql_master -t -c \
+    "SELECT count(*) FROM information_schema.tables WHERE table_schema = '${POSTGRES_SCHEMA}';" \
+    | xargs)
+
+  if [[ "${table_count}" -eq 0 ]]; then
+    log_error "No tables found in schema '${POSTGRES_SCHEMA}' after migration!"
+    return 1
+  fi
+  log_info "Found ${table_count} table(s) in schema '${POSTGRES_SCHEMA}'"
+
+  log_info "Table list in '${POSTGRES_SCHEMA}':"
+  psql_master -c \
+    "SELECT table_name FROM information_schema.tables WHERE table_schema = '${POSTGRES_SCHEMA}' ORDER BY table_name;"
+
+  log_info "Goose version table in '${POSTGRES_SCHEMA}':"
+  psql_master -c "SELECT * FROM ${POSTGRES_SCHEMA}.goose_db_version ORDER BY id;"
+}
+
+verify_no_tables_in_public() {
+  log_info "=== Verifying no application tables leaked into 'public' schema ==="
+
+  local public_tables
+  public_tables=$(psql_master -t -c \
+    "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name != 'goose_db_version';" \
+    | xargs)
+
+  if [[ -n "${public_tables}" ]]; then
+    log_warn "Unexpected tables found in public schema: ${public_tables}"
+  else
+    log_info "public schema is clean (no application tables)"
+  fi
+}
+
+verify_app_user_access() {
+  log_info "=== Verifying app_user access as '${APP_USERNAME}' ==="
+
+  # app_user must be able to SELECT from tables in the schema
+  log_info "  SELECT from test_type..."
+  psql_appuser -v ON_ERROR_STOP=1 -c "SELECT * FROM test_type LIMIT 1;" >/dev/null
+
+  # app_user must be able to INSERT into test_type (seeded by migrations)
+  log_info "  INSERT into test_type..."
+  psql_appuser -v ON_ERROR_STOP=1 -c \
+    "INSERT INTO test_type (test_code, description) VALUES ('TEST_ACCESS_CHECK', 'app_user access verification') ON CONFLICT DO NOTHING;" >/dev/null
+
+  # app_user must be able to DELETE what it just inserted
+  log_info "  DELETE from test_type..."
+  psql_appuser -v ON_ERROR_STOP=1 -c \
+    "DELETE FROM test_type WHERE test_code = 'TEST_ACCESS_CHECK';" >/dev/null
+
+  # app_user must NOT be able to create tables (not a schema owner)
+  log_info "  Verify app_user cannot CREATE TABLE..."
+  local create_output
+  if psql_appuser -c "CREATE TABLE ${POSTGRES_SCHEMA}.should_fail (id int);" 2>&1; then
+    log_error "app_user was unexpectedly able to CREATE TABLE — privileges are too broad!"
+    return 1
+  else
+    log_info "  Correctly denied: app_user cannot CREATE TABLE"
+  fi
+
+  log_info "app_user access checks passed."
 }
 
 # ==============================================================================
@@ -123,7 +261,9 @@ main() {
   cd "${PROJECT_ROOT}"
 
   log_info "=== Goose Migration Tests ==="
-  log_info "Migrations directory: ${MIGRATIONS_DIR}"
+  log_info "Migrations directory : ${MIGRATIONS_DIR}"
+  log_info "Target schema        : ${POSTGRES_SCHEMA}"
+  log_info "App user             : ${APP_USERNAME}"
 
   # Check prerequisites
   if [[ ! -d "${MIGRATIONS_DIR}" ]]; then
@@ -145,36 +285,57 @@ main() {
 
   wait_for_postgres
 
-  # Run migrations
+  # Step 1: Replicate setupSchemaAndUser (Lambda step 1)
+  setup_schema_and_user
+
+  # Step 2: Goose status before any migrations (Lambda step 3)
   log_info "=== Migration Status (Initial) ==="
   run_goose status
 
+  # Step 3: Run migrations with search_path=<schema> (Lambda step 2+3)
   log_info "=== Running Migrations (Up) ==="
   run_goose up
 
   log_info "=== Migration Status (After Up) ==="
   run_goose status
 
-  log_info "=== Verifying Tables ==="
-  docker exec -e PGPASSWORD="${POSTGRES_PASSWORD}" "${CONTAINER_NAME}" \
-    psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c '\dt'
+  # Step 4: Verify tables landed in the right schema
+  verify_tables_in_schema
+  verify_no_tables_in_public
 
-  log_info "=== Goose Version Table ==="
-  docker exec -e PGPASSWORD="${POSTGRES_PASSWORD}" "${CONTAINER_NAME}" \
-    psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -c 'SELECT * FROM goose_db_version;'
+  # Step 5: Re-grant on existing tables (covers tables created before DEFAULT PRIVILEGES)
+  log_info "=== Granting privileges on migrated tables to '${APP_USERNAME}' ==="
+  psql_master -v ON_ERROR_STOP=1 -c \
+    "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA ${POSTGRES_SCHEMA} TO ${APP_USERNAME};"
+  psql_master -v ON_ERROR_STOP=1 -c \
+    "GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA ${POSTGRES_SCHEMA} TO ${APP_USERNAME};"
 
+  # Step 6: Verify app_user can perform DML but cannot create tables
+  verify_app_user_access
+
+  # Step 7: Rollback and re-apply (idempotency)
   log_info "=== Testing Rollback (Down) ==="
   run_goose down
 
   log_info "=== Migration Status (After Down) ==="
   run_goose status
 
-  log_info "=== Testing Re-apply (Up again - idempotency) ==="
+  log_info "=== Testing Re-apply (Up again — idempotency) ==="
   run_goose up
+
+  # Step 8: Re-grant after re-apply (mirrors what the Lambda does on each invocation)
+  psql_master -v ON_ERROR_STOP=1 -c \
+    "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA ${POSTGRES_SCHEMA} TO ${APP_USERNAME};" >/dev/null
+  psql_master -v ON_ERROR_STOP=1 -c \
+    "GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA ${POSTGRES_SCHEMA} TO ${APP_USERNAME};" >/dev/null
 
   log_info "=== Final Migration Status ==="
   run_goose status
 
+  verify_tables_in_schema
+  verify_app_user_access
+
+  log_info ""
   log_info "=== All migration tests passed! ==="
 }
 
