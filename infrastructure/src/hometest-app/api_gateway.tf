@@ -7,8 +7,12 @@ locals {
   # Get unique API path prefixes from lambdas
   api_prefixes = toset([for k, v in local.api_lambdas : v.api_path_prefix])
 
-  # Map of api_prefix to lambda name (for integration)
-  api_to_lambda = { for k, v in local.api_lambdas : v.api_path_prefix => k }
+  # Group lambda keys by prefix (for deployment triggers)
+  prefix_to_lambda_keys = {
+    for prefix in local.api_prefixes : prefix => [
+      for k, v in local.api_lambdas : k if v.api_path_prefix == prefix
+    ]
+  }
 
   authorized_api_prefixes = var.authorized_api_prefixes
 }
@@ -48,63 +52,63 @@ resource "aws_api_gateway_resource" "proxy" {
 
 # ANY method on proxy resource
 resource "aws_api_gateway_method" "proxy_any" {
-  for_each = local.api_prefixes
+  for_each = local.api_lambdas
 
-  rest_api_id = aws_api_gateway_rest_api.apis[each.key].id
-  resource_id = aws_api_gateway_resource.proxy[each.key].id
-  http_method = "ANY"
+  rest_api_id = aws_api_gateway_rest_api.apis[each.value.api_path_prefix].id
+  resource_id = aws_api_gateway_resource.proxy[each.value.api_path_prefix].id
+  http_method = coalesce(each.value.http_method, "ANY")
 
   # Apply authorization if this API prefix is in authorized list
-  authorization = contains(local.authorized_api_prefixes, each.key) ? "COGNITO_USER_POOLS" : "NONE"
-  authorizer_id = contains(local.authorized_api_prefixes, each.key) ? aws_api_gateway_authorizer.cognito_supplier[each.key].id : null
+  authorization = contains(local.authorized_api_prefixes, each.value.api_path_prefix) ? "COGNITO_USER_POOLS" : "NONE"
+  authorizer_id = contains(local.authorized_api_prefixes, each.value.api_path_prefix) ? aws_api_gateway_authorizer.cognito_supplier[each.value.api_path_prefix].id : null
 
   # Authorization scopes
   authorization_scopes = (
-    contains(local.authorized_api_prefixes, each.key) &&
-    lookup(local.api_lambdas[local.api_to_lambda[each.key]], "authorization_scopes", null) != null
-  ) ? local.api_lambdas[local.api_to_lambda[each.key]].authorization_scopes : null
+    contains(local.authorized_api_prefixes, each.value.api_path_prefix) &&
+    length(each.value.authorization_scopes) > 0
+  ) ? each.value.authorization_scopes : null
 }
 
 # Lambda integration for proxy
 resource "aws_api_gateway_integration" "proxy" {
-  for_each = local.api_prefixes
+  for_each = local.api_lambdas
 
-  rest_api_id             = aws_api_gateway_rest_api.apis[each.key].id
-  resource_id             = aws_api_gateway_resource.proxy[each.key].id
+  rest_api_id             = aws_api_gateway_rest_api.apis[each.value.api_path_prefix].id
+  resource_id             = aws_api_gateway_resource.proxy[each.value.api_path_prefix].id
   http_method             = aws_api_gateway_method.proxy_any[each.key].http_method
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = module.lambdas[local.api_to_lambda[each.key]].function_invoke_arn
+  uri                     = module.lambdas[each.key].function_invoke_arn
 }
 
 # ANY method on root
 resource "aws_api_gateway_method" "root" {
-  for_each = local.api_prefixes
+  for_each = local.api_lambdas
 
-  rest_api_id = aws_api_gateway_rest_api.apis[each.key].id
-  resource_id = aws_api_gateway_rest_api.apis[each.key].root_resource_id
-  http_method = "ANY"
+  rest_api_id = aws_api_gateway_rest_api.apis[each.value.api_path_prefix].id
+  resource_id = aws_api_gateway_rest_api.apis[each.value.api_path_prefix].root_resource_id
+  http_method = coalesce(each.value.http_method, "ANY")
 
   # Apply authorization if this API prefix is in authorized list
-  authorization = contains(local.authorized_api_prefixes, each.key) ? "COGNITO_USER_POOLS" : "NONE"
-  authorizer_id = contains(local.authorized_api_prefixes, each.key) ? aws_api_gateway_authorizer.cognito_supplier[each.key].id : null
+  authorization = contains(local.authorized_api_prefixes, each.value.api_path_prefix) ? "COGNITO_USER_POOLS" : "NONE"
+  authorizer_id = contains(local.authorized_api_prefixes, each.value.api_path_prefix) ? aws_api_gateway_authorizer.cognito_supplier[each.value.api_path_prefix].id : null
 
   authorization_scopes = (
-    contains(local.authorized_api_prefixes, each.key) &&
-    lookup(local.api_lambdas[local.api_to_lambda[each.key]], "authorization_scopes", null) != null
-  ) ? local.api_lambdas[local.api_to_lambda[each.key]].authorization_scopes : null
+    contains(local.authorized_api_prefixes, each.value.api_path_prefix) &&
+    length(each.value.authorization_scopes) > 0
+  ) ? each.value.authorization_scopes : null
 }
 
 # Lambda integration for root
 resource "aws_api_gateway_integration" "root" {
-  for_each = local.api_prefixes
+  for_each = local.api_lambdas
 
-  rest_api_id             = aws_api_gateway_rest_api.apis[each.key].id
-  resource_id             = aws_api_gateway_rest_api.apis[each.key].root_resource_id
+  rest_api_id             = aws_api_gateway_rest_api.apis[each.value.api_path_prefix].id
+  resource_id             = aws_api_gateway_rest_api.apis[each.value.api_path_prefix].root_resource_id
   http_method             = aws_api_gateway_method.root[each.key].http_method
   integration_http_method = "POST"
   type                    = "AWS_PROXY"
-  uri                     = module.lambdas[local.api_to_lambda[each.key]].function_invoke_arn
+  uri                     = module.lambdas[each.key].function_invoke_arn
 }
 
 ################################################################################
@@ -409,23 +413,23 @@ resource "aws_api_gateway_deployment" "apis" {
   rest_api_id = aws_api_gateway_rest_api.apis[each.key].id
 
   triggers = {
-    redeployment = sha1(jsonencode([
-      aws_api_gateway_resource.proxy[each.key].id,
-      aws_api_gateway_method.proxy_any[each.key].id,
-      aws_api_gateway_method.proxy_any[each.key].authorization,
-      aws_api_gateway_method.proxy_any[each.key].authorizer_id,
-      aws_api_gateway_method.root[each.key].id,
-      aws_api_gateway_method.root[each.key].authorization,
-      aws_api_gateway_method.root[each.key].authorizer_id,
-      aws_api_gateway_integration.proxy[each.key].id,
-      aws_api_gateway_integration.root[each.key].id,
-      aws_api_gateway_method.options[each.key].id,
-      aws_api_gateway_method.root_options[each.key].id,
-      aws_api_gateway_integration_response.options[each.key].id,
-      aws_api_gateway_integration_response.root_options[each.key].id,
-      aws_api_gateway_gateway_response.default_4xx[each.key].id,
-      aws_api_gateway_gateway_response.default_5xx[each.key].id,
-    ]))
+    redeployment = sha1(jsonencode(concat(
+      [aws_api_gateway_resource.proxy[each.key].id],
+      [for lk in local.prefix_to_lambda_keys[each.key] : aws_api_gateway_method.proxy_any[lk].id],
+      [for lk in local.prefix_to_lambda_keys[each.key] : aws_api_gateway_method.proxy_any[lk].authorization],
+      [for lk in local.prefix_to_lambda_keys[each.key] : aws_api_gateway_method.proxy_any[lk].authorizer_id],
+      [for lk in local.prefix_to_lambda_keys[each.key] : aws_api_gateway_method.root[lk].id],
+      [for lk in local.prefix_to_lambda_keys[each.key] : aws_api_gateway_method.root[lk].authorization],
+      [for lk in local.prefix_to_lambda_keys[each.key] : aws_api_gateway_method.root[lk].authorizer_id],
+      [for lk in local.prefix_to_lambda_keys[each.key] : aws_api_gateway_integration.proxy[lk].id],
+      [for lk in local.prefix_to_lambda_keys[each.key] : aws_api_gateway_integration.root[lk].id],
+      [aws_api_gateway_method.options[each.key].id],
+      [aws_api_gateway_method.root_options[each.key].id],
+      [aws_api_gateway_integration_response.options[each.key].id],
+      [aws_api_gateway_integration_response.root_options[each.key].id],
+      [aws_api_gateway_gateway_response.default_4xx[each.key].id],
+      [aws_api_gateway_gateway_response.default_5xx[each.key].id],
+    )))
   }
 
   lifecycle {

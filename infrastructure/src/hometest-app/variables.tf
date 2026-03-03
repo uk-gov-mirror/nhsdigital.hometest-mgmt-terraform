@@ -226,6 +226,8 @@ variable "lambdas" {
     source_hash                    = optional(string, null) # Source code hash for updates
     environment                    = optional(map(string), {})
     api_path_prefix                = optional(string, null) # API Gateway path prefix (e.g., "api1" -> /api1/*)
+    http_method                    = optional(string, null) # HTTP method for API Gateway (e.g., "GET", "POST"). null = "ANY" (single lambda per prefix)
+    enable_cors                    = optional(bool, false)  # Enable CORS headers in Lambda response
     sqs_trigger                    = optional(bool, false)  # Enable SQS event source mapping
     secrets_arn                    = optional(string, null) # Secrets Manager ARN for this lambda
     reserved_concurrent_executions = optional(number, -1)
@@ -242,6 +244,16 @@ variable "lambdas" {
   #     api_path_prefix = "api1"
   #     secrets_arn     = "arn:aws:secretsmanager:eu-west-2:123456789:secret:my-secret"
   #     environment     = { API_NAME = "users" }
+  #   }
+  #   "order-create" = {
+  #     description     = "Create orders"
+  #     api_path_prefix = "order"
+  #     http_method     = "POST"           # Multiple lambdas can share a prefix with different methods
+  #   }
+  #   "order-get" = {
+  #     description     = "Get order status"
+  #     api_path_prefix = "order"
+  #     http_method     = "GET"
   #   }
   #   "sqs-processor" = {
   #     description = "SQS message processor"
