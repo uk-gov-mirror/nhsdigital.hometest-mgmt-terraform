@@ -297,6 +297,17 @@ resource "aws_api_gateway_account" "this" {
   cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch.arn
 
   depends_on = [aws_iam_role_policy.api_gateway_cloudwatch]
+
+  # api_key_version, features, and throttle_settings are read-only computed
+  # attributes that the AWS provider always reports as changed. Ignore them
+  # to avoid perpetual drift in terraform plan.
+  lifecycle {
+    ignore_changes = [
+      api_key_version,
+      features,
+      throttle_settings,
+    ]
+  }
 }
 
 resource "aws_iam_role" "api_gateway_cloudwatch" {
