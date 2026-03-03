@@ -134,11 +134,14 @@ psql_appuser() {
 
 # Run goose as the master user with search_path set to the target schema.
 # Mirrors how HandleRequest sets search_path before calling goose.Up.
+# Note: search_path must be passed via the libpq "options" parameter rather than
+# as a bare DSN key because not all Go PostgreSQL drivers recognise search_path
+# as a top-level connection-string keyword.
 run_goose() {
   local cmd="$1"
   shift
   GOOSE_DRIVER=postgres \
-  GOOSE_DBSTRING="host=localhost port=${POSTGRES_PORT} user=${POSTGRES_USER} password=${POSTGRES_PASSWORD} dbname=${POSTGRES_DB} sslmode=disable search_path=${POSTGRES_SCHEMA}" \
+  GOOSE_DBSTRING="host=localhost port=${POSTGRES_PORT} user=${POSTGRES_USER} password=${POSTGRES_PASSWORD} dbname=${POSTGRES_DB} sslmode=disable options=-c search_path=${POSTGRES_SCHEMA}" \
   goose -dir "${MIGRATIONS_DIR}" "${cmd}" "$@"
 }
 
