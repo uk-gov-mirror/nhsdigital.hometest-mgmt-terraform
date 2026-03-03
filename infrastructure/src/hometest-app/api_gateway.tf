@@ -272,6 +272,12 @@ resource "aws_api_gateway_gateway_response" "default_4xx" {
     "gatewayresponse.header.Access-Control-Allow-Methods"     = "'GET,POST,PUT,DELETE,OPTIONS'"
     "gatewayresponse.header.Access-Control-Allow-Credentials" = "'true'"
   }
+
+  # Explicitly set the default response body so Terraform doesn't try to remove
+  # the template that API Gateway creates automatically.
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
+  }
 }
 
 resource "aws_api_gateway_gateway_response" "default_5xx" {
@@ -285,6 +291,12 @@ resource "aws_api_gateway_gateway_response" "default_5xx" {
     "gatewayresponse.header.Access-Control-Allow-Headers"     = "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
     "gatewayresponse.header.Access-Control-Allow-Methods"     = "'GET,POST,PUT,DELETE,OPTIONS'"
     "gatewayresponse.header.Access-Control-Allow-Credentials" = "'true'"
+  }
+
+  # Explicitly set the default response body so Terraform doesn't try to remove
+  # the template that API Gateway creates automatically.
+  response_templates = {
+    "application/json" = "{\"message\":$context.error.messageString}"
   }
 }
 
