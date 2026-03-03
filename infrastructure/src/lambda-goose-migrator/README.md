@@ -186,6 +186,7 @@ The module uses the `terraform-aws-modules/lambda/aws` module with a custom buil
 | <a name="input_security_group_ids"></a> [security\_group\_ids](#input\_security\_group\_ids) | List of security group IDs for Lambda VPC config | `list(string)` | n/a | yes |
 | <a name="input_subnet_ids"></a> [subnet\_ids](#input\_subnet\_ids) | List of subnet IDs for Lambda VPC config | `list(string)` | n/a | yes |
 | <a name="input_tags"></a> [tags](#input\_tags) | Additional tags for all resources | `map(string)` | `{}` | no |
+| <a name="input_use_iam_auth"></a> [use\_iam\_auth](#input\_use\_iam\_auth) | Whether to use IAM authentication for Aurora instead of a static password. Requires enable\_iam\_auth on the Aurora cluster and the DB user to be granted the rds\_iam role. | `bool` | `false` | no |
 
 ## Outputs
 
