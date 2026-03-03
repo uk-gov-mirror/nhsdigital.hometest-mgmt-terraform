@@ -57,6 +57,8 @@ inputs = {
   db_schema            = local.db_schema
   app_user_secret_name = "nhs-hometest/${local.environment}/app-user-db-secret"
 
+  use_iam_auth = true
+
   subnet_ids = dependency.network.outputs.private_subnet_ids
   security_group_ids = [
     dependency.network.outputs.lambda_rds_security_group_id,

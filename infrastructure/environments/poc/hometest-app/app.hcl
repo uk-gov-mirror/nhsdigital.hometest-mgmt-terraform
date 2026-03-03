@@ -311,7 +311,7 @@ inputs = {
         DB_NAME        = dependency.aurora_postgres.outputs.cluster_database_name
         DB_SECRET_NAME = local.app_user_secret_name
         DB_SCHEMA      = local.db_schema
-        USE_IAM_AUTH   = "false"
+        USE_IAM_AUTH   = "true"
         DB_REGION      = local.aws_region
       }
     }
@@ -334,7 +334,7 @@ inputs = {
         DB_NAME        = dependency.aurora_postgres.outputs.cluster_database_name
         DB_SECRET_NAME = local.app_user_secret_name
         DB_SCHEMA      = local.db_schema
-        USE_IAM_AUTH   = "false"
+        USE_IAM_AUTH   = "true"
         DB_REGION      = local.aws_region
       }
     }
@@ -418,7 +418,7 @@ inputs = {
         DB_NAME                   = dependency.aurora_postgres.outputs.cluster_database_name
         DB_SECRET_NAME            = local.app_user_secret_name
         DB_SCHEMA                 = local.db_schema
-        USE_IAM_AUTH              = "false"
+        USE_IAM_AUTH              = "true"
         DB_REGION                 = local.aws_region
       }
     }

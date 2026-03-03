@@ -35,6 +35,7 @@ module "goose_migrator_lambda" {
     APP_USER_SECRET_NAME = var.db_schema != "public" ? aws_secretsmanager_secret.app_user[0].name : ""
     USE_IAM_AUTH         = tostring(var.use_iam_auth)
     DB_REGION            = var.aws_region
+    GRANT_RDS_IAM        = tostring(var.use_iam_auth)
   }
 
   architectures = ["arm64"]
