@@ -92,7 +92,7 @@ module "aurora_postgres" {
   cluster_parameter_group = {
     name        = "${var.identifier}-cluster-pg"
     family      = "aurora-postgresql${split(".", var.engine_version)[0]}"
-    description = "Cluster parameter group for ${var.identifier} – enforces TLS 1.2"
+    description = "Cluster parameter group for ${var.identifier} - enforces TLS 1.2"
     parameters = [
       {
         name         = "rds.force_ssl"

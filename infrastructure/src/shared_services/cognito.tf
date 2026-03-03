@@ -459,10 +459,6 @@ resource "aws_cognito_user_pool_client" "preventex_m2m" {
   prevent_user_existence_errors = "ENABLED"
   enable_token_revocation       = true
 
-  tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-preventex-m2m"
-  })
-
   depends_on = [
     aws_cognito_resource_server.results,
     aws_cognito_resource_server.orders
@@ -499,10 +495,6 @@ resource "aws_cognito_user_pool_client" "sh24_m2m" {
   # Security settings
   prevent_user_existence_errors = "ENABLED"
   enable_token_revocation       = true
-
-  tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-sh24-m2m"
-  })
 
   depends_on = [
     aws_cognito_resource_server.results,
