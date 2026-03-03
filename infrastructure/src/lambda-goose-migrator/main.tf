@@ -35,8 +35,7 @@ module "goose_migrator_lambda" {
     USE_IAM_AUTH         = tostring(var.use_iam_auth)
     DB_SECRET_ARN        = var.use_iam_auth ? "" : data.aws_rds_cluster.db.master_user_secret[0].secret_arn
     APP_USER_SECRET_NAME = var.db_schema != "public" ? aws_secretsmanager_secret.app_user[0].name : ""
-    # GRANT_RDS_IAM        = tostring(var.use_iam_auth)
-    GRANT_RDS_IAM = "true"
+    GRANT_RDS_IAM        = tostring(var.grant_rds_iam)
   }
 
   architectures = ["arm64"]

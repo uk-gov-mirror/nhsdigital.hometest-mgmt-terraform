@@ -100,7 +100,13 @@ variable "security_group_ids" {
 }
 
 variable "use_iam_auth" {
-  description = "Whether to use IAM authentication for Aurora instead of a static password. Requires enable_iam_auth on the Aurora cluster and the DB user to be granted the rds_iam role."
+  description = "Whether the goose migrator Lambda itself connects to Aurora using IAM auth instead of Secrets Manager password. The master user typically uses password auth, so this is usually false."
+  type        = bool
+  default     = false
+}
+
+variable "grant_rds_iam" {
+  description = "Whether to GRANT rds_iam to the app_user so that app lambdas can use IAM token authentication. Independent of how the migrator itself connects."
   type        = bool
   default     = false
 }
