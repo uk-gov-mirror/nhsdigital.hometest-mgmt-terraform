@@ -48,7 +48,7 @@ module "goose_migrator_lambda" {
       path = "${path.module}/src"
       commands = [
         "go mod tidy",
-        "GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o bootstrap main.go",
+        "GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o bootstrap main.go",
         ":zip",
       ]
       patterns = [
