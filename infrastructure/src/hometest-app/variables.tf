@@ -89,11 +89,11 @@ variable "authorized_api_prefixes" {
 # Dependencies from network
 #------------------------------------------------------------------------------
 
-variable "vpc_id" {
-  description = "VPC ID (from network)"
-  type        = string
-  default     = null
-}
+# variable "vpc_id" {
+#   description = "VPC ID (from network)"
+#   type        = string
+#   default     = null
+# }
 
 variable "lambda_subnet_ids" {
   description = "Private subnet IDs for Lambda VPC configuration (from network)"
@@ -163,58 +163,24 @@ variable "use_placeholder_lambda" {
   default     = false
 }
 
-# Lambda Resource Access
-variable "lambda_secrets_arns" {
-  description = "Secrets Manager ARNs for Lambda access"
-  type        = list(string)
-  default     = []
-}
-
-variable "lambda_ssm_parameter_arns" {
-  description = "SSM parameter ARNs for Lambda access"
-  type        = list(string)
-  default     = []
-}
-
-variable "lambda_s3_bucket_arns" {
-  description = "Additional S3 bucket ARNs for Lambda access"
-  type        = list(string)
-  default     = []
-}
-
-variable "lambda_dynamodb_table_arns" {
-  description = "DynamoDB table ARNs for Lambda access"
-  type        = list(string)
-  default     = []
-}
-
-variable "lambda_sqs_queue_arns" {
-  description = "SQS queue ARNs for Lambda access"
-  type        = list(string)
-  default     = []
-}
-
-# variable "enable_sqs_access" {
-#   description = "Enable SQS access for Lambda functions (creates order-results queue)"
-#   type        = bool
-#   default     = false
-# }
-
-variable "lambda_additional_kms_key_arns" {
-  description = "Additional KMS key ARNs for Lambda to decrypt secrets (e.g., secrets encrypted with different keys)"
-  type        = list(string)
-  default     = []
-}
-
-variable "lambda_aurora_cluster_resource_ids" {
-  description = "Aurora cluster resource IDs to grant Lambda IAM database authentication (rds-db:connect)"
-  type        = list(string)
-  default     = []
-}
+# Lambda Resource Access — REMOVED (now per-lambda via `iam` block)
+# See the `lambdas` variable below for per-function IAM configuration.
 
 # Lambda Definitions Map
 variable "lambdas" {
-  description = "Map of Lambda function configurations. Each key is the lambda name."
+  description = <<-EOT
+    Map of Lambda function configurations. Each key is the lambda name.
+
+    Per-lambda IAM (least privilege):
+      Use the `iam` block to grant each Lambda access to only the resources it needs.
+      Secrets, SSM parameters, KMS keys, S3 buckets, DynamoDB tables, SQS queues,
+      and Aurora clusters are specified individually per function.
+
+    Internal SQS queue references:
+      Use `sqs_send_to` and `sqs_receive_from` to reference internal SQS queues
+      by name ("events", "order-placement", "order-results", "notifications").
+      Lambdas with `sqs_trigger = true` automatically get receive on the events queue.
+  EOT
   type = map(object({
     description                    = optional(string, "Lambda function")
     handler                        = optional(string, "index.handler")
@@ -225,13 +191,29 @@ variable "lambdas" {
     s3_key                         = optional(string, null) # S3 key if already uploaded
     source_hash                    = optional(string, null) # Source code hash for updates
     environment                    = optional(map(string), {})
-    api_path_prefix                = optional(string, null) # API Gateway path prefix (e.g., "api1" -> /api1/*)
-    sqs_trigger                    = optional(bool, false)  # Enable SQS event source mapping
-    secrets_arn                    = optional(string, null) # Secrets Manager ARN for this lambda
+    api_path_prefix                = optional(string, null)     # API Gateway path prefix (e.g., "api1" -> /api1/*)
+    sqs_trigger                    = optional(bool, false)      # Enable SQS event source mapping (auto-grants receive on events queue)
+    sqs_send_to                    = optional(list(string), []) # Internal SQS queue names to send to
+    sqs_receive_from               = optional(list(string), []) # Internal SQS queue names to receive from
     reserved_concurrent_executions = optional(number, -1)
 
     authorization        = optional(string, "NONE")   # "NONE" or "COGNITO_USER_POOLS"
     authorization_scopes = optional(list(string), []) # e.g., ["results/write", "orders/read"]
+
+    # Per-lambda IAM permissions (least privilege)
+    # Each Lambda gets its own IAM role with only these permissions.
+    iam = optional(object({
+      secrets_arns                = optional(list(string), []) # Secrets Manager ARNs this Lambda can read
+      ssm_parameter_arns          = optional(list(string), []) # SSM Parameter Store ARNs
+      kms_key_arns                = optional(list(string), []) # Additional KMS keys (shared KMS key always included)
+      s3_bucket_arns              = optional(list(string), []) # S3 bucket ARNs
+      dynamodb_table_arns         = optional(list(string), []) # DynamoDB table ARNs
+      sqs_send_queue_arns         = optional(list(string), []) # External SQS ARNs to send to
+      sqs_receive_queue_arns      = optional(list(string), []) # External SQS ARNs to receive from
+      aurora_cluster_resource_ids = optional(list(string), []) # Aurora cluster resource IDs for IAM DB auth
+      custom_policies             = optional(map(string), {})  # Custom IAM policy JSON documents
+      managed_policy_arns         = optional(list(string), []) # Additional managed policy ARNs
+    }), {})
   }))
   default = {}
 
@@ -240,12 +222,18 @@ variable "lambdas" {
   #   "api1-handler" = {
   #     description     = "User service API"
   #     api_path_prefix = "api1"
-  #     secrets_arn     = "arn:aws:secretsmanager:eu-west-2:123456789:secret:my-secret"
-  #     environment     = { API_NAME = "users" }
+  #     iam = {
+  #       secrets_arns               = ["arn:aws:secretsmanager:eu-west-2:123:secret:my-secret-*"]
+  #       aurora_cluster_resource_ids = ["cluster-ABC123"]
+  #     }
   #   }
   #   "sqs-processor" = {
-  #     description = "SQS message processor"
-  #     sqs_trigger = true  # Triggered by SQS queue
+  #     description  = "SQS message processor"
+  #     sqs_trigger  = true
+  #     sqs_send_to  = ["notifications"]
+  #     iam = {
+  #       secrets_arns = ["arn:aws:secretsmanager:eu-west-2:123:secret:api-key-*"]
+  #     }
   #   }
   # }
 }

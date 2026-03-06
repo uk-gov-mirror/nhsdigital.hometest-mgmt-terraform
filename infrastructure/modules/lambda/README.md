@@ -1,16 +1,17 @@
 # Lambda Module
 
-Terraform module for deploying AWS Lambda functions with security best practices.
+Terraform module for deploying AWS Lambda functions with **per-function least-privilege IAM roles** using the official [terraform-aws-modules/lambda/aws](https://registry.terraform.io/modules/terraform-aws-modules/lambda/aws/latest) module.
 
 ## Features
 
+- **Per-Lambda IAM Roles**: Each Lambda gets its own dedicated IAM role with only the permissions it needs
+- **Least Privilege**: Secrets, SQS queues, S3, DynamoDB, Aurora are granted individually per function
+- **Official Module**: Uses `terraform-aws-modules/lambda/aws` v8.7.0 under the hood
 - **Security First**: KMS encryption for environment variables and CloudWatch logs
 - **Observability**: X-Ray tracing enabled by default
 - **Monitoring**: Optional CloudWatch alarm for Lambda errors (failed invocations)
-- **VPC Support**: Optional VPC configuration for private resources
+- **VPC Support**: Optional VPC configuration with scoped ENI permissions
 - **Dead Letter Queue**: Failed invocations can be sent to SQS/SNS
-- **Function URL**: Optional direct HTTPS endpoint
-- **Aliases**: Support for traffic shifting and blue/green deployments
 
 ## Usage
 
@@ -18,13 +19,27 @@ Terraform module for deploying AWS Lambda functions with security best practices
 module "my_lambda" {
   source = "../../modules/lambda"
 
-  project_name    = "nhs-hometest"
-  function_name   = "my-function"
-  environment     = "dev"
-  lambda_role_arn = aws_iam_role.lambda_execution.arn
+  project_name          = "nhs-hometest"
+  aws_account_shortname = "poc"
+  function_name         = "my-function"
+  environment           = "dev"
 
-  s3_bucket = "my-deployment-bucket"
-  s3_key    = "lambdas/my-function.zip"
+  # Required for IAM policy ARN construction
+  aws_account_id = "123456789012"
+  aws_region     = "eu-west-2"
+
+  # Deployment package
+  filename         = "path/to/my-function.zip"
+  source_code_hash = filebase64sha256("path/to/my-function.zip")
+
+  # Per-lambda IAM permissions (least privilege)
+  secrets_arns               = ["arn:aws:secretsmanager:eu-west-2:123456789012:secret:my-secret-*"]
+  aurora_cluster_resource_ids = ["cluster-ABC123"]
+  sqs_send_queue_arns        = ["arn:aws:sqs:eu-west-2:123456789012:my-queue"]
+
+  # Infrastructure-level permissions
+  enable_vpc_access = true
+  enable_xray       = true
 
   environment_variables = {
     API_URL = "https://api.example.com"
@@ -44,6 +59,23 @@ module "my_lambda" {
   }
 }
 ```
+
+## Per-Lambda IAM
+
+Each Lambda function gets its own IAM role. Specify exactly which resources each Lambda can access:
+
+| Variable | Description |
+|---|---|
+| `secrets_arns` | Secrets Manager secrets this Lambda can read |
+| `ssm_parameter_arns` | SSM parameters this Lambda can read |
+| `kms_key_arns` | KMS keys for decryption |
+| `s3_bucket_arns` | S3 buckets for read/write |
+| `dynamodb_table_arns` | DynamoDB tables |
+| `sqs_send_queue_arns` | SQS queues to send messages to |
+| `sqs_receive_queue_arns` | SQS queues to receive/delete messages from |
+| `aurora_cluster_resource_ids` | Aurora clusters for IAM DB auth |
+| `custom_policies` | Custom JSON policy documents |
+| `managed_policy_arns` | AWS managed policy ARNs |
 
 ## Security Best Practices
 

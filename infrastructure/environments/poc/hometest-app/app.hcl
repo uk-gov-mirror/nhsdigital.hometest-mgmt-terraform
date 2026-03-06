@@ -245,22 +245,6 @@ inputs = {
   lambda_memory_size = local.lambda_memory_size
   log_retention_days = local.log_retention_days
 
-  # IAM Permissions - Grant Lambda access to secrets
-  # Note: AWS Secrets Manager ARNs have a random suffix, use -* wildcard to match
-  lambda_secrets_arns = [
-    "arn:aws:secretsmanager:eu-west-2:781863586270:secret:nhs-hometest/dev/preventex-dev-client-secret-*",
-    "arn:aws:secretsmanager:eu-west-2:781863586270:secret:nhs-hometest/dev/sh24-dev-client-secret-*",
-    "arn:aws:secretsmanager:eu-west-2:781863586270:secret:nhs-hometest/dev/nhs-login-private-key-*"
-  ]
-
-  # KMS keys for secrets encrypted with different keys than shared_services KMS
-  lambda_additional_kms_key_arns = []
-
-  # lambda_sqs_queue_arns is not needed here — order-placement ARN is automatically included
-  # in lambda_iam.tf via module.sqs_order_placement.queue_arn
-
-  # Aurora IAM authentication - allow Lambdas to connect without passwords
-  lambda_aurora_cluster_resource_ids = [dependency.aurora_postgres.outputs.cluster_resource_id]
   # Cognito User Pool for API Gateway authorizer
   enable_cognito        = true
   cognito_user_pool_arn = dependency.shared_services.outputs.cognito_user_pool_arn
@@ -275,24 +259,28 @@ inputs = {
   lambdas_base_path = local.lambdas_base_path
 
   # =============================================================================
-  # LAMBDA DEFINITIONS - hometest-service lambdas
-  # Based on hometest-service/local-environment/infra/main.tf configuration
+  # LAMBDA DEFINITIONS - Per-Lambda Least-Privilege IAM
+  #
+  # Each Lambda declares exactly which secrets, SQS queues, and DB clusters
+  # it needs via the `iam` block. Internal SQS queues are referenced by name
+  # via `sqs_send_to` and `sqs_receive_from`.
   #
   # CloudFront Routing (path-based):
   # - / and /*              → S3 SPA (Next.js)
-  # - /test-order/*         → API Gateway → eligibility-test-info-lambda
+  # - /eligibility-lookup/* → API Gateway → eligibility-lookup-lambda
   # - /order-router/*       → API Gateway → order-router-lambda (SQS-triggered)
-  # - /order-router-sh24/*  → API Gateway → order-router-lambda-sh24 (SQS-triggered)
   # - /login/*              → API Gateway → login-lambda
+  # - /session/*            → API Gateway → session-lambda
   # - /result/*             → API Gateway → order-result-lambda
+  # - /order/*              → API Gateway → order-service-lambda
   #
-  # To add extra lambdas (e.g., hello-world), define them in the child terragrunt.hcl:
+  # To add extra lambdas, define them in the child terragrunt.hcl:
   #   inputs = { lambdas = { "hello-world-lambda" = { ... } } }
   # =============================================================================
   lambdas = {
     # Eligibility Lookup Lambda
     # CloudFront: /eligibility-lookup/* → API Gateway → Lambda
-    # Handles: GET /eligibility-lookup (returns eligibility information from DB)
+    # IAM: Aurora IAM auth only (no secrets needed)
     "eligibility-lookup-lambda" = {
       description     = "Eligibility Lookup Service - Returns eligibility information"
       api_path_prefix = "eligibility-lookup"
@@ -310,17 +298,21 @@ inputs = {
         USE_IAM_AUTH = "true"
         DB_REGION    = local.aws_region
       }
+      iam = {
+        aurora_cluster_resource_ids = [dependency.aurora_postgres.outputs.cluster_resource_id]
+      }
     }
 
     # Order Router Lambda - SQS triggered for async order processing
     # NOT exposed via API Gateway - processes orders from SQS queue
+    # IAM: Aurora IAM auth + supplier API secrets + receives from order-placement & events queues
     "order-router-lambda" = {
-      description = "Order Router Service - Processes orders from SQS queue"
-      sqs_trigger = true # Triggered by SQS, no API Gateway endpoint
-      # api_path_prefix = "order-router" # Not used for routing since this is SQS-triggered, but included for consistency
-      handler     = "index.handler"
-      timeout     = 60 # Longer timeout for external API calls to supplier
-      memory_size = 512
+      description      = "Order Router Service - Processes orders from SQS queue"
+      sqs_trigger      = true                # Triggered by SQS, auto-grants receive on events queue
+      sqs_receive_from = ["order-placement"] # Also receives from order-placement queue
+      handler          = "index.handler"
+      timeout          = 60 # Longer timeout for external API calls to supplier
+      memory_size      = 512
       environment = {
         NODE_OPTIONS = "--enable-source-maps"
         ENVIRONMENT  = local.environment
@@ -332,11 +324,18 @@ inputs = {
         USE_IAM_AUTH = "true"
         DB_REGION    = local.aws_region
       }
+      iam = {
+        aurora_cluster_resource_ids = [dependency.aurora_postgres.outputs.cluster_resource_id]
+        secrets_arns = [
+          "arn:aws:secretsmanager:eu-west-2:781863586270:secret:nhs-hometest/dev/preventex-dev-client-secret-*",
+          "arn:aws:secretsmanager:eu-west-2:781863586270:secret:nhs-hometest/dev/sh24-dev-client-secret-*"
+        ]
+      }
     }
 
     # Login Lambda - NHS Login authentication
     # CloudFront: /login/* → API Gateway → Lambda
-    # CORS: handled in-code via @middy/http-cors using COOKIE_ACCESS_CONTROL_ALLOW_ORIGIN env var
+    # IAM: NHS Login private key secret only
     "login-lambda" = {
       description     = "Login Service - NHS Login authentication"
       api_path_prefix = "login"
@@ -356,11 +355,16 @@ inputs = {
         AUTH_COOKIE_SAME_SITE                      = "Lax"
         COOKIE_ACCESS_CONTROL_ALLOW_ORIGIN         = "https://${local.env_domain}"
       }
+      iam = {
+        secrets_arns = [
+          "arn:aws:secretsmanager:eu-west-2:781863586270:secret:nhs-hometest/dev/nhs-login-private-key-*"
+        ]
+      }
     }
 
     # Session Lambda - Validates auth cookie and returns NHS Login user info
     # CloudFront: /session/* → API Gateway → Lambda
-    # CORS: handled in-code via @middy/http-cors using COOKIE_ACCESS_CONTROL_ALLOW_ORIGIN env var
+    # IAM: NHS Login private key secret only (for cookie verification)
     "session-lambda" = {
       description     = "Session Service - Validates auth cookie and returns user info"
       api_path_prefix = "session"
@@ -375,10 +379,16 @@ inputs = {
         NHS_LOGIN_BASE_ENDPOINT_URL        = "https://auth.sandpit.signin.nhs.uk"
         COOKIE_ACCESS_CONTROL_ALLOW_ORIGIN = "https://${local.env_domain}"
       }
+      iam = {
+        secrets_arns = [
+          "arn:aws:secretsmanager:eu-west-2:781863586270:secret:nhs-hometest/dev/nhs-login-private-key-*"
+        ]
+      }
     }
 
     # Order Result Lambda - Receives test results from suppliers
     # CloudFront: /result/* → API Gateway → Lambda
+    # IAM: Aurora master user secret (for DB access via password auth)
     "order-result-lambda" = {
       description     = "Order Result Service - Receives test results from suppliers"
       api_path_prefix = "result"
@@ -396,10 +406,16 @@ inputs = {
       }
       authorization        = "COGNITO_USER_POOLS"
       authorization_scopes = ["results/write"]
+      iam = {
+        secrets_arns = [
+          dependency.aurora_postgres.outputs.cluster_master_user_secret_arn
+        ]
+      }
     }
 
     # Order Service Lambda - Creates test orders and persists to database
     # CloudFront: /order/* → API Gateway → Lambda
+    # IAM: Aurora IAM auth + sends to order-placement SQS queue
     "order-service-lambda" = {
       description     = "Order Service - Creates test orders and persists to database"
       api_path_prefix = "order"
@@ -407,6 +423,7 @@ inputs = {
       http_method     = "POST"
       timeout         = 30
       memory_size     = 256
+      sqs_send_to     = ["order-placement"] # Sends orders to the order-placement queue
       environment = {
         NODE_OPTIONS              = "--enable-source-maps"
         ENVIRONMENT               = local.environment
@@ -418,6 +435,9 @@ inputs = {
         DB_SCHEMA                 = local.db_schema
         USE_IAM_AUTH              = "true"
         DB_REGION                 = local.aws_region
+      }
+      iam = {
+        aurora_cluster_resource_ids = [dependency.aurora_postgres.outputs.cluster_resource_id]
       }
     }
   }

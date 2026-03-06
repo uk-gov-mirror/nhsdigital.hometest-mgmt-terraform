@@ -1,5 +1,13 @@
 ################################################################################
-# Lambda Functions - Dynamic Creation from Map
+# Lambda Functions - Per-Lambda IAM with Least Privilege
+#
+# Each Lambda function gets its own dedicated IAM role with only the
+# permissions it needs. Secrets, SQS queues, S3 buckets, DynamoDB tables,
+# and Aurora clusters are granted individually per function via the `iam`
+# block in the lambdas variable.
+#
+# Internal SQS queues can be referenced by name via `sqs_send_to` and
+# `sqs_receive_from` fields - the Terraform code resolves them to ARNs.
 ################################################################################
 
 locals {
@@ -20,10 +28,20 @@ locals {
   # https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Lambda-Insights-extension-versionsARM.html
   # https://docs.aws.amazon.com/AmazonCloudWatch/latest/monitoring/Lambda-Insights-extension-versionsx86-64.html
   lambda_insights_layer_arn = var.lambda_architecture == "arm64" ? "arn:aws:lambda:eu-west-2:580247275435:layer:LambdaInsightsExtension-Arm64:31" : "arn:aws:lambda:eu-west-2:580247275435:layer:LambdaInsightsExtension:64"
+
+  # ---------------------------------------------------------------------------
+  # SQS Queue Name → ARN lookup (for sqs_send_to / sqs_receive_from fields)
+  # ---------------------------------------------------------------------------
+  sqs_queue_arns_by_name = {
+    "events"          = length(local.sqs_lambdas) > 0 ? module.sqs_events[0].queue_arn : null
+    "order-placement" = module.sqs_order_placement.queue_arn
+    "order-results"   = module.sqs_order_results.queue_arn
+    "notifications"   = module.sqs_notifications.queue_arn
+  }
 }
 
 ################################################################################
-# Lambda Functions
+# Lambda Functions (official terraform-aws-modules/lambda/aws via wrapper)
 ################################################################################
 
 module "lambdas" {
@@ -34,7 +52,10 @@ module "lambdas" {
   aws_account_shortname = var.aws_account_shortname
   function_name         = each.key
   environment           = var.environment
-  lambda_role_arn       = module.lambda_iam.role_arn
+
+  # IAM: account & region for policy ARN construction
+  aws_account_id = var.aws_account_id
+  aws_region     = var.aws_region
 
   # Deployment: local zip file (Terraform uploads) or placeholder
   use_placeholder = var.use_placeholder_lambda
@@ -77,6 +98,55 @@ module "lambdas" {
     },
     each.value.environment
   )
+
+  # ---------------------------------------------------------------------------
+  # Per-Lambda IAM (least privilege)
+  # ---------------------------------------------------------------------------
+
+  enable_vpc_access = var.enable_vpc_access
+  enable_xray       = true
+
+  # Secrets — only the secrets this specific Lambda needs
+  secrets_arns = try(each.value.iam.secrets_arns, [])
+
+  # SSM Parameters
+  ssm_parameter_arns = try(each.value.iam.ssm_parameter_arns, [])
+
+  # KMS — always include the shared KMS key + any per-lambda keys
+  kms_key_arns = distinct(compact(concat(
+    var.kms_key_arn != null ? [var.kms_key_arn] : [],
+    try(each.value.iam.kms_key_arns, [])
+  )))
+
+  # S3 buckets
+  s3_bucket_arns = try(each.value.iam.s3_bucket_arns, [])
+
+  # DynamoDB tables
+  dynamodb_table_arns = try(each.value.iam.dynamodb_table_arns, [])
+
+  # SQS Send — explicit ARNs + resolved internal queue names
+  sqs_send_queue_arns = distinct(compact(concat(
+    try(each.value.iam.sqs_send_queue_arns, []),
+    [for q in try(each.value.sqs_send_to, []) : try(local.sqs_queue_arns_by_name[q], null)]
+  )))
+
+  # SQS Receive — explicit ARNs + resolved internal queue names + auto for sqs_trigger
+  sqs_receive_queue_arns = distinct(compact(concat(
+    try(each.value.iam.sqs_receive_queue_arns, []),
+    [for q in try(each.value.sqs_receive_from, []) : try(local.sqs_queue_arns_by_name[q], null)],
+    try(each.value.sqs_trigger, false) ? compact([try(local.sqs_queue_arns_by_name["events"], null)]) : []
+  )))
+
+  # Aurora IAM authentication
+  aurora_cluster_resource_ids = try(each.value.iam.aurora_cluster_resource_ids, [])
+
+  # Managed policies — always include CloudWatch Lambda Insights
+  managed_policy_arns = distinct(concat(
+    ["arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy"],
+    try(each.value.iam.managed_policy_arns, [])
+  ))
+
+  custom_policies = try(each.value.iam.custom_policies, {})
 
   tags = local.common_tags
 }

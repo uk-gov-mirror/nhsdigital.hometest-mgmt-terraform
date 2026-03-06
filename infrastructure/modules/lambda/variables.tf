@@ -2,7 +2,10 @@
 # Lambda Module Variables
 ################################################################################
 
+#------------------------------------------------------------------------------
 # Required Variables
+#------------------------------------------------------------------------------
+
 variable "project_name" {
   description = "Name of the project"
   type        = string
@@ -23,9 +26,102 @@ variable "environment" {
   type        = string
 }
 
-variable "lambda_role_arn" {
-  description = "ARN of the IAM role for Lambda execution"
+#------------------------------------------------------------------------------
+# IAM Configuration (per-lambda least-privilege)
+#------------------------------------------------------------------------------
+
+variable "aws_account_id" {
+  description = "AWS account ID (used for IAM policy resource ARNs)"
   type        = string
+}
+
+variable "aws_region" {
+  description = "AWS region (used for IAM policy resource ARNs)"
+  type        = string
+}
+
+variable "enable_vpc_access" {
+  description = "Enable VPC access IAM permissions (ec2:CreateNetworkInterface, etc.)"
+  type        = bool
+  default     = false
+}
+
+variable "enable_xray" {
+  description = "Enable X-Ray tracing IAM permissions"
+  type        = bool
+  default     = true
+}
+
+variable "restrict_to_account" {
+  description = "Restrict role assumption to the specific AWS account"
+  type        = bool
+  default     = true
+}
+
+variable "max_session_duration" {
+  description = "Maximum session duration for the IAM role in seconds"
+  type        = number
+  default     = 3600
+}
+
+variable "secrets_arns" {
+  description = "List of Secrets Manager secret ARNs this Lambda can read"
+  type        = list(string)
+  default     = []
+}
+
+variable "ssm_parameter_arns" {
+  description = "List of SSM Parameter Store ARNs this Lambda can read"
+  type        = list(string)
+  default     = []
+}
+
+variable "kms_key_arns" {
+  description = "List of KMS key ARNs this Lambda can use for decryption"
+  type        = list(string)
+  default     = []
+}
+
+variable "s3_bucket_arns" {
+  description = "List of S3 bucket ARNs this Lambda can access (read/write)"
+  type        = list(string)
+  default     = []
+}
+
+variable "dynamodb_table_arns" {
+  description = "List of DynamoDB table ARNs this Lambda can access"
+  type        = list(string)
+  default     = []
+}
+
+variable "sqs_send_queue_arns" {
+  description = "List of SQS queue ARNs this Lambda can send messages to"
+  type        = list(string)
+  default     = []
+}
+
+variable "sqs_receive_queue_arns" {
+  description = "List of SQS queue ARNs this Lambda can receive/delete messages from"
+  type        = list(string)
+  default     = []
+}
+
+variable "aurora_cluster_resource_ids" {
+  description = "List of Aurora cluster resource IDs for IAM database authentication (rds-db:connect)"
+  type        = list(string)
+  default     = []
+}
+
+variable "custom_policies" {
+  description = "Map of custom IAM policy names to policy JSON documents"
+  type        = map(string)
+  default     = {}
+}
+
+variable "managed_policy_arns" {
+  description = "List of managed IAM policy ARNs to attach to this Lambda's role"
+  type        = list(string)
+  default     = []
 }
 
 # Deployment Package
@@ -69,6 +165,12 @@ variable "placeholder_response" {
   description = "JSON response for placeholder Lambda (when use_placeholder is true)"
   type        = string
   default     = "{\"statusCode\": 200, \"body\": \"Placeholder - deploy actual code\"}"
+}
+
+variable "publish" {
+  description = "Whether to publish creation/change as new Lambda function version"
+  type        = bool
+  default     = false
 }
 
 # Function Configuration
@@ -213,56 +315,6 @@ variable "tracing_mode" {
 variable "dead_letter_target_arn" {
   description = "ARN of SQS queue or SNS topic for dead letter queue"
   type        = string
-  default     = null
-}
-
-# Function URL
-variable "create_function_url" {
-  description = "Whether to create a Lambda function URL"
-  type        = bool
-  default     = false
-}
-
-variable "function_url_auth_type" {
-  description = "Authorization type for function URL (AWS_IAM or NONE)"
-  type        = string
-  default     = "AWS_IAM"
-
-  validation {
-    condition     = contains(["AWS_IAM", "NONE"], var.function_url_auth_type)
-    error_message = "Function URL auth type must be either 'AWS_IAM' or 'NONE'."
-  }
-}
-
-variable "function_url_cors" {
-  description = "CORS configuration for function URL"
-  type = object({
-    allow_credentials = optional(bool, false)
-    allow_headers     = optional(list(string), ["*"])
-    allow_methods     = optional(list(string), ["*"])
-    allow_origins     = optional(list(string), ["*"])
-    expose_headers    = optional(list(string), [])
-    max_age           = optional(number, 0)
-  })
-  default = null
-}
-
-# Alias Configuration
-variable "create_alias" {
-  description = "Whether to create a Lambda alias"
-  type        = bool
-  default     = false
-}
-
-variable "alias_name" {
-  description = "Name of the Lambda alias"
-  type        = string
-  default     = "live"
-}
-
-variable "alias_routing_additional_version_weights" {
-  description = "Map of version weights for traffic shifting"
-  type        = map(number)
   default     = null
 }
 

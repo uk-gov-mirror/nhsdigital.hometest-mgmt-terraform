@@ -6,9 +6,11 @@
 # Lambda Functions (Dynamic)
 #------------------------------------------------------------------------------
 
-output "lambda_execution_role_arn" {
-  description = "ARN of the Lambda execution role"
-  value       = module.lambda_iam.role_arn
+output "lambda_execution_role_arns" {
+  description = "Map of Lambda function names to their execution role ARNs (per-lambda least-privilege)"
+  value = {
+    for name, lambda in module.lambdas : name => lambda.role_arn
+  }
 }
 
 output "lambda_functions" {

@@ -1,6 +1,11 @@
 ################################################################################
 # Lambda Module
-# Deploys Lambda functions with best security practices
+# Deploys Lambda functions using the official terraform-aws-modules/lambda/aws
+# module with per-function least-privilege IAM roles.
+#
+# Each Lambda gets its own dedicated IAM role (see iam.tf) with only the
+# permissions it needs — secrets, SQS queues, S3 buckets, DynamoDB tables,
+# Aurora clusters, etc. are granted individually per function.
 ################################################################################
 
 locals {
@@ -43,134 +48,75 @@ data "archive_file" "placeholder" {
 }
 
 ################################################################################
-# CloudWatch Log Group
-# Create log group before Lambda to ensure proper log encryption
+# Lambda Function (official terraform-aws-modules/lambda/aws)
 ################################################################################
 
-resource "aws_cloudwatch_log_group" "lambda" {
-  name              = "/aws/lambda/${local.function_name}"
-  retention_in_days = var.log_retention_days
-  kms_key_id        = var.cloudwatch_kms_key_arn
+module "lambda" {
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "8.7.0"
 
-  tags = merge(local.common_tags, {
-    ResourceType = "cloudwatch-log-group"
-  })
-}
-
-################################################################################
-# Lambda Function
-################################################################################
-
-resource "aws_lambda_function" "this" {
   function_name = local.function_name
   description   = var.description
-  role          = var.lambda_role_arn
   handler       = var.handler
   runtime       = var.runtime
   timeout       = var.timeout
   memory_size   = var.memory_size
   architectures = var.architectures
   layers        = length(var.layers) > 0 ? var.layers : null
+  publish       = var.publish
 
-  # Deployment package priority:
-  # 1. Placeholder (for initial deployment)
-  # 2. Local filename (Terraform uploads directly)
-  # 3. S3 bucket/key (pre-uploaded package)
-  filename          = var.use_placeholder ? data.archive_file.placeholder[0].output_path : var.filename
-  s3_bucket         = var.use_placeholder || var.filename != null ? null : var.s3_bucket
-  s3_key            = var.use_placeholder || var.filename != null ? null : var.s3_key
-  s3_object_version = var.use_placeholder || var.filename != null ? null : var.s3_object_version
-  source_code_hash  = var.use_placeholder ? data.archive_file.placeholder[0].output_base64sha256 : var.source_code_hash
+  # Use our per-lambda IAM role (least privilege) — see iam.tf
+  create_role = false
+  lambda_role = aws_iam_role.this.arn
 
-  # VPC Configuration (optional)
-  dynamic "vpc_config" {
-    for_each = var.vpc_subnet_ids != null ? [1] : []
-    content {
-      subnet_ids         = var.vpc_subnet_ids
-      security_group_ids = var.vpc_security_group_ids
-    }
-  }
+  # Deployment package — we always provide the package ourselves
+  create_package = false
+
+  local_existing_package = (
+    var.use_placeholder ? data.archive_file.placeholder[0].output_path :
+    var.filename != null ? var.filename :
+    null
+  )
+
+  s3_existing_package = (
+    !var.use_placeholder && var.filename == null && var.s3_bucket != null ? {
+      bucket     = var.s3_bucket
+      key        = var.s3_key
+      version_id = var.s3_object_version
+    } : null
+  )
+
+  hash_extra = var.source_code_hash
+
+  # VPC Configuration
+  vpc_subnet_ids         = var.vpc_subnet_ids
+  vpc_security_group_ids = var.vpc_security_group_ids
 
   # Environment variables
-  dynamic "environment" {
-    for_each = length(var.environment_variables) > 0 ? [1] : []
-    content {
-      variables = var.environment_variables
-    }
-  }
+  environment_variables = var.environment_variables
 
-  # Dead letter queue for failed invocations
-  dynamic "dead_letter_config" {
-    for_each = var.dead_letter_target_arn != null ? [1] : []
-    content {
-      target_arn = var.dead_letter_target_arn
-    }
-  }
-
-  # Tracing configuration for X-Ray
-  tracing_config {
-    mode = var.tracing_mode
-  }
-
-  # Reserved concurrency (set to -1 to disable)
-  reserved_concurrent_executions = var.reserved_concurrent_executions
+  # X-Ray tracing
+  tracing_mode = var.tracing_mode
 
   # Encryption for environment variables at rest
   kms_key_arn = var.lambda_kms_key_arn
 
-  depends_on = [aws_cloudwatch_log_group.lambda]
+  # Reserved concurrency (-1 = unreserved)
+  reserved_concurrent_executions = var.reserved_concurrent_executions
+
+  # CloudWatch Logs (module creates log group automatically)
+  cloudwatch_logs_retention_in_days = var.log_retention_days
+  cloudwatch_logs_kms_key_id        = var.cloudwatch_kms_key_arn
+
+  # Dead letter queue
+  dead_letter_target_arn = var.dead_letter_target_arn
 
   tags = local.common_tags
 
-  timeouts {
-    create = "10m" # Custom create timeout (e.g., 10 minutes)
-    update = "10m" # Custom update timeout
-    delete = "10m" # Custom delete timeout for durable executions
-  }
-}
-
-################################################################################
-# Lambda Function URL (optional, for direct HTTPS access)
-################################################################################
-
-resource "aws_lambda_function_url" "this" {
-  count = var.create_function_url ? 1 : 0
-
-  function_name      = aws_lambda_function.this.function_name
-  authorization_type = var.function_url_auth_type
-
-  dynamic "cors" {
-    for_each = var.function_url_cors != null ? [var.function_url_cors] : []
-    content {
-      allow_credentials = cors.value.allow_credentials
-      allow_headers     = cors.value.allow_headers
-      allow_methods     = cors.value.allow_methods
-      allow_origins     = cors.value.allow_origins
-      expose_headers    = cors.value.expose_headers
-      max_age           = cors.value.max_age
-    }
-  }
-
-  # tags = local.common_tags
-}
-
-################################################################################
-# Lambda Alias (for traffic shifting and blue/green deployments)
-################################################################################
-
-resource "aws_lambda_alias" "this" {
-  count = var.create_alias ? 1 : 0
-
-  name             = var.alias_name
-  description      = "Alias for ${local.function_name}"
-  function_name    = aws_lambda_function.this.function_name
-  function_version = aws_lambda_function.this.version
-
-  dynamic "routing_config" {
-    for_each = var.alias_routing_additional_version_weights != null ? [1] : []
-    content {
-      additional_version_weights = var.alias_routing_additional_version_weights
-    }
+  timeouts = {
+    create = "10m"
+    update = "10m"
+    delete = "10m"
   }
 }
 
@@ -193,7 +139,7 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   treat_missing_data  = "notBreaching"
 
   dimensions = {
-    FunctionName = aws_lambda_function.this.function_name
+    FunctionName = module.lambda.lambda_function_name
   }
 
   alarm_actions = var.alarm_actions
