@@ -195,6 +195,8 @@ resource "aws_api_gateway_integration_response" "options" {
     "method.response.header.Access-Control-Allow-Origin"      = "'${local.cors_origin}'"
     "method.response.header.Access-Control-Allow-Credentials" = "'true'"
   }
+
+  depends_on = [aws_api_gateway_integration.options]
 }
 
 # --- Root (/) OPTIONS --------------------------------------------------------
@@ -252,6 +254,8 @@ resource "aws_api_gateway_integration_response" "root_options" {
     "method.response.header.Access-Control-Allow-Origin"      = "'${local.cors_origin}'"
     "method.response.header.Access-Control-Allow-Credentials" = "'true'"
   }
+
+  depends_on = [aws_api_gateway_integration.root_options]
 }
 
 ################################################################################
