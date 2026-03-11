@@ -268,7 +268,7 @@ inputs = {
   cognito_user_pool_arn = dependency.shared_services.outputs.cognito_user_pool_arn
 
   # API prefixes that require authorization
-  authorized_api_prefixes = ["result"]
+  authorized_api_prefixes = ["result", "test-order-status"]
 
   # Lambda code deployment
   use_placeholder_lambda = false
@@ -497,6 +497,9 @@ inputs = {
         USE_IAM_AUTH = "true"
         DB_REGION    = local.aws_region
       }
+
+      authorization        = "COGNITO_USER_POOLS"
+      authorization_scopes = ["orders/write"]
     }
 
     # Postcode Lookup Lambda - Looks up addresses by postcode via OS Places API
