@@ -15,6 +15,9 @@ inputs:
   actor:
     description: "The GitHub actor (user) that triggered the workflow"
     required: true
+  pr_creator:
+    description: "The GitHub user who created the pull request"
+    required: true
 
 runs:
   using: "composite"
@@ -24,8 +27,9 @@ runs:
       env:
         PR_BRANCH: ${{ inputs.pr_branch }}
         ACTOR: ${{ inputs.actor }}
+        PR_CREATOR: ${{ inputs.pr_creator }}
       run: |
-        if [[ "$ACTOR" == "dependabot[bot]" ]]; then
+        if [[ "$PR_CREATOR" == "dependabot[bot]" ]]; then
           echo "⏭️  Skipping branch check for Dependabot PR"
           exit 0
         fi
@@ -56,8 +60,9 @@ runs:
       env:
         PR_TITLE: ${{ inputs.pr_title }}
         ACTOR: ${{ inputs.actor }}
+        PR_CREATOR: ${{ inputs.pr_creator }}
       run: |
-        if [[ "$ACTOR" == "dependabot[bot]" ]]; then
+        if [[ "$PR_CREATOR" == "dependabot[bot]" ]]; then
           echo "⏭️  Skipping PR title check for Dependabot PR"
           exit 0
         fi
@@ -87,8 +92,9 @@ runs:
         PR_TITLE: ${{ inputs.pr_title }}
         JIRA_TOKEN: ${{ inputs.jira_token }}
         ACTOR: ${{ inputs.actor }}
+        PR_CREATOR: ${{ inputs.pr_creator }}
       run: |
-        if [[ "$ACTOR" == "dependabot[bot]" ]]; then
+        if [[ "$PR_CREATOR" == "dependabot[bot]" ]]; then
           echo "⏭️  Skipping Jira check for Dependabot PR"
           exit 0
         fi

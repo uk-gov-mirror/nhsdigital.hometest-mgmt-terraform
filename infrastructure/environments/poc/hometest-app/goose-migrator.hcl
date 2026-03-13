@@ -39,6 +39,59 @@ locals {
 
 terraform {
   source = "${get_repo_root()}/infrastructure//src/lambda-goose-migrator"
+
+  # ---------------------------------------------------------------------------
+  # HOOKS — invoke the goose-migrator Lambda automatically after apply / before destroy
+  #
+  # These hooks mean you can simply run:
+  #   cd poc/hometest-app/<env>/lambda-goose-migrator
+  #   terragrunt apply    # deploys Lambda then runs migrations
+  #   terragrunt destroy  # tears down schema/user then destroys Lambda infra
+  #
+  # The helper script works both locally and in CI (writes GITHUB_STEP_SUMMARY
+  # when that variable is set).
+  #
+  # SKIPPING (local):  export SKIP_MIGRATOR=true before running terragrunt.
+  #                    This deploys/destroys the Lambda infrastructure but skips
+  #                    the Lambda invocation (no migrations or teardown run).
+  # SKIPPING (CI):     Set the 'skip_migrator' input on the workflow dispatch.
+  #                    This bypasses the entire deploy-migrator job.
+  # ---------------------------------------------------------------------------
+
+  # After a successful apply, invoke the Lambda to run migrations
+  after_hook "invoke_migrate" {
+    commands     = ["apply"]
+    run_on_error = false
+    execute = [
+      "bash", "-c",
+      <<-EOF
+        FUNCTION_NAME=$(terraform output -raw function_name 2>/dev/null || echo "")
+        "${get_repo_root()}/scripts/invoke-goose-migrator.sh" \
+          "$FUNCTION_NAME" \
+          "migrate" \
+          "${local.environment}"
+      EOF
+    ]
+  }
+
+  # Before destroy, invoke the Lambda to teardown the schema and user.
+  # This must run BEFORE the Lambda infrastructure is destroyed.
+  # If the function name can't be resolved (already destroyed), the script
+  # exits 0 gracefully.
+  before_hook "invoke_teardown" {
+    commands     = ["destroy"]
+    run_on_error = false
+    execute = [
+      "bash", "-c",
+      <<-EOF
+        FUNCTION_NAME=$(terraform output -raw function_name 2>/dev/null || echo "")
+        "${get_repo_root()}/scripts/invoke-goose-migrator.sh" \
+          "$FUNCTION_NAME" \
+          "teardown" \
+          "${local.environment}"
+      EOF
+    ]
+  }
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
