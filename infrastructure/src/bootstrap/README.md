@@ -226,7 +226,7 @@ statement {
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 6.33.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | 6.33.0 |
 
 ## Modules
 
@@ -237,18 +237,8 @@ No modules.
 | Name | Type |
 |------|------|
 | [aws_account_region.disabled](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/account_region) | resource |
-| [aws_iam_openid_connect_provider.github](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_openid_connect_provider) | resource |
-| [aws_iam_policy.deny_regions](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
-| [aws_iam_policy.gha_permissions_boundary](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
-| [aws_iam_role.gha_oidc_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
-| [aws_iam_role_policy.gha_infrastructure](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
-| [aws_iam_role_policy.gha_tfstate](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
-| [aws_iam_role_policy_attachment.additional_policies](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
-| [aws_iam_role_policy_attachment.gha_deny_regions](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_kms_alias.tfstate](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/kms_alias) | resource |
 | [aws_kms_key.tfstate](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/kms_key) | resource |
-| [aws_resourcegroups_group.all](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/resourcegroups_group) | resource |
-| [aws_resourcegroups_group.bootstrap](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/resourcegroups_group) | resource |
 | [aws_s3_bucket.tfstate](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket) | resource |
 | [aws_s3_bucket.tfstate_logs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket) | resource |
 | [aws_s3_bucket_lifecycle_configuration.tfstate](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_lifecycle_configuration) | resource |
@@ -261,8 +251,6 @@ No modules.
 | [aws_s3_bucket_server_side_encryption_configuration.tfstate_logs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_server_side_encryption_configuration) | resource |
 | [aws_s3_bucket_versioning.tfstate](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_versioning) | resource |
 | [aws_s3_bucket_versioning.tfstate_logs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_versioning) | resource |
-| [aws_iam_policy_document.infrastructure_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
-| [aws_iam_policy_document.tfstate_policy](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 
 ## Inputs
 
@@ -291,11 +279,7 @@ No modules.
 | <a name="output_allowed_regions"></a> [allowed\_regions](#output\_allowed\_regions) | List of AWS regions that are allowed |
 | <a name="output_backend_config_hcl"></a> [backend\_config\_hcl](#output\_backend\_config\_hcl) | Terraform backend configuration in HCL format |
 | <a name="output_denied_regions"></a> [denied\_regions](#output\_denied\_regions) | List of all AWS regions denied via IAM policy |
-| <a name="output_deny_regions_policy_arn"></a> [deny\_regions\_policy\_arn](#output\_deny\_regions\_policy\_arn) | ARN of the IAM policy that denies non-allowed regions |
 | <a name="output_disabled_opt_in_regions"></a> [disabled\_opt\_in\_regions](#output\_disabled\_opt\_in\_regions) | List of opt-in AWS regions that have been disabled |
-| <a name="output_gha_oidc_role_arn"></a> [gha\_oidc\_role\_arn](#output\_gha\_oidc\_role\_arn) | ARN of the GitHub Actions OIDC role (store as AWS\_ROLE\_ARN in GitHub secrets) |
-| <a name="output_gha_oidc_role_name"></a> [gha\_oidc\_role\_name](#output\_gha\_oidc\_role\_name) | Name of the GitHub Actions OIDC role |
-| <a name="output_github_oidc_provider_arn"></a> [github\_oidc\_provider\_arn](#output\_github\_oidc\_provider\_arn) | ARN of the GitHub OIDC provider |
 | <a name="output_kms_key_alias"></a> [kms\_key\_alias](#output\_kms\_key\_alias) | Alias of the KMS key for state encryption |
 | <a name="output_kms_key_arn"></a> [kms\_key\_arn](#output\_kms\_key\_arn) | ARN of the KMS key for state encryption |
 | <a name="output_logging_bucket_name"></a> [logging\_bucket\_name](#output\_logging\_bucket\_name) | Name of the S3 bucket for access logs |

@@ -87,77 +87,77 @@ resource "aws_account_region" "disabled" {
 # Attach this to roles/users/groups to enforce region restrictions
 ################################################################################
 
-resource "aws_iam_policy" "deny_regions" {
-  name        = local.regions_block_iam_role_name
-  description = "Denies access to all AWS regions except ${join(", ", var.aws_allowed_regions)}"
+# resource "aws_iam_policy" "deny_regions" {
+#   name        = local.regions_block_iam_role_name
+#   description = "Denies access to all AWS regions except ${join(", ", var.aws_allowed_regions)}"
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid      = "DenyNonAllowedRegions"
-        Effect   = "Deny"
-        Action   = "*"
-        Resource = "*"
-        Condition = {
-          StringNotEquals = {
-            "aws:RequestedRegion" = var.aws_allowed_regions
-          }
-          # Exclude global services that don't have a region
-          "ForAnyValue:StringNotLike" = {
-            "aws:PrincipalArn" = [
-              "arn:aws:iam::*:root"
-            ]
-          }
-        }
-      },
-      {
-        Sid    = "AllowGlobalServices"
-        Effect = "Allow"
-        Action = [
-          # IAM is global
-          "iam:*",
-          # Organizations is global
-          "organizations:*",
-          # STS is global (but also regional)
-          "sts:GetCallerIdentity",
-          # Route53 is global
-          "route53:*",
-          "route53domains:*",
-          # CloudFront is global
-          "cloudfront:*",
-          # WAF Global
-          "waf:*",
-          "wafv2:*",
-          # Shield is global
-          "shield:*",
-          # Global Accelerator
-          "globalaccelerator:*",
-          # Support is global
-          "support:*",
-          # Billing/Cost
-          "aws-portal:*",
-          "budgets:*",
-          "ce:*",
-          "cur:*",
-          # Account management
-          "account:*"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
+#   policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [
+#       {
+#         Sid      = "DenyNonAllowedRegions"
+#         Effect   = "Deny"
+#         Action   = "*"
+#         Resource = "*"
+#         Condition = {
+#           StringNotEquals = {
+#             "aws:RequestedRegion" = var.aws_allowed_regions
+#           }
+#           # Exclude global services that don't have a region
+#           "ForAnyValue:StringNotLike" = {
+#             "aws:PrincipalArn" = [
+#               "arn:aws:iam::*:root"
+#             ]
+#           }
+#         }
+#       },
+#       {
+#         Sid    = "AllowGlobalServices"
+#         Effect = "Allow"
+#         Action = [
+#           # IAM is global
+#           "iam:*",
+#           # Organizations is global
+#           "organizations:*",
+#           # STS is global (but also regional)
+#           "sts:GetCallerIdentity",
+#           # Route53 is global
+#           "route53:*",
+#           "route53domains:*",
+#           # CloudFront is global
+#           "cloudfront:*",
+#           # WAF Global
+#           "waf:*",
+#           "wafv2:*",
+#           # Shield is global
+#           "shield:*",
+#           # Global Accelerator
+#           "globalaccelerator:*",
+#           # Support is global
+#           "support:*",
+#           # Billing/Cost
+#           "aws-portal:*",
+#           "budgets:*",
+#           "ce:*",
+#           "cur:*",
+#           # Account management
+#           "account:*"
+#         ]
+#         Resource = "*"
+#       }
+#     ]
+#   })
 
-  tags = merge(local.common_tags, {
-    Name = local.regions_block_iam_role_name
-  })
-}
+#   tags = merge(local.common_tags, {
+#     Name = local.regions_block_iam_role_name
+#   })
+# }
 
-# Attach to GitHub Actions role to enforce region restrictions
-resource "aws_iam_role_policy_attachment" "gha_deny_regions" {
-  role       = aws_iam_role.gha_oidc_role.name
-  policy_arn = aws_iam_policy.deny_regions.arn
-}
+# # Attach to GitHub Actions role to enforce region restrictions
+# resource "aws_iam_role_policy_attachment" "gha_deny_regions" {
+#   role       = aws_iam_role.gha_oidc_role.name
+#   policy_arn = aws_iam_policy.deny_regions.arn
+# }
 
 ################################################################################
 # Outputs
@@ -178,7 +178,7 @@ output "allowed_regions" {
   value       = var.aws_allowed_regions
 }
 
-output "deny_regions_policy_arn" {
-  description = "ARN of the IAM policy that denies non-allowed regions"
-  value       = aws_iam_policy.deny_regions.arn
-}
+# output "deny_regions_policy_arn" {
+#   description = "ARN of the IAM policy that denies non-allowed regions"
+#   value       = aws_iam_policy.deny_regions.arn
+# }

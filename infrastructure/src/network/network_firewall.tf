@@ -18,28 +18,29 @@ resource "aws_subnet" "firewall" {
 
 # Route table for firewall subnets
 resource "aws_route_table" "firewall" {
-  count = var.enable_network_firewall ? 1 : 0
+  count = var.enable_network_firewall ? (var.single_nat_gateway ? 1 : length(local.azs)) : 0
 
   vpc_id = aws_vpc.main.id
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-firewall-rt"
+    Name = "${local.resource_prefix}-firewall-rt-${count.index + 1}"
   })
 }
 
-resource "aws_route" "firewall_internet" {
-  count = var.enable_network_firewall ? 1 : 0
+# Route from firewall subnet to NAT Gateway (for egress filtering)
+resource "aws_route" "firewall_nat" {
+  count = var.enable_network_firewall ? (var.single_nat_gateway ? 1 : length(local.azs)) : 0
 
-  route_table_id         = aws_route_table.firewall[0].id
+  route_table_id         = aws_route_table.firewall[count.index].id
   destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = aws_internet_gateway.main.id
+  nat_gateway_id         = aws_nat_gateway.main[count.index].id
 }
 
 resource "aws_route_table_association" "firewall" {
   count = var.enable_network_firewall ? length(local.azs) : 0
 
   subnet_id      = aws_subnet.firewall[count.index].id
-  route_table_id = aws_route_table.firewall[0].id
+  route_table_id = aws_route_table.firewall[var.single_nat_gateway ? 0 : count.index].id
 }
 
 ################################################################################

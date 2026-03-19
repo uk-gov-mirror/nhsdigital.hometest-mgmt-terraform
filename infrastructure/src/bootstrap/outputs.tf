@@ -24,22 +24,22 @@ output "kms_key_alias" {
   value       = aws_kms_alias.tfstate.name
 }
 
-# OIDC Provider Outputs
-output "github_oidc_provider_arn" {
-  description = "ARN of the GitHub OIDC provider"
-  value       = aws_iam_openid_connect_provider.github.arn
-}
+# # OIDC Provider Outputs
+# output "github_oidc_provider_arn" {
+#   description = "ARN of the GitHub OIDC provider"
+#   value       = aws_iam_openid_connect_provider.github.arn
+# }
 
-# IAM Role Outputs
-output "gha_oidc_role_arn" {
-  description = "ARN of the GitHub Actions OIDC role (store as AWS_ROLE_ARN in GitHub secrets)"
-  value       = aws_iam_role.gha_oidc_role.arn
-}
+# # IAM Role Outputs
+# output "gha_oidc_role_arn" {
+#   description = "ARN of the GitHub Actions OIDC role (store as AWS_ROLE_ARN in GitHub secrets)"
+#   value       = aws_iam_role.gha_oidc_role.arn
+# }
 
-output "gha_oidc_role_name" {
-  description = "Name of the GitHub Actions OIDC role"
-  value       = aws_iam_role.gha_oidc_role.name
-}
+# output "gha_oidc_role_name" {
+#   description = "Name of the GitHub Actions OIDC role"
+#   value       = aws_iam_role.gha_oidc_role.name
+# }
 
 # Logging Bucket Outputs
 output "logging_bucket_name" {

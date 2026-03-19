@@ -58,26 +58,26 @@ terraform {
   }
 }
 
-remote_state {
-  backend = "s3"
-  config = {
-    bucket       = "nhs-hometest-poc-core-s3-tfstate"
-    use_lockfile = true
-    # IMPORTANT: This key derives `environment` from env.hcl (via find_in_parent_folders)
-    # and uses basename(path) as the module name. For NESTED modules (e.g., dev/lambda-goose-migrator)
-    # the basename alone is NOT unique across environments. Each subenv directory (dev/, uat/, etc.)
-    # MUST have an env.hcl that sets `environment = "<name>"` to disambiguate the key.
-    # Without it, all environments share the same key and overwrite each other's state.
-    key        = "${local.account_name}-${local.environment}-${basename(path_relative_to_include())}.tfstate"
-    encrypt    = true
-    kms_key_id = "arn:aws:kms:eu-west-2:781863586270:key/3e87d63f-febc-4dd4-a771-92c3c07a51f5"
-    region     = local.region
-  }
-  generate = {
-    path      = "backend.tf"
-    if_exists = "overwrite_terragrunt"
-  }
-}
+# remote_state {
+#   backend = "s3"
+#   config = {
+#     bucket       = "${local.account_name}-${local.environment}-s3-tfstate"
+#     use_lockfile = true
+#     # IMPORTANT: This key derives `environment` from env.hcl (via find_in_parent_folders)
+#     # and uses basename(path) as the module name. For NESTED modules (e.g., dev/lambda-goose-migrator)
+#     # the basename alone is NOT unique across environments. Each subenv directory (dev/, uat/, etc.)
+#     # MUST have an env.hcl that sets `environment = "<name>"` to disambiguate the key.
+#     # Without it, all environments share the same key and overwrite each other's state.
+#     key        = "${local.account_name}-${local.environment}-${basename(path_relative_to_include())}.tfstate"
+#     encrypt    = true
+#     kms_key_id = "arn:aws:kms:${local.region}:${local.account_id}:alias/${local.account_name}-${local.environment}-kms-tfstate-key"
+#     region     = local.region
+#   }
+#   generate = {
+#     path      = "backend.tf"
+#     if_exists = "overwrite_terragrunt"
+#   }
+# }
 
 # ---------------------------------------------------------------------------------------------------------------------
 # GLOBAL PARAMETERS

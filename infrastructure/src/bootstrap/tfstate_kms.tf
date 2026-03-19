@@ -3,7 +3,7 @@
 ################################################################################
 
 locals {
-  tfstate_kms_key_name = "${local.resource_prefix}-kms-tfstate-key"
+  tfstate_kms_key_name = "${local.resource_prefix}-kms-tfstate-key-v4"
 }
 
 resource "aws_kms_key" "tfstate" {
@@ -23,22 +23,22 @@ resource "aws_kms_key" "tfstate" {
         }
         Action   = "kms:*"
         Resource = "*"
-      },
-      {
-        Sid    = "Allow GitHub Actions Role"
-        Effect = "Allow"
-        Principal = {
-          AWS = aws_iam_role.gha_oidc_role.arn
-        }
-        Action = [
-          "kms:Encrypt",
-          "kms:Decrypt",
-          "kms:ReEncrypt*",
-          "kms:GenerateDataKey*",
-          "kms:DescribeKey"
-        ]
-        Resource = "*"
       }
+      # {
+      #   Sid    = "Allow GitHub Actions Role"
+      #   Effect = "Allow"
+      #   Principal = {
+      #     AWS = aws_iam_role.gha_oidc_role.arn
+      #   }
+      #   Action = [
+      #     "kms:Encrypt",
+      #     "kms:Decrypt",
+      #     "kms:ReEncrypt*",
+      #     "kms:GenerateDataKey*",
+      #     "kms:DescribeKey"
+      #   ]
+      #   Resource = "*"
+      # }
     ]
   })
 

@@ -222,6 +222,33 @@ variable "allowed_egress_domains" {
   # ]
 }
 
+variable "allowed_ingress_ips" {
+  description = "List of allowed ingress IP addresses with port and protocol. These IPs will be permitted through the firewall for inbound traffic."
+  type = list(object({
+    ip          = string # IP address or CIDR (e.g., "203.0.113.10/32")
+    port        = string # Port number or "ANY"
+    protocol    = string # Protocol: TCP, UDP, or IP
+    description = string # Description for documentation
+  }))
+  default = []
+
+  # Example:
+  # allowed_ingress_ips = [
+  #   {
+  #     ip          = "0.0.0.0/0"
+  #     port        = "443"
+  #     protocol    = "TCP"
+  #     description = "HTTPS from anywhere"
+  #   },
+  #   {
+  #     ip          = "0.0.0.0/0"
+  #     port        = "80"
+  #     protocol    = "TCP"
+  #     description = "HTTP from anywhere"
+  #   }
+  # ]
+}
+
 #------------------------------------------------------------------------------
 # Tags
 #------------------------------------------------------------------------------
