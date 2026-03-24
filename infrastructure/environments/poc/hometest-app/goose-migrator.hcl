@@ -31,6 +31,9 @@ locals {
 
   # Secrets Manager path for app user credentials
   app_user_secret_name = "nhs-hometest/${local.environment}/app-user-db-secret"
+
+  # Resolved paths
+  scripts_dir = "${get_repo_root()}/scripts"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -66,7 +69,7 @@ terraform {
       "bash", "-c",
       <<-EOF
         FUNCTION_NAME=$(terraform output -raw function_name 2>/dev/null || echo "")
-        "${get_repo_root()}/scripts/invoke-goose-migrator.sh" \
+        "${local.scripts_dir}/invoke-goose-migrator.sh" \
           "$FUNCTION_NAME" \
           "migrate" \
           "${local.environment}"
@@ -84,8 +87,20 @@ terraform {
     execute = [
       "bash", "-c",
       <<-EOF
+        # Check if there's any state to destroy
+        RESOURCE_COUNT=$(terraform state list 2>/dev/null | wc -l || echo "0")
+        if [[ "$RESOURCE_COUNT" -eq 0 ]]; then
+          echo "[goose-migrator] No resources in state — nothing to teardown."
+          exit 0
+        fi
+
         FUNCTION_NAME=$(terraform output -raw function_name 2>/dev/null || echo "")
-        "${get_repo_root()}/scripts/invoke-goose-migrator.sh" \
+        if [[ -z "$FUNCTION_NAME" || "$FUNCTION_NAME" == "None" ]]; then
+          echo "[goose-migrator] No function name in state — skipping teardown."
+          exit 0
+        fi
+
+        "${local.scripts_dir}/invoke-goose-migrator.sh" \
           "$FUNCTION_NAME" \
           "teardown" \
           "${local.environment}"

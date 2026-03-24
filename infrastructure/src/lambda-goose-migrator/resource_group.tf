@@ -30,7 +30,11 @@ resource "aws_resourcegroups_group" "rg" {
         {
           Key    = "Component"
           Values = ["goose-migrator"]
-        }
+        },
+        {
+          Key    = "Environment"
+          Values = [var.environment]
+        },
       ]
     })
   }

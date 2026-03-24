@@ -16,6 +16,16 @@ variable "project_name" {
   }
 }
 
+variable "aws_account_shortname" {
+  description = "Short name for the AWS account"
+  type        = string
+
+  validation {
+    condition     = can(regex("^[a-z0-9-]+$", var.aws_account_shortname))
+    error_message = "AWS account shortname must contain only lowercase letters, numbers, and hyphens."
+  }
+}
+
 variable "environment" {
   description = "Environment name (dev, staging, prod)"
   type        = string

@@ -20,9 +20,10 @@ locals {
 module "sns_alerts" {
   source = "../../modules/sns"
 
-  project_name      = var.project_name
-  environment       = var.environment
-  topic_name_suffix = "alerts"
+  project_name          = var.project_name
+  aws_account_shortname = var.aws_account_shortname
+  environment           = var.environment
+  topic_name_suffix     = "alerts"
 
   # Encryption
   kms_master_key_id = aws_kms_key.main.id
