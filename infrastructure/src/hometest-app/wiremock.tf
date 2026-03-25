@@ -68,7 +68,7 @@ module "wiremock_alb" {
 
   #checkov:skip=CKV_TF_1:Using a commit hash for module from the Terraform registry is not applicable
   source  = "terraform-aws-modules/alb/aws"
-  version = "~> 9.16.0"
+  version = "~> 10.5.0"
 
   name     = "${local.wiremock_name}-alb"
   internal = false # Internet-facing — same as API Gateway exposure model
@@ -228,7 +228,7 @@ module "wiremock_service" {
 
   #checkov:skip=CKV_TF_1:Using a commit hash for module from the Terraform registry is not applicable
   source  = "terraform-aws-modules/ecs/aws//modules/service"
-  version = "~> 5.12.0"
+  version = "~> 7.5.0"
 
   name        = local.wiremock_name
   cluster_arn = var.wiremock_ecs_cluster_arn
@@ -280,14 +280,14 @@ module "wiremock_service" {
         "--permitted-system-keys=.*"
       ]
 
-      port_mappings = [{
+      portMappings = [{
         containerPort = local.wiremock_container_port
         protocol      = "tcp"
       }]
 
-      readonly_root_filesystem = false # WireMock writes mappings/files to disk
+      readonlyRootFilesystem = false # WireMock writes mappings/files to disk
 
-      log_configuration = {
+      logConfiguration = {
         logDriver = "awslogs"
         options = {
           "awslogs-group"         = aws_cloudwatch_log_group.wiremock[0].name
@@ -296,7 +296,7 @@ module "wiremock_service" {
         }
       }
 
-      health_check = {
+      healthCheck = {
         command     = ["CMD-SHELL", "wget --spider --quiet http://localhost:${local.wiremock_container_port}/__admin/health || exit 1"]
         interval    = 30
         timeout     = 5
@@ -339,51 +339,49 @@ module "wiremock_service" {
   security_group_name        = "${local.wiremock_name}-sg"
   security_group_description = "Security group for WireMock ECS tasks"
 
-  security_group_rules = merge(
+  security_group_ingress_rules = merge(
     {
       alb_ingress = {
-        type                     = "ingress"
-        from_port                = local.wiremock_container_port
-        to_port                  = local.wiremock_container_port
-        protocol                 = "tcp"
-        source_security_group_id = module.wiremock_alb[0].security_group_id
-        description              = "HTTP from ALB"
-      }
-      https_egress = {
-        type        = "egress"
-        from_port   = 443
-        to_port     = 443
-        protocol    = "tcp"
-        cidr_ipv4   = "0.0.0.0/0"
-        description = "HTTPS outbound for ECR and CloudWatch"
-      }
-      dns_udp_egress = {
-        type        = "egress"
-        from_port   = 53
-        to_port     = 53
-        protocol    = "udp"
-        cidr_ipv4   = data.aws_vpc.selected[0].cidr_block
-        description = "DNS (UDP)"
-      }
-      dns_tcp_egress = {
-        type        = "egress"
-        from_port   = 53
-        to_port     = 53
-        protocol    = "tcp"
-        cidr_ipv4   = data.aws_vpc.selected[0].cidr_block
-        description = "DNS (TCP)"
+        from_port                    = local.wiremock_container_port
+        to_port                      = local.wiremock_container_port
+        ip_protocol                  = "tcp"
+        referenced_security_group_id = module.wiremock_alb[0].security_group_id
+        description                  = "HTTP from ALB"
       }
     },
     # Allow Lambda functions to call WireMock directly (service-to-service)
     { for idx, sg_id in var.lambda_security_group_ids : "lambda_ingress_${idx}" => {
-      type                     = "ingress"
-      from_port                = local.wiremock_container_port
-      to_port                  = local.wiremock_container_port
-      protocol                 = "tcp"
-      source_security_group_id = sg_id
-      description              = "HTTP from Lambda SG ${sg_id}"
+      from_port                    = local.wiremock_container_port
+      to_port                      = local.wiremock_container_port
+      ip_protocol                  = "tcp"
+      referenced_security_group_id = sg_id
+      description                  = "HTTP from Lambda SG ${sg_id}"
     } }
   )
+
+  security_group_egress_rules = {
+    https_egress = {
+      from_port   = 443
+      to_port     = 443
+      ip_protocol = "tcp"
+      cidr_ipv4   = "0.0.0.0/0"
+      description = "HTTPS outbound for ECR and CloudWatch"
+    }
+    dns_udp_egress = {
+      from_port   = 53
+      to_port     = 53
+      ip_protocol = "udp"
+      cidr_ipv4   = data.aws_vpc.selected[0].cidr_block
+      description = "DNS (UDP)"
+    }
+    dns_tcp_egress = {
+      from_port   = 53
+      to_port     = 53
+      ip_protocol = "tcp"
+      cidr_ipv4   = data.aws_vpc.selected[0].cidr_block
+      description = "DNS (TCP)"
+    }
+  }
 
   # ---------------------------------------------------------------------------
   # Load balancer

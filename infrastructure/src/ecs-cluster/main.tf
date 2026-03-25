@@ -20,18 +20,18 @@ locals {
 module "ecs_cluster" {
   #checkov:skip=CKV_TF_1:Using a commit hash for module from the Terraform registry is not applicable
   source  = "terraform-aws-modules/ecs/aws//modules/cluster"
-  version = "~> 5.12.0"
+  version = "~> 7.5.0"
 
-  cluster_name = "${local.resource_prefix}-ecs"
+  name = "${local.resource_prefix}-ecs"
 
   # Container Insights for observability
-  cluster_settings = {
+  setting = [{
     name  = "containerInsights"
     value = "enhanced"
-  }
+  }]
 
   # ECS Exec audit logging (encrypted)
-  cluster_configuration = {
+  configuration = {
     execute_command_configuration = {
       kms_key_id = var.kms_key_arn
       logging    = "OVERRIDE"
@@ -43,17 +43,16 @@ module "ecs_cluster" {
   }
 
   # Fargate capacity providers — FARGATE_SPOT as default for cost savings (dev-only workloads)
-  fargate_capacity_providers = {
+  # v7: cluster_capacity_providers must be explicitly listed
+  cluster_capacity_providers = ["FARGATE", "FARGATE_SPOT"]
+
+  default_capacity_provider_strategy = {
     FARGATE = {
-      default_capacity_provider_strategy = {
-        weight = 0
-      }
+      weight = 0
     }
     FARGATE_SPOT = {
-      default_capacity_provider_strategy = {
-        weight = 1
-        base   = 1
-      }
+      weight = 1
+      base   = 1
     }
   }
 
