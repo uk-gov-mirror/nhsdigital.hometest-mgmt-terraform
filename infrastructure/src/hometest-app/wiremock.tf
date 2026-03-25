@@ -246,23 +246,23 @@ module "wiremock_service" {
   # IAM — Task Execution Role (pulls image, writes logs)
   # ---------------------------------------------------------------------------
   task_exec_iam_role_name        = "${local.wiremock_name}-exec"
-  task_exec_iam_role_description = "ECS task execution role for WireMock — pulls images and writes logs"
+  task_exec_iam_role_description = "ECS task execution role for WireMock - pulls images and writes logs"
 
-  task_exec_iam_statements = {
-    kms = {
+  task_exec_iam_statements = [
+    {
       effect    = "Allow"
       actions   = ["kms:Decrypt", "kms:GenerateDataKey"]
       resources = [var.kms_key_arn]
     }
-  }
+  ]
 
   # ---------------------------------------------------------------------------
   # IAM — Task Role (container runtime permissions — minimal for WireMock)
   # ---------------------------------------------------------------------------
   tasks_iam_role_name        = "${local.wiremock_name}-task"
-  tasks_iam_role_description = "ECS task role for WireMock — no extra permissions needed"
+  tasks_iam_role_description = "ECS task role for WireMock - no extra permissions needed"
 
-  tasks_iam_role_statements = {}
+  tasks_iam_role_statements = null
 
   # ---------------------------------------------------------------------------
   # Networking — PRIVATE subnets, no public IP
@@ -334,10 +334,8 @@ module "wiremock_service" {
   # Service discovery
   # ---------------------------------------------------------------------------
   service_registries = var.wiremock_service_discovery_namespace_id != null ? {
-    wiremock = {
-      registry_arn = aws_service_discovery_service.wiremock[0].arn
-    }
-  } : {}
+    registry_arn = aws_service_discovery_service.wiremock[0].arn
+  } : null
 
   ignore_task_definition_changes = false
 

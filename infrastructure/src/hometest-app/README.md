@@ -352,7 +352,7 @@ After deployment, you'll have access to:
 | <a name="input_wiremock_desired_count"></a> [wiremock\_desired\_count](#input\_wiremock\_desired\_count) | Number of WireMock tasks to run | `number` | `1` | no |
 | <a name="input_wiremock_domain_name"></a> [wiremock\_domain\_name](#input\_wiremock\_domain\_name) | Custom domain for WireMock (e.g., wiremock-dev.poc.hometest.service.nhs.uk). Must be covered by acm\_regional\_certificate\_arn. | `string` | `null` | no |
 | <a name="input_wiremock_ecs_cluster_arn"></a> [wiremock\_ecs\_cluster\_arn](#input\_wiremock\_ecs\_cluster\_arn) | ARN of the ECS cluster to deploy WireMock into | `string` | `null` | no |
-| <a name="input_wiremock_image_tag"></a> [wiremock\_image\_tag](#input\_wiremock\_image\_tag) | Docker image tag for wiremock/wiremock (e.g., '3.13.0', 'latest') | `string` | `"3.13.0"` | no |
+| <a name="input_wiremock_image_tag"></a> [wiremock\_image\_tag](#input\_wiremock\_image\_tag) | Docker image tag for wiremock/wiremock (e.g., '3.13.2', 'latest') | `string` | `"3.13.2"` | no |
 | <a name="input_wiremock_memory"></a> [wiremock\_memory](#input\_wiremock\_memory) | Memory (MiB) for the WireMock Fargate task | `number` | `512` | no |
 | <a name="input_wiremock_service_discovery_namespace_id"></a> [wiremock\_service\_discovery\_namespace\_id](#input\_wiremock\_service\_discovery\_namespace\_id) | Cloud Map namespace ID for service discovery (from core ECS cluster) | `string` | `null` | no |
 | <a name="input_wiremock_subnet_ids"></a> [wiremock\_subnet\_ids](#input\_wiremock\_subnet\_ids) | Private subnet IDs for WireMock ECS tasks | `list(string)` | `[]` | no |

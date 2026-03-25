@@ -473,9 +473,9 @@ variable "wiremock_service_discovery_namespace_id" {
 }
 
 variable "wiremock_image_tag" {
-  description = "Docker image tag for wiremock/wiremock (e.g., '3.13.0', 'latest')"
+  description = "Docker image tag for wiremock/wiremock (e.g., '3.13.2', 'latest')"
   type        = string
-  default     = "3.13.0"
+  default     = "3.13.2"
 }
 
 variable "wiremock_cpu" {
