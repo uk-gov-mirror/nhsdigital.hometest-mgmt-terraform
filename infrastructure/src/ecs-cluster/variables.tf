@@ -48,3 +48,37 @@ variable "log_retention_days" {
   type        = number
   default     = 30
 }
+
+################################################################################
+# Shared ALB Configuration
+################################################################################
+
+variable "enable_alb" {
+  description = "Create a shared internet-facing ALB for ECS services"
+  type        = bool
+  default     = true
+}
+
+variable "public_subnet_ids" {
+  description = "Public subnet IDs for the internet-facing ALB (protected by network firewall)"
+  type        = list(string)
+  default     = []
+}
+
+variable "acm_regional_certificate_arn" {
+  description = "ARN of the shared regional ACM wildcard certificate for HTTPS"
+  type        = string
+  default     = null
+}
+
+variable "waf_regional_arn" {
+  description = "ARN of the regional WAF Web ACL to attach to the ALB"
+  type        = string
+  default     = null
+}
+
+variable "route53_zone_id" {
+  description = "Route53 hosted zone ID for DNS records"
+  type        = string
+  default     = null
+}

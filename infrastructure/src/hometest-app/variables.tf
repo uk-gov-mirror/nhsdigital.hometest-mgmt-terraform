@@ -436,10 +436,28 @@ variable "wiremock_subnet_ids" {
   default     = []
 }
 
-variable "wiremock_public_subnet_ids" {
-  description = "Public subnet IDs for the internet-facing WireMock ALB (protected by network firewall)"
-  type        = list(string)
-  default     = []
+variable "wiremock_alb_https_listener_arn" {
+  description = "ARN of the shared ALB HTTPS listener (from core ECS cluster)"
+  type        = string
+  default     = null
+}
+
+variable "wiremock_alb_security_group_id" {
+  description = "Security group ID of the shared ALB (from core ECS cluster)"
+  type        = string
+  default     = null
+}
+
+variable "wiremock_alb_dns_name" {
+  description = "DNS name of the shared ALB (from core ECS cluster, for Route53 alias)"
+  type        = string
+  default     = null
+}
+
+variable "wiremock_alb_zone_id" {
+  description = "Canonical hosted zone ID of the shared ALB (from core ECS cluster, for Route53 alias)"
+  type        = string
+  default     = null
 }
 
 variable "wiremock_domain_name" {

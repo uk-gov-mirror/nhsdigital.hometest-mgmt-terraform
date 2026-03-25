@@ -169,19 +169,14 @@ output "deployment_info" {
 # WireMock (when enabled)
 #------------------------------------------------------------------------------
 
-output "wiremock_alb_dns_name" {
-  description = "DNS name of the WireMock ALB"
-  value       = try(module.wiremock_alb[0].dns_name, null)
-}
-
 output "wiremock_url" {
-  description = "URL for WireMock API (custom domain if set, otherwise ALB DNS)"
+  description = "URL for WireMock API (custom domain if set, otherwise shared ALB DNS)"
   value = (
     var.enable_wiremock
     ? (
       var.wiremock_domain_name != null
       ? "https://${var.wiremock_domain_name}"
-      : "https://${module.wiremock_alb[0].dns_name}"
+      : try("https://${var.wiremock_alb_dns_name}", null)
     )
     : null
   )
@@ -194,7 +189,7 @@ output "wiremock_admin_url" {
     ? (
       var.wiremock_domain_name != null
       ? "https://${var.wiremock_domain_name}/__admin"
-      : "https://${module.wiremock_alb[0].dns_name}/__admin"
+      : try("https://${var.wiremock_alb_dns_name}/__admin", null)
     )
     : null
   )

@@ -5,11 +5,11 @@
 # - Stubbing 3rd-party APIs in dev environments
 # - Providing a mock backend for Playwright end-to-end tests
 #
-# Uses terraform-aws-modules/ecs/aws//modules/service for the ECS service
-# and terraform-aws-modules/alb/aws for the internet-facing ALB.
+# Uses terraform-aws-modules/ecs/aws//modules/service for the ECS service.
+# Routes traffic via a path-based listener rule on the shared core ALB.
 #
 # Exposure model (mirrors Lambda/API Gateway):
-# - Internet-facing ALB in public subnets (protected by network firewall)
+# - Shared internet-facing ALB in public subnets (from core ecs module)
 # - Regional WAF attached to the ALB (same rules as API Gateway)
 # - HTTPS via shared wildcard ACM certificate
 # - Route53 alias: wiremock-<env>.<account>.hometest.service.nhs.uk
@@ -55,119 +55,55 @@ resource "aws_cloudwatch_log_group" "wiremock" {
 }
 
 ################################################################################
-# Internet-facing ALB — terraform-aws-modules/alb/aws
-# https://github.com/terraform-aws-modules/terraform-aws-alb/releases
-#
-# Placed in PUBLIC subnets so it gets a public IP and is reachable from the
-# internet. The AWS Network Firewall (if enabled) inspects all ingress/egress
-# traffic on the public subnets automatically via VPC route tables.
+# ALB Target Group — registers with shared core ALB
 ################################################################################
 
-module "wiremock_alb" {
+resource "aws_lb_target_group" "wiremock" {
   count = var.enable_wiremock ? 1 : 0
 
-  #checkov:skip=CKV_TF_1:Using a commit hash for module from the Terraform registry is not applicable
-  source  = "terraform-aws-modules/alb/aws"
-  version = "~> 10.5.0"
+  name        = "${local.wiremock_name}-tg"
+  port        = local.wiremock_container_port
+  protocol    = "HTTP"
+  vpc_id      = var.vpc_id
+  target_type = "ip"
 
-  name     = "${local.wiremock_name}-alb"
-  internal = false # Internet-facing — same as API Gateway exposure model
-
-  vpc_id  = var.vpc_id
-  subnets = var.wiremock_public_subnet_ids # Public subnets (protected by network firewall)
-
-  enable_deletion_protection = false
-  drop_invalid_header_fields = true
-
-  # Security group — HTTPS from internet (WAF provides L7 protection)
-  security_group_ingress_rules = {
-    https_all = {
-      from_port   = 443
-      to_port     = 443
-      ip_protocol = "tcp"
-      cidr_ipv4   = "0.0.0.0/0"
-      description = "HTTPS from internet"
-    }
-    http_all = {
-      from_port   = 80
-      to_port     = 80
-      ip_protocol = "tcp"
-      cidr_ipv4   = "0.0.0.0/0"
-      description = "HTTP from internet (redirected to HTTPS)"
-    }
-  }
-  security_group_egress_rules = {
-    to_targets = {
-      from_port                    = local.wiremock_container_port
-      to_port                      = local.wiremock_container_port
-      ip_protocol                  = "tcp"
-      referenced_security_group_id = module.wiremock_service[0].security_group_id
-      description                  = "To WireMock ECS tasks"
-    }
-  }
-
-  listeners = {
-    # HTTPS listener — terminates TLS with shared wildcard certificate
-    https = {
-      port            = 443
-      protocol        = "HTTPS"
-      ssl_policy      = "ELBSecurityPolicy-TLS13-1-2-2021-06"
-      certificate_arn = var.acm_regional_certificate_arn
-
-      forward = {
-        target_group_key = "wiremock"
-      }
-    }
-
-    # HTTP listener — redirect all HTTP to HTTPS
-    http = {
-      port     = 80
-      protocol = "HTTP"
-
-      redirect = {
-        port        = "443"
-        protocol    = "HTTPS"
-        status_code = "HTTP_301"
-      }
-    }
-  }
-
-  target_groups = {
-    wiremock = {
-      name             = "${local.wiremock_name}-tg"
-      backend_port     = local.wiremock_container_port
-      backend_protocol = "HTTP"
-      target_type      = "ip"
-
-      health_check = {
-        enabled             = true
-        path                = "/__admin/health"
-        port                = "traffic-port"
-        protocol            = "HTTP"
-        healthy_threshold   = 2
-        unhealthy_threshold = 3
-        timeout             = 5
-        interval            = 30
-        matcher             = "200"
-      }
-
-      # ECS service manages target registration
-      create_attachment = false
-    }
+  health_check {
+    enabled             = true
+    path                = "/__admin/health"
+    port                = "traffic-port"
+    protocol            = "HTTP"
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+    timeout             = 5
+    interval            = 30
+    matcher             = "200"
   }
 
   tags = local.common_tags
 }
 
 ################################################################################
-# WAF Association — same regional WAF as API Gateway
+# ALB Listener Rule — host-based routing on the shared HTTPS listener
+# Matches: wiremock-<env>.<account>.hometest.service.nhs.uk
 ################################################################################
 
-resource "aws_wafv2_web_acl_association" "wiremock" {
-  count = var.enable_wiremock && var.waf_regional_arn != null ? 1 : 0
+resource "aws_lb_listener_rule" "wiremock" {
+  count = var.enable_wiremock && var.wiremock_alb_https_listener_arn != null ? 1 : 0
 
-  resource_arn = module.wiremock_alb[0].arn
-  web_acl_arn  = var.waf_regional_arn
+  listener_arn = var.wiremock_alb_https_listener_arn
+
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.wiremock[0].arn
+  }
+
+  condition {
+    host_header {
+      values = [local.wiremock_domain]
+    }
+  }
+
+  tags = local.common_tags
 }
 
 ################################################################################
@@ -177,15 +113,15 @@ resource "aws_wafv2_web_acl_association" "wiremock" {
 ################################################################################
 
 resource "aws_route53_record" "wiremock" {
-  count = var.enable_wiremock && local.wiremock_domain != null ? 1 : 0
+  count = var.enable_wiremock && local.wiremock_domain != null && var.wiremock_alb_dns_name != null ? 1 : 0
 
   zone_id = var.route53_zone_id
   name    = local.wiremock_domain
   type    = "A"
 
   alias {
-    name                   = module.wiremock_alb[0].dns_name
-    zone_id                = module.wiremock_alb[0].zone_id
+    name                   = var.wiremock_alb_dns_name
+    zone_id                = var.wiremock_alb_zone_id
     evaluate_target_health = true
   }
 }
@@ -345,8 +281,8 @@ module "wiremock_service" {
         from_port                    = local.wiremock_container_port
         to_port                      = local.wiremock_container_port
         ip_protocol                  = "tcp"
-        referenced_security_group_id = module.wiremock_alb[0].security_group_id
-        description                  = "HTTP from ALB"
+        referenced_security_group_id = var.wiremock_alb_security_group_id
+        description                  = "HTTP from shared ALB"
       }
     },
     # Allow Lambda functions to call WireMock directly (service-to-service)
@@ -388,7 +324,7 @@ module "wiremock_service" {
   # ---------------------------------------------------------------------------
   load_balancer = {
     wiremock = {
-      target_group_arn = module.wiremock_alb[0].target_groups["wiremock"].arn
+      target_group_arn = aws_lb_target_group.wiremock[0].arn
       container_name   = "wiremock"
       container_port   = local.wiremock_container_port
     }

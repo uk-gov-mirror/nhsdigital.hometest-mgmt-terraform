@@ -20,7 +20,9 @@ dependency "network" {
   config_path = "../network"
 
   mock_outputs = {
-    vpc_id = "vpc-00000000000000000"
+    vpc_id            = "vpc-00000000000000000"
+    public_subnet_ids = ["subnet-pub-mock1", "subnet-pub-mock2", "subnet-pub-mock3"]
+    route53_zone_id   = "Z0123456789ABCDEFGHIJ"
   }
   mock_outputs_allowed_terraform_commands = ["validate", "plan"]
 }
@@ -29,7 +31,9 @@ dependency "shared_services" {
   config_path = "../shared_services"
 
   mock_outputs = {
-    kms_key_arn = "arn:aws:kms:eu-west-2:000000000000:key/00000000-0000-0000-0000-000000000000"
+    kms_key_arn                  = "arn:aws:kms:eu-west-2:000000000000:key/00000000-0000-0000-0000-000000000000"
+    waf_regional_arn             = "arn:aws:wafv2:eu-west-2:000000000000:regional/webacl/mock/mock-id"
+    acm_regional_certificate_arn = "arn:aws:acm:eu-west-2:000000000000:certificate/mock-cert"
   }
   mock_outputs_allowed_terraform_commands = ["validate", "plan"]
 }
@@ -39,4 +43,11 @@ inputs = {
   kms_key_arn = dependency.shared_services.outputs.kms_key_arn
 
   log_retention_days = 30
+
+  # Shared ALB
+  enable_alb                   = true
+  public_subnet_ids            = dependency.network.outputs.public_subnet_ids
+  acm_regional_certificate_arn = dependency.shared_services.outputs.acm_regional_certificate_arn
+  waf_regional_arn             = dependency.shared_services.outputs.waf_regional_arn
+  route53_zone_id              = dependency.network.outputs.route53_zone_id
 }
