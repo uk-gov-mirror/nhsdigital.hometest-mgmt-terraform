@@ -130,6 +130,7 @@ All deployments use the `deploy-terragrunt` composite action which runs `mise ex
 - Use `dependency` blocks for cross-module references
 - Validate inputs with `terragrunt_validate_inputs` (strict mode enabled)
 - Format with `terragrunt fmt` (enforced by pre-commit)
+- **When adding a new Terraform root module**: add a corresponding `terragrunt_validate_inputs` hook entry in `.pre-commit-config.yaml` with the correct `files` regex pattern for the new module path, and add the module to the `stage-2-test.yaml` matrix for CI Terragrunt Plan coverage
 - Remote state: S3 bucket `nhs-hometest-${environment}-core-s3-tfstate` with KMS encryption
 - State key pattern: `${account_name}-${environment}-${module_name}.tfstate`
 - Lockfile enabled, parallelism set to 20

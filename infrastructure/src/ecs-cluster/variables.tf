@@ -76,9 +76,3 @@ variable "waf_regional_arn" {
   type        = string
   default     = null
 }
-
-variable "route53_zone_id" {
-  description = "Route53 hosted zone ID for DNS records"
-  type        = string
-  default     = null
-}
