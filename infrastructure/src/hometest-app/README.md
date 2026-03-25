@@ -270,16 +270,30 @@ After deployment, you'll have access to:
 | [aws_api_gateway_rest_api.apis](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_rest_api) | resource |
 | [aws_api_gateway_stage.apis](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_stage) | resource |
 | [aws_cloudwatch_log_group.api_gateway](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group) | resource |
+| [aws_cloudwatch_log_group.wiremock](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group) | resource |
+| [aws_ecs_service.wiremock](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_service) | resource |
+| [aws_ecs_task_definition.wiremock](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ecs_task_definition) | resource |
 | [aws_iam_role.api_gateway_cloudwatch](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
+| [aws_iam_role.wiremock_execution](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
+| [aws_iam_role.wiremock_task](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
 | [aws_iam_role_policy.api_gateway_cloudwatch](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
+| [aws_iam_role_policy.wiremock_execution_kms](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
+| [aws_iam_role_policy_attachment.wiremock_execution](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy_attachment) | resource |
 | [aws_lambda_event_source_mapping.order_router_order_placement](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_event_source_mapping) | resource |
 | [aws_lambda_event_source_mapping.sqs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_event_source_mapping) | resource |
 | [aws_lambda_permission.api_gateway](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission) | resource |
+| [aws_lb.wiremock](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb) | resource |
+| [aws_lb_listener.wiremock](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb_listener) | resource |
+| [aws_lb_target_group.wiremock](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb_target_group) | resource |
 | [aws_resourcegroups_group.rg](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/resourcegroups_group) | resource |
 | [aws_route53_record.api_domain](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_record) | resource |
 | [aws_route53_record.api_domain_cert_validation](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_record) | resource |
 | [aws_route53_record.cloudfront_cert_validation](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_record) | resource |
+| [aws_security_group.wiremock](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
+| [aws_security_group.wiremock_alb](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
+| [aws_service_discovery_service.wiremock](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/service_discovery_service) | resource |
 | [aws_wafv2_web_acl_association.apis](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/wafv2_web_acl_association) | resource |
+| [aws_vpc.selected](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/vpc) | data source |
 
 ## Inputs
 
@@ -307,6 +321,7 @@ After deployment, you'll have access to:
 | <a name="input_custom_domain_name"></a> [custom\_domain\_name](#input\_custom\_domain\_name) | Custom domain name for the environment (e.g., dev1.hometest.service.nhs.uk) | `string` | `null` | no |
 | <a name="input_enable_cloudfront_logging"></a> [enable\_cloudfront\_logging](#input\_enable\_cloudfront\_logging) | Enable CloudFront access logging | `bool` | `false` | no |
 | <a name="input_enable_vpc_access"></a> [enable\_vpc\_access](#input\_enable\_vpc\_access) | Enable VPC access for Lambda functions | `bool` | `false` | no |
+| <a name="input_enable_wiremock"></a> [enable\_wiremock](#input\_enable\_wiremock) | Enable WireMock ECS Fargate service for API stubbing and Playwright tests | `bool` | `false` | no |
 | <a name="input_environment"></a> [environment](#input\_environment) | Environment name (dev, dev1, dev2, staging, prod) | `string` | n/a | yes |
 | <a name="input_geo_restriction_locations"></a> [geo\_restriction\_locations](#input\_geo\_restriction\_locations) | List of country codes for geo restriction | `list(string)` | `[]` | no |
 | <a name="input_geo_restriction_type"></a> [geo\_restriction\_type](#input\_geo\_restriction\_type) | Geo restriction type (whitelist, blacklist, none) | `string` | `"none"` | no |
@@ -336,6 +351,13 @@ After deployment, you'll have access to:
 | <a name="input_vpc_id"></a> [vpc\_id](#input\_vpc\_id) | VPC ID (from network) | `string` | `null` | no |
 | <a name="input_waf_cloudfront_arn"></a> [waf\_cloudfront\_arn](#input\_waf\_cloudfront\_arn) | ARN of CloudFront WAF Web ACL (from shared\_services) | `string` | `null` | no |
 | <a name="input_waf_regional_arn"></a> [waf\_regional\_arn](#input\_waf\_regional\_arn) | ARN of Regional WAF Web ACL to associate with API Gateway stages (from shared\_services) | `string` | `null` | no |
+| <a name="input_wiremock_cpu"></a> [wiremock\_cpu](#input\_wiremock\_cpu) | CPU units for the WireMock Fargate task (256 = 0.25 vCPU) | `number` | `256` | no |
+| <a name="input_wiremock_desired_count"></a> [wiremock\_desired\_count](#input\_wiremock\_desired\_count) | Number of WireMock tasks to run | `number` | `1` | no |
+| <a name="input_wiremock_ecs_cluster_arn"></a> [wiremock\_ecs\_cluster\_arn](#input\_wiremock\_ecs\_cluster\_arn) | ARN of the ECS cluster to deploy WireMock into | `string` | `null` | no |
+| <a name="input_wiremock_image_tag"></a> [wiremock\_image\_tag](#input\_wiremock\_image\_tag) | Docker image tag for wiremock/wiremock (e.g., '3.13.0', 'latest') | `string` | `"3.13.0"` | no |
+| <a name="input_wiremock_memory"></a> [wiremock\_memory](#input\_wiremock\_memory) | Memory (MiB) for the WireMock Fargate task | `number` | `512` | no |
+| <a name="input_wiremock_service_discovery_namespace_id"></a> [wiremock\_service\_discovery\_namespace\_id](#input\_wiremock\_service\_discovery\_namespace\_id) | Cloud Map namespace ID for service discovery (from core ECS cluster) | `string` | `null` | no |
+| <a name="input_wiremock_subnet_ids"></a> [wiremock\_subnet\_ids](#input\_wiremock\_subnet\_ids) | Private subnet IDs for WireMock ECS tasks and ALB | `list(string)` | `[]` | no |
 
 ## Outputs
 
@@ -372,4 +394,7 @@ After deployment, you'll have access to:
 | <a name="output_sqs_dlq_url"></a> [sqs\_dlq\_url](#output\_sqs\_dlq\_url) | URL of the events dead letter queue |
 | <a name="output_sqs_queue_arn"></a> [sqs\_queue\_arn](#output\_sqs\_queue\_arn) | ARN of the events SQS queue |
 | <a name="output_sqs_queue_url"></a> [sqs\_queue\_url](#output\_sqs\_queue\_url) | URL of the events SQS queue |
+| <a name="output_wiremock_admin_url"></a> [wiremock\_admin\_url](#output\_wiremock\_admin\_url) | Internal URL for WireMock admin API |
+| <a name="output_wiremock_alb_dns_name"></a> [wiremock\_alb\_dns\_name](#output\_wiremock\_alb\_dns\_name) | DNS name of the internal WireMock ALB |
+| <a name="output_wiremock_url"></a> [wiremock\_url](#output\_wiremock\_url) | Internal URL for WireMock API (use from Lambdas / Playwright) |
 <!-- END_TF_DOCS -->

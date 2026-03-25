@@ -255,6 +255,20 @@ dependency "aurora_postgres" {
   mock_outputs_allowed_terraform_commands = ["validate", "plan"]
 }
 
+dependency "ecs" {
+  config_path = "${get_terragrunt_dir()}/../../core/ecs"
+
+  mock_outputs = {
+    cluster_arn                      = "arn:aws:ecs:eu-west-2:123456789012:cluster/mock-ecs-cluster"
+    cluster_name                     = "mock-ecs-cluster"
+    service_discovery_namespace_id   = "ns-mock1234567890"
+    service_discovery_namespace_name = "ecs.mock.local"
+    ecs_tasks_security_group_id      = "sg-mock-ecs-tasks"
+    ecs_tasks_log_group_name         = "/ecs/mock/tasks"
+  }
+  mock_outputs_allowed_terraform_commands = ["validate", "plan"]
+}
+
 # ---------------------------------------------------------------------------------------------------------------------
 # INPUTS - Shared across all hometest-app environments
 # Environment-specific terragrunt.hcl files can override any of these via deep merge.
@@ -590,4 +604,14 @@ inputs = {
 
   # CloudFront Configuration
   cloudfront_price_class = local.cloudfront_price_class
+
+  # ---------------------------------------------------------------------------
+  # WireMock (ECS Fargate)
+  # Disabled by default — enable per-environment in child terragrunt.hcl
+  # Used for Playwright E2E tests and stubbing 3rd-party APIs in dev envs
+  # ---------------------------------------------------------------------------
+  enable_wiremock                         = false
+  wiremock_ecs_cluster_arn                = dependency.ecs.outputs.cluster_arn
+  wiremock_subnet_ids                     = dependency.network.outputs.private_subnet_ids
+  wiremock_service_discovery_namespace_id = dependency.ecs.outputs.service_discovery_namespace_id
 }

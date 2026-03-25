@@ -25,6 +25,9 @@ include "app" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 inputs = {
+  # WireMock - enabled for dev to stub 3rd-party APIs and support Playwright tests
+  enable_wiremock = true
+
   # Hello World Lambda - simple health check (dev environment only)
   lambdas = {
     "hello-world-lambda" = {

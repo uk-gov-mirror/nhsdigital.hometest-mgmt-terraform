@@ -415,6 +415,58 @@ variable "geo_restriction_locations" {
 }
 
 ################################################################################
+# WireMock Configuration
+################################################################################
+
+variable "enable_wiremock" {
+  description = "Enable WireMock ECS Fargate service for API stubbing and Playwright tests"
+  type        = bool
+  default     = false
+}
+
+variable "wiremock_ecs_cluster_arn" {
+  description = "ARN of the ECS cluster to deploy WireMock into"
+  type        = string
+  default     = null
+}
+
+variable "wiremock_subnet_ids" {
+  description = "Private subnet IDs for WireMock ECS tasks and ALB"
+  type        = list(string)
+  default     = []
+}
+
+variable "wiremock_service_discovery_namespace_id" {
+  description = "Cloud Map namespace ID for service discovery (from core ECS cluster)"
+  type        = string
+  default     = null
+}
+
+variable "wiremock_image_tag" {
+  description = "Docker image tag for wiremock/wiremock (e.g., '3.13.0', 'latest')"
+  type        = string
+  default     = "3.13.0"
+}
+
+variable "wiremock_cpu" {
+  description = "CPU units for the WireMock Fargate task (256 = 0.25 vCPU)"
+  type        = number
+  default     = 256
+}
+
+variable "wiremock_memory" {
+  description = "Memory (MiB) for the WireMock Fargate task"
+  type        = number
+  default     = 512
+}
+
+variable "wiremock_desired_count" {
+  description = "Number of WireMock tasks to run"
+  type        = number
+  default     = 1
+}
+
+################################################################################
 # Region Configuration
 ################################################################################
 

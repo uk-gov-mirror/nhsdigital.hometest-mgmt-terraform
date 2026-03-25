@@ -164,3 +164,22 @@ output "deployment_info" {
     api_prefixes  = [for prefix in local.api_prefixes : prefix]
   }
 }
+
+#------------------------------------------------------------------------------
+# WireMock (when enabled)
+#------------------------------------------------------------------------------
+
+output "wiremock_alb_dns_name" {
+  description = "DNS name of the internal WireMock ALB"
+  value       = try(aws_lb.wiremock[0].dns_name, null)
+}
+
+output "wiremock_url" {
+  description = "Internal URL for WireMock API (use from Lambdas / Playwright)"
+  value       = var.enable_wiremock ? "http://${aws_lb.wiremock[0].dns_name}" : null
+}
+
+output "wiremock_admin_url" {
+  description = "Internal URL for WireMock admin API"
+  value       = var.enable_wiremock ? "http://${aws_lb.wiremock[0].dns_name}/__admin" : null
+}
