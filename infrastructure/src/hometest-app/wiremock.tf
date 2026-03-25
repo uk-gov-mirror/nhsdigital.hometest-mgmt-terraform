@@ -6,7 +6,13 @@
 # - Providing a mock backend for Playwright end-to-end tests
 #
 # Uses terraform-aws-modules/ecs/aws//modules/service for the ECS service
-# and terraform-aws-modules/alb/aws for the internal ALB.
+# and terraform-aws-modules/alb/aws for the internet-facing ALB.
+#
+# Exposure model (mirrors Lambda/API Gateway):
+# - Internet-facing ALB in public subnets (protected by network firewall)
+# - Regional WAF attached to the ALB (same rules as API Gateway)
+# - HTTPS via shared wildcard ACM certificate
+# - Route53 alias: wiremock-<env>.<account>.hometest.service.nhs.uk
 #
 # Cost optimisations (dev-only workloads):
 # - ARM64 (Graviton) — ~20% cheaper than x86_64
@@ -22,6 +28,7 @@
 locals {
   wiremock_name           = "${local.resource_prefix}-wiremock"
   wiremock_container_port = 8080
+  wiremock_domain         = var.enable_wiremock && var.wiremock_domain_name != null ? var.wiremock_domain_name : null
 }
 
 ################################################################################
@@ -48,8 +55,12 @@ resource "aws_cloudwatch_log_group" "wiremock" {
 }
 
 ################################################################################
-# Internal ALB — terraform-aws-modules/alb/aws
+# Internet-facing ALB — terraform-aws-modules/alb/aws
 # https://github.com/terraform-aws-modules/terraform-aws-alb/releases
+#
+# Placed in PUBLIC subnets so it gets a public IP and is reachable from the
+# internet. The AWS Network Firewall (if enabled) inspects all ingress/egress
+# traffic on the public subnets automatically via VPC route tables.
 ################################################################################
 
 module "wiremock_alb" {
@@ -60,22 +71,29 @@ module "wiremock_alb" {
   version = "~> 9.16.0"
 
   name     = "${local.wiremock_name}-alb"
-  internal = true
+  internal = false # Internet-facing — same as API Gateway exposure model
 
   vpc_id  = var.vpc_id
-  subnets = var.wiremock_subnet_ids
+  subnets = var.wiremock_public_subnet_ids # Public subnets (protected by network firewall)
 
   enable_deletion_protection = false
   drop_invalid_header_fields = true
 
-  # Security group — VPC-only ingress
+  # Security group — HTTPS from internet (WAF provides L7 protection)
   security_group_ingress_rules = {
-    http_vpc = {
+    https_all = {
+      from_port   = 443
+      to_port     = 443
+      ip_protocol = "tcp"
+      cidr_ipv4   = "0.0.0.0/0"
+      description = "HTTPS from internet"
+    }
+    http_all = {
       from_port   = 80
       to_port     = 80
       ip_protocol = "tcp"
-      cidr_ipv4   = data.aws_vpc.selected[0].cidr_block
-      description = "HTTP from VPC"
+      cidr_ipv4   = "0.0.0.0/0"
+      description = "HTTP from internet (redirected to HTTPS)"
     }
   }
   security_group_egress_rules = {
@@ -89,12 +107,27 @@ module "wiremock_alb" {
   }
 
   listeners = {
+    # HTTPS listener — terminates TLS with shared wildcard certificate
+    https = {
+      port            = 443
+      protocol        = "HTTPS"
+      ssl_policy      = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+      certificate_arn = var.acm_regional_certificate_arn
+
+      forward = {
+        target_group_key = "wiremock"
+      }
+    }
+
+    # HTTP listener — redirect all HTTP to HTTPS
     http = {
       port     = 80
       protocol = "HTTP"
 
-      forward = {
-        target_group_key = "wiremock"
+      redirect = {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
       }
     }
   }
@@ -127,6 +160,37 @@ module "wiremock_alb" {
 }
 
 ################################################################################
+# WAF Association — same regional WAF as API Gateway
+################################################################################
+
+resource "aws_wafv2_web_acl_association" "wiremock" {
+  count = var.enable_wiremock && var.waf_regional_arn != null ? 1 : 0
+
+  resource_arn = module.wiremock_alb[0].arn
+  web_acl_arn  = var.waf_regional_arn
+}
+
+################################################################################
+# Route53 — custom domain for WireMock
+# Pattern: wiremock-<env>.<account>.hometest.service.nhs.uk
+# Covered by shared wildcard cert *.poc.hometest.service.nhs.uk
+################################################################################
+
+resource "aws_route53_record" "wiremock" {
+  count = var.enable_wiremock && local.wiremock_domain != null ? 1 : 0
+
+  zone_id = var.route53_zone_id
+  name    = local.wiremock_domain
+  type    = "A"
+
+  alias {
+    name                   = module.wiremock_alb[0].dns_name
+    zone_id                = module.wiremock_alb[0].zone_id
+    evaluate_target_health = true
+  }
+}
+
+################################################################################
 # Service Discovery
 ################################################################################
 
@@ -155,6 +219,8 @@ resource "aws_service_discovery_service" "wiremock" {
 ################################################################################
 # ECS Service — terraform-aws-modules/ecs/aws//modules/service
 # https://github.com/terraform-aws-modules/terraform-aws-ecs/releases
+#
+# Tasks run in PRIVATE subnets — only the ALB is in public subnets.
 ################################################################################
 
 module "wiremock_service" {
@@ -260,13 +326,12 @@ module "wiremock_service" {
   tasks_iam_role_name        = "${local.wiremock_name}-task"
   tasks_iam_role_description = "ECS task role for WireMock — no extra permissions needed"
 
-  # Restrict assume-role to this account's ECS tasks only
   tasks_iam_role_statements = {}
 
   # ---------------------------------------------------------------------------
-  # Networking — private subnets, no public IP
+  # Networking — PRIVATE subnets, no public IP
   # ---------------------------------------------------------------------------
-  subnet_ids         = var.wiremock_subnet_ids
+  subnet_ids         = var.wiremock_subnet_ids # Private subnets (tasks don't need internet directly)
   assign_public_ip   = false
   enable_autoscaling = false
 
@@ -282,7 +347,7 @@ module "wiremock_service" {
         to_port                  = local.wiremock_container_port
         protocol                 = "tcp"
         source_security_group_id = module.wiremock_alb[0].security_group_id
-        description              = "HTTP from internal ALB"
+        description              = "HTTP from ALB"
       }
       https_egress = {
         type        = "egress"
@@ -340,7 +405,6 @@ module "wiremock_service" {
     }
   } : {}
 
-  # Ignore desired_count drift (manual scaling, stop/start)
   ignore_task_definition_changes = false
 
   tags = local.common_tags

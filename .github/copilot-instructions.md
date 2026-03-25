@@ -130,7 +130,7 @@ All deployments use the `deploy-terragrunt` composite action which runs `mise ex
 - Use `dependency` blocks for cross-module references
 - Validate inputs with `terragrunt_validate_inputs` (strict mode enabled)
 - Format with `terragrunt fmt` (enforced by pre-commit)
-- Remote state: S3 bucket `nhs-hometest-poc-core-s3-tfstate` with KMS encryption
+- Remote state: S3 bucket `nhs-hometest-${environment}-core-s3-tfstate` with KMS encryption
 - State key pattern: `${account_name}-${environment}-${module_name}.tfstate`
 - Lockfile enabled, parallelism set to 20
 
@@ -151,7 +151,7 @@ All deployments use the `deploy-terragrunt` composite action which runs `mise ex
 - Quote all shell variables: `"$GITHUB_OUTPUT"`, `"$GITHUB_STEP_SUMMARY"`
 - Use grouped redirects: `{ echo "..."; } >> "$GITHUB_OUTPUT"`
 - Use parameter expansion over sed: `${GITHUB_REF#refs/heads/}`
-- Use `jdx/mise-action@v3` for tool installation
+- Use action `install-mise` for tool installation
 - Define inputs for reusable workflows
 - Must pass actionlint validation (enforced by pre-commit)
 - Workflows follow naming convention: `cicd-N-*.yaml` for pipeline stages, `stage-N-*.yaml` for reusable stage workflows, `deploy-tf-*.yaml` for deployment workflows

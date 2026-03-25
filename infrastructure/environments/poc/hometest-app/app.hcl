@@ -212,6 +212,7 @@ dependency "network" {
     route53_zone_id              = "Z0123456789ABCDEFGHIJ"
     vpc_id                       = "vpc-mock12345"
     private_subnet_ids           = ["subnet-mock1", "subnet-mock2", "subnet-mock3"]
+    public_subnet_ids            = ["subnet-pub-mock1", "subnet-pub-mock2", "subnet-pub-mock3"]
     lambda_security_group_id     = "sg-mock12345"
     lambda_rds_security_group_id = "sg-mock67890"
   }
@@ -604,12 +605,14 @@ inputs = {
   cloudfront_price_class = local.cloudfront_price_class
 
   # ---------------------------------------------------------------------------
-  # WireMock (ECS Fargate)
+  # WireMock (ECS Fargate) — Internet-facing with WAF + HTTPS + Route53
   # Disabled by default — enable per-environment in child terragrunt.hcl
   # Used for Playwright E2E tests and stubbing 3rd-party APIs in dev envs
   # ---------------------------------------------------------------------------
   enable_wiremock                         = false
   wiremock_ecs_cluster_arn                = dependency.ecs.outputs.cluster_arn
   wiremock_subnet_ids                     = dependency.network.outputs.private_subnet_ids
+  wiremock_public_subnet_ids              = dependency.network.outputs.public_subnet_ids
   wiremock_service_discovery_namespace_id = dependency.ecs.outputs.service_discovery_namespace_id
+  wiremock_domain_name                    = "wiremock-${local.environment}.${local.base_domain}"
 }

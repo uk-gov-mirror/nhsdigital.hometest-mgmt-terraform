@@ -431,9 +431,21 @@ variable "wiremock_ecs_cluster_arn" {
 }
 
 variable "wiremock_subnet_ids" {
-  description = "Private subnet IDs for WireMock ECS tasks and ALB"
+  description = "Private subnet IDs for WireMock ECS tasks"
   type        = list(string)
   default     = []
+}
+
+variable "wiremock_public_subnet_ids" {
+  description = "Public subnet IDs for the internet-facing WireMock ALB (protected by network firewall)"
+  type        = list(string)
+  default     = []
+}
+
+variable "wiremock_domain_name" {
+  description = "Custom domain for WireMock (e.g., wiremock-dev.poc.hometest.service.nhs.uk). Must be covered by acm_regional_certificate_arn."
+  type        = string
+  default     = null
 }
 
 variable "wiremock_service_discovery_namespace_id" {
