@@ -314,32 +314,36 @@ main() {
   # Step 1: Replicate setupSchemaAndUser (Lambda step 1)
   setup_schema_and_user
 
-  # Step 2: Goose status before any migrations (Lambda step 3)
+  # Step 2: Validate migration files before running them
+  log_info "=== Validating Migrations ==="
+  run_goose validate
+
+  # Step 3: Goose status before any migrations
   log_info "=== Migration Status (Initial) ==="
   run_goose status
 
-  # Step 3: Run migrations with search_path=<schema> (Lambda step 2+3)
+  # Step 4: Run migrations with search_path=<schema> (Lambda step 2)
   log_info "=== Running Migrations (Up) ==="
   run_goose up
 
   log_info "=== Migration Status (After Up) ==="
   run_goose status
 
-  # Step 4: Verify tables landed in the right schema
+  # Step 5: Verify tables landed in the right schema
   verify_tables_in_schema
   verify_no_tables_in_public
 
-  # Step 5: Re-grant on existing tables (covers tables created before DEFAULT PRIVILEGES)
+  # Step 6: Re-grant on existing tables (Lambda step 3 — covers tables created before DEFAULT PRIVILEGES)
   log_info "=== Granting privileges on migrated tables to '${APP_USERNAME}' ==="
   psql_master -v ON_ERROR_STOP=1 -c \
     "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA ${POSTGRES_SCHEMA} TO ${APP_USERNAME};"
   psql_master -v ON_ERROR_STOP=1 -c \
     "GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA ${POSTGRES_SCHEMA} TO ${APP_USERNAME};"
 
-  # Step 6: Verify app_user can perform DML but cannot create tables
+  # Step 7: Verify app_user can perform DML but cannot create tables
   verify_app_user_access
 
-  # Step 7: Rollback and re-apply (idempotency)
+  # Step 8: Rollback and re-apply (idempotency)
   log_info "=== Testing Rollback (Down) ==="
   run_goose down
 
@@ -349,7 +353,7 @@ main() {
   log_info "=== Testing Re-apply (Up again — idempotency) ==="
   run_goose up
 
-  # Step 8: Re-grant after re-apply (mirrors what the Lambda does on each invocation)
+  # Step 9: Re-grant after re-apply (mirrors what the Lambda does on each invocation)
   psql_master -v ON_ERROR_STOP=1 -c \
     "GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA ${POSTGRES_SCHEMA} TO ${APP_USERNAME};" >/dev/null
   psql_master -v ON_ERROR_STOP=1 -c \

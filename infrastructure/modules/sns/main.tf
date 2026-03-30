@@ -6,7 +6,7 @@
 locals {
   topic_name_suffix = coalesce(var.topic_name_suffix, "topic")
 
-  topic_name = "${var.project_name}-${var.environment}-${local.topic_name_suffix}"
+  topic_name = "${var.project_name}-${var.aws_account_shortname}-${var.environment}-${local.topic_name_suffix}"
 
   common_tags = merge(
     var.tags,

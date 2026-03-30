@@ -30,7 +30,7 @@ runs:
         path: |
           ~/.local/share/mise
           ${{ inputs.working_directory }}/.mise-cache
-        key: mise-${{ runner.os }}-mgmt-${{ github.event_name == 'pull_request' && 'pr' || 'push' }}-${{ hashFiles(format('{0}/.mise.toml', steps.repo-root.outputs.path)) }}
+        key: mise-${{ runner.os }}-mgmt-${{ github.event_name == 'pull_request' && 'pr' || 'push' }}-${{ hashFiles(format('{0}/mise.lock', steps.repo-root.outputs.path)) }}
         restore-keys: |
           mise-${{ runner.os }}-mgmt-${{ github.event_name == 'pull_request' && 'pr' || 'push' }}-
           mise-${{ runner.os }}-mgmt-

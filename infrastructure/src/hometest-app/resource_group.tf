@@ -30,6 +30,10 @@ resource "aws_resourcegroups_group" "rg" {
         {
           Key    = "Component"
           Values = ["hometest-app"]
+        },
+        {
+          Key    = "Environment"
+          Values = [var.environment]
         }
       ]
     })

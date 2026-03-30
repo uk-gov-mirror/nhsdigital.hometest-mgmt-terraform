@@ -31,6 +31,8 @@ paths = [
   '''.pre-commit-config\.yaml''',
 ]
 regexes = [
+
   '''SUPPLIER_CLIENT_ID''',
-  '''client_id'''
+  '''client_id''',
+  '''nhs-hometest\/.*\/.+-secret'''
 ]

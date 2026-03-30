@@ -1,3 +1,7 @@
+[settings]
+lockfile = true
+install_before = "7d"
+
 [tools]
 # Custom registries are not included in mise-versions
 # https://mise-versions.jdx.dev/
@@ -9,46 +13,50 @@
 ## Infrastructure tools
 
 # https://github.com/hashicorp/terraform/releases
-terraform = "1.14.6"
+terraform = "1.14.7"
 
 # https://github.com/gruntwork-io/terragrunt/releases
 terragrunt = "0.99.4"
 
 # https://github.com/terraform-linters/tflint/releases
-tflint = "latest"
+tflint = "0.61.0"
 
 # https://github.com/terraform-docs/terraform-docs/releases
-terraform-docs = "latest"
+terraform-docs = "0.21.0"
 
 # https://github.com/aws/aws-cli/tags
-awscli = "2.33.13"
+awscli = "2.34.15"
 
 # https://go.dev/dl/
-go = "1.26.0"
+go = "1.26.1"
 
 # https://github.com/pressly/goose/releases
-"go:github.com/pressly/goose/v3/cmd/goose" = "latest"
+"go:github.com/pressly/goose/v3/cmd/goose" = "3.27.0"
 
-python = "3.14"
+# https://devguide.python.org/versions/
+python = "3.14.3"
 
 ## Security scanning
 
 # https://github.com/aquasecurity/trivy/releases
-trivy = "latest"
+"aqua:aquasecurity/trivy" = "v0.69.3"
+
+# https://github.com/pypa/pipx/releases
+pipx = "1.11.0"
 
 # https://github.com/bridgecrewio/checkov/releases
-"pipx:checkov" = "latest"
+"pipx:checkov" = "3.2.510"
 
 # https://github.com/gitleaks/gitleaks/releases
-gitleaks = "8.18.4"
+gitleaks = "8.30.1"
 
 ## Pre-commit and linting
 
 # https://github.com/pre-commit/pre-commit/releases
-pre-commit = "latest"
+pre-commit = "4.5.1"
 
 # https://github.com/errata-ai/vale/releases
-vale = "latest"
+vale = "3.14.1"
 
 # https://github.com/igorshubovych/markdownlint-cli/releases
 # markdownlint-cli = "latest"
@@ -88,4 +96,4 @@ echo "Done."
 [env]
 # https://terragrunt.gruntwork.io/docs/troubleshooting/performance/
 TF_PLUGIN_CACHE_DIR = "{{config_root}}/.terraform-plugin-cache"
-#TG_EXPERIMENT = "dependency-fetch-output-from-state"
+TG_EXPERIMENT = "dependency-fetch-output-from-state"

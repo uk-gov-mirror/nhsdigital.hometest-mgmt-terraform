@@ -57,17 +57,35 @@ locals {
   create_api_certificate        = lookup(local._domain_overrides, "create_api_certificate", false)
 
   # Schema-per-environment: each env gets its own schema in the shared Aurora DB
-  db_schema            = "hometest_${local.environment}"
-  db_app_user          = "app_user_${local.db_schema}"
-  app_user_secret_name = "nhs-hometest/${local.environment}/app-user-db-secret"
+  db_schema   = "hometest_${local.environment}"
+  db_app_user = "app_user_${local.db_schema}"
+
+  # ---------------------------------------------------------------------------
+  # SECRET NAMES (environment-aware)
+  # ---------------------------------------------------------------------------
+  # secret_prefix                     = "nhs-hometest/${local.environment}"
+  secret_prefix = "nhs-hometest/dev"
+  # app_user_secret_name              = "nhs-hometest/${local.environment}/app-user-db-secret"
+  preventx_client_secret_name       = "${local.secret_prefix}/preventex-dev-client-secret"
+  sh24_client_secret_name           = "${local.secret_prefix}/sh24-dev-client-secret"
+  nhs_login_private_key_secret_name = "${local.secret_prefix}/nhs-login-private-key"
+  os_places_creds_secret_name       = "${local.secret_prefix}/os-places-creds"
+
+  # Secrets Manager ARN prefix for building IAM policies
+  secrets_arn_prefix = "arn:aws:secretsmanager:${local.aws_region}:${local.account_id}:secret"
 
   # ---------------------------------------------------------------------------
   # SOURCE PATHS
   # Override these in child terragrunt.hcl locals if needed
   # ---------------------------------------------------------------------------
-  lambdas_source_dir = "${get_repo_root()}/../hometest-service/lambdas"
+  hometest_service_dir = trimspace(run_cmd("realpath", "${get_repo_root()}/../hometest-service"))
+  scripts_dir          = "${get_repo_root()}/scripts"
+  lambda_build_cache   = "${get_repo_root()}/.lambda-build-cache"
+  spa_build_cache      = "${get_repo_root()}/.spa-build-cache"
+
+  lambdas_source_dir = "${local.hometest_service_dir}/lambdas"
   lambdas_base_path  = "${local.lambdas_source_dir}/src"
-  spa_source_dir     = "${get_repo_root()}/../hometest-service/ui"
+  spa_source_dir     = "${local.hometest_service_dir}/ui"
   spa_dist_dir       = "${local.spa_source_dir}/out"
   spa_type           = "nextjs" # "nextjs" or "vite"
 
@@ -86,6 +104,29 @@ locals {
 
   # CloudFront Defaults
   cloudfront_price_class = "PriceClass_100"
+
+  # NHS Login Configuration
+  nhs_login_base_url                         = "https://auth.sandpit.signin.nhs.uk"
+  nhs_login_client_id                        = "hometest"
+  auth_session_max_duration_minutes          = "60"
+  auth_access_token_expiry_duration_minutes  = "60"
+  auth_refresh_token_expiry_duration_minutes = "60"
+  auth_cookie_same_site                      = "Lax"
+  auth_cookie_key_id                         = "key"
+
+  # Postcode Lookup Configuration
+  postcode_lookup_base_url             = "https://api.os.uk/search/places/v1"
+  postcode_lookup_timeout_ms           = "5000"
+  postcode_lookup_max_retries          = "3"
+  postcode_lookup_retry_delay_ms       = "1000"
+  postcode_lookup_retry_backoff_factor = "2"
+  use_stub_postcode_client             = false
+
+  # Commonly used derived values
+  spa_origin = "https://${local.env_domain}"
+
+  sqs_prefix                = "https://sqs.${local.aws_region}.amazonaws.com/${local.account_id}/${local.project_name}-${local.aws_account_shortname}-${local.environment}"
+  order_placement_queue_url = "${local.sqs_prefix}-order-placement"
 
   # Security headers
   content_security_policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none';"
@@ -108,22 +149,24 @@ terraform {
 
   # Build and package Lambda code locally (Terraform uploads and deploys)
   # Uses scripts/build-lambdas.sh which only rebuilds when source changes are detected
+  # Runs under hometest-service mise env so the correct Node.js version is used
   before_hook "build_lambdas" {
     commands = ["plan",
     "apply"]
     execute = [
       "bash", "-c",
-      "\"$(cd '${get_repo_root()}' && pwd)/scripts/build-lambdas.sh\" \"$(cd '${local.lambdas_source_dir}' && pwd)\" \"$(cd '${get_repo_root()}' && pwd)/.lambda-build-cache\""
+      "mise exec -C '${local.hometest_service_dir}' -- '${local.scripts_dir}/build-lambdas.sh' '${local.lambdas_source_dir}' '${local.lambda_build_cache}'"
     ]
   }
 
   # Build SPA before apply (only rebuilds when source or backend URL changes)
   # Uses scripts/build-spa.sh which content-hashes source + NEXT_PUBLIC_BACKEND_URL
+  # Runs under hometest-service mise env so the correct Node.js version is used
   before_hook "build_spa" {
     commands = ["plan", "apply"]
     execute = [
       "bash", "-c",
-      "\"$(cd '${get_repo_root()}' && pwd)/scripts/build-spa.sh\" \"$(cd '${local.spa_source_dir}' && pwd)\" \"$(cd '${get_repo_root()}' && pwd)/.spa-build-cache\" \"https://${local.api_domain}\" \"${local.spa_type}\""
+      "mise exec -C '${local.hometest_service_dir}' -- '${local.scripts_dir}/build-spa.sh' '${local.spa_source_dir}' '${local.spa_build_cache}' 'https://${local.api_domain}' '${local.spa_type}'"
     ]
   }
 
@@ -139,16 +182,14 @@ terraform {
         SPA_BUCKET=$(terraform output -raw spa_bucket_id 2>/dev/null || echo "")
         CLOUDFRONT_ID=$(terraform output -raw cloudfront_distribution_id 2>/dev/null || echo "")
         if [[ -n "$SPA_BUCKET" ]]; then
-          SCRIPT="$(cd '${get_repo_root()}' && pwd)/scripts/upload-spa.sh"
-          DIST_DIR="$(cd '${local.spa_dist_dir}' 2>/dev/null && pwd || echo '${local.spa_dist_dir}')"
           CF_FLAG=""
           if [[ -n "$CLOUDFRONT_ID" ]]; then
             CF_FLAG="--cloudfront-id $CLOUDFRONT_ID"
           fi
-          "$SCRIPT" "$DIST_DIR" "$SPA_BUCKET" \
+          "${local.scripts_dir}/upload-spa.sh" "${local.spa_dist_dir}" "$SPA_BUCKET" \
             --spa-type "${local.spa_type}" \
             --region "${local.aws_region}" \
-            --spa-source-dir "$(cd '${local.spa_source_dir}' && pwd)" \
+            --spa-source-dir "${local.spa_source_dir}" \
             $CF_FLAG
         else
           echo "Could not determine SPA bucket from terraform outputs, skipping upload..."
@@ -249,10 +290,10 @@ inputs = {
   # IAM Permissions - Grant Lambda access to secrets
   # Note: AWS Secrets Manager ARNs have a random suffix, use -* wildcard to match
   lambda_secrets_arns = [
-    "arn:aws:secretsmanager:eu-west-2:781863586270:secret:nhs-hometest/dev/preventex-dev-client-secret-*",
-    "arn:aws:secretsmanager:eu-west-2:781863586270:secret:nhs-hometest/dev/sh24-dev-client-secret-*",
-    "arn:aws:secretsmanager:eu-west-2:781863586270:secret:nhs-hometest/dev/nhs-login-private-key-*",
-    "arn:aws:secretsmanager:eu-west-2:781863586270:secret:nhs-hometest/dev/os-places-creds-*"
+    "${local.secrets_arn_prefix}:${local.preventx_client_secret_name}-*",
+    "${local.secrets_arn_prefix}:${local.sh24_client_secret_name}-*",
+    "${local.secrets_arn_prefix}:${local.nhs_login_private_key_secret_name}-*",
+    "${local.secrets_arn_prefix}:${local.os_places_creds_secret_name}-*"
   ]
 
   # KMS keys for secrets encrypted with different keys than shared_services KMS
@@ -300,12 +341,12 @@ inputs = {
       description     = "Eligibility Lookup Service - Returns eligibility information"
       api_path_prefix = "eligibility-lookup"
       handler         = "index.handler"
-      timeout         = 30
-      memory_size     = 256
+      timeout         = local.lambda_timeout
+      memory_size     = local.lambda_memory_size
       environment = {
         NODE_OPTIONS = "--enable-source-maps"
         ENVIRONMENT  = local.environment
-        ALLOW_ORIGIN = "https://${local.env_domain}"
+        ALLOW_ORIGIN = local.spa_origin
         DB_USERNAME  = local.db_app_user
         DB_ADDRESS   = dependency.aurora_postgres.outputs.cluster_endpoint
         DB_PORT      = tostring(dependency.aurora_postgres.outputs.cluster_port)
@@ -345,20 +386,20 @@ inputs = {
       description     = "Login Service - NHS Login authentication"
       api_path_prefix = "login"
       handler         = "index.handler"
-      timeout         = 30
-      memory_size     = 256
+      timeout         = local.lambda_timeout
+      memory_size     = local.lambda_memory_size
       environment = {
         NODE_OPTIONS                               = "--enable-source-maps"
         ENVIRONMENT                                = local.environment
-        NHS_LOGIN_BASE_ENDPOINT_URL                = "https://auth.sandpit.signin.nhs.uk"
-        NHS_LOGIN_CLIENT_ID                        = "hometest"
-        NHS_LOGIN_REDIRECT_URL                     = "https://${local.env_domain}/callback"
-        NHS_LOGIN_PRIVATE_KEY_SECRET_NAME          = "nhs-hometest/dev/nhs-login-private-key"
-        AUTH_SESSION_MAX_DURATION_MINUTES          = "60"
-        AUTH_ACCESS_TOKEN_EXPIRY_DURATION_MINUTES  = "60"
-        AUTH_REFRESH_TOKEN_EXPIRY_DURATION_MINUTES = "60"
-        AUTH_COOKIE_SAME_SITE                      = "Lax"
-        COOKIE_ACCESS_CONTROL_ALLOW_ORIGIN         = "https://${local.env_domain}"
+        NHS_LOGIN_BASE_ENDPOINT_URL                = local.nhs_login_base_url
+        NHS_LOGIN_CLIENT_ID                        = local.nhs_login_client_id
+        NHS_LOGIN_REDIRECT_URL                     = "${local.spa_origin}/callback"
+        NHS_LOGIN_PRIVATE_KEY_SECRET_NAME          = local.nhs_login_private_key_secret_name
+        AUTH_SESSION_MAX_DURATION_MINUTES          = local.auth_session_max_duration_minutes
+        AUTH_ACCESS_TOKEN_EXPIRY_DURATION_MINUTES  = local.auth_access_token_expiry_duration_minutes
+        AUTH_REFRESH_TOKEN_EXPIRY_DURATION_MINUTES = local.auth_refresh_token_expiry_duration_minutes
+        AUTH_COOKIE_SAME_SITE                      = local.auth_cookie_same_site
+        COOKIE_ACCESS_CONTROL_ALLOW_ORIGIN         = local.spa_origin
       }
     }
 
@@ -369,15 +410,15 @@ inputs = {
       description     = "Session Service - Validates auth cookie and returns user info"
       api_path_prefix = "session"
       handler         = "index.handler"
-      timeout         = 30
-      memory_size     = 256
+      timeout         = local.lambda_timeout
+      memory_size     = local.lambda_memory_size
       environment = {
         NODE_OPTIONS                       = "--enable-source-maps"
         ENVIRONMENT                        = local.environment
-        AUTH_COOKIE_KEY_ID                 = "key"
-        AUTH_COOKIE_PUBLIC_KEY_SECRET_NAME = "nhs-hometest/dev/nhs-login-private-key"
-        NHS_LOGIN_BASE_ENDPOINT_URL        = "https://auth.sandpit.signin.nhs.uk"
-        COOKIE_ACCESS_CONTROL_ALLOW_ORIGIN = "https://${local.env_domain}"
+        AUTH_COOKIE_KEY_ID                 = local.auth_cookie_key_id
+        AUTH_COOKIE_PUBLIC_KEY_SECRET_NAME = local.nhs_login_private_key_secret_name
+        NHS_LOGIN_BASE_ENDPOINT_URL        = local.nhs_login_base_url
+        COOKIE_ACCESS_CONTROL_ALLOW_ORIGIN = local.spa_origin
       }
     }
 
@@ -387,8 +428,8 @@ inputs = {
       description     = "Order Result Service - Receives test results from suppliers"
       api_path_prefix = "result"
       handler         = "index.handler"
-      timeout         = 30
-      memory_size     = 256
+      timeout         = local.lambda_timeout
+      memory_size     = local.lambda_memory_size
       environment = {
         NODE_OPTIONS = "--enable-source-maps"
         ENVIRONMENT  = local.environment
@@ -411,13 +452,13 @@ inputs = {
       api_path_prefix = "order"
       handler         = "index.handler"
       http_method     = "POST"
-      timeout         = 30
-      memory_size     = 256
+      timeout         = local.lambda_timeout
+      memory_size     = local.lambda_memory_size
       environment = {
         NODE_OPTIONS              = "--enable-source-maps"
         ENVIRONMENT               = local.environment
-        ALLOW_ORIGIN              = "https://${local.env_domain}"
-        ORDER_PLACEMENT_QUEUE_URL = "https://sqs.${local.aws_region}.amazonaws.com/${local.account_id}/${local.project_name}-${local.aws_account_shortname}-${local.environment}-order-placement"
+        ALLOW_ORIGIN              = local.spa_origin
+        ORDER_PLACEMENT_QUEUE_URL = local.order_placement_queue_url
         DB_USERNAME               = local.db_app_user
         DB_ADDRESS                = dependency.aurora_postgres.outputs.cluster_endpoint
         DB_PORT                   = tostring(dependency.aurora_postgres.outputs.cluster_port)
@@ -436,12 +477,12 @@ inputs = {
       api_path_prefix = "get-order"
       handler         = "index.handler"
       http_method     = "GET"
-      timeout         = 30
-      memory_size     = 256
+      timeout         = local.lambda_timeout
+      memory_size     = local.lambda_memory_size
       environment = {
         NODE_OPTIONS = "--enable-source-maps"
         ENVIRONMENT  = local.environment
-        ALLOW_ORIGIN = "https://${local.env_domain}"
+        ALLOW_ORIGIN = local.spa_origin
         DB_USERNAME  = local.db_app_user
         DB_ADDRESS   = dependency.aurora_postgres.outputs.cluster_endpoint
         DB_PORT      = tostring(dependency.aurora_postgres.outputs.cluster_port)
@@ -459,12 +500,12 @@ inputs = {
       api_path_prefix = "results"
       handler         = "index.handler"
       http_method     = "GET"
-      timeout         = 30
-      memory_size     = 256
+      timeout         = local.lambda_timeout
+      memory_size     = local.lambda_memory_size
       environment = {
         NODE_OPTIONS = "--enable-source-maps"
         ENVIRONMENT  = local.environment
-        ALLOW_ORIGIN = "https://${local.env_domain}"
+        ALLOW_ORIGIN = local.spa_origin
         DB_USERNAME  = local.db_app_user
         DB_ADDRESS   = dependency.aurora_postgres.outputs.cluster_endpoint
         DB_PORT      = tostring(dependency.aurora_postgres.outputs.cluster_port)
@@ -483,12 +524,12 @@ inputs = {
       api_path_prefix = "test-order-status"
       handler         = "index.handler"
       http_method     = "POST"
-      timeout         = 30
-      memory_size     = 256
+      timeout         = local.lambda_timeout
+      memory_size     = local.lambda_memory_size
       environment = {
         NODE_OPTIONS = "--enable-source-maps"
         ENVIRONMENT  = local.environment
-        ALLOW_ORIGIN = "https://${local.env_domain}"
+        ALLOW_ORIGIN = local.spa_origin
         DB_USERNAME  = local.db_app_user
         DB_ADDRESS   = dependency.aurora_postgres.outputs.cluster_endpoint
         DB_PORT      = tostring(dependency.aurora_postgres.outputs.cluster_port)
@@ -509,19 +550,19 @@ inputs = {
       api_path_prefix = "postcode-lookup"
       handler         = "index.handler"
       http_method     = "GET"
-      timeout         = 30
-      memory_size     = 256
+      timeout         = local.lambda_timeout
+      memory_size     = local.lambda_memory_size
       environment = {
         NODE_OPTIONS                            = "--enable-source-maps"
         ENVIRONMENT                             = local.environment
-        ALLOW_ORIGIN                            = "https://${local.env_domain}"
-        POSTCODE_LOOKUP_CREDENTIALS_SECRET_NAME = "nhs-hometest/dev/os-places-creds"
-        POSTCODE_LOOKUP_BASE_URL                = "https://api.os.uk/search/places/v1"
-        POSTCODE_LOOKUP_TIMEOUT_MS              = "5000"
-        POSTCODE_LOOKUP_MAX_RETRIES             = "3"
-        POSTCODE_LOOKUP_RETRY_DELAY_MS          = "1000"
-        POSTCODE_LOOKUP_RETRY_BACKOFF_FACTOR    = "2"
-        USE_STUB_POSTCODE_CLIENT                = false
+        ALLOW_ORIGIN                            = local.spa_origin
+        POSTCODE_LOOKUP_CREDENTIALS_SECRET_NAME = local.os_places_creds_secret_name
+        POSTCODE_LOOKUP_BASE_URL                = local.postcode_lookup_base_url
+        POSTCODE_LOOKUP_TIMEOUT_MS              = local.postcode_lookup_timeout_ms
+        POSTCODE_LOOKUP_MAX_RETRIES             = local.postcode_lookup_max_retries
+        POSTCODE_LOOKUP_RETRY_DELAY_MS          = local.postcode_lookup_retry_delay_ms
+        POSTCODE_LOOKUP_RETRY_BACKOFF_FACTOR    = local.postcode_lookup_retry_backoff_factor
+        USE_STUB_POSTCODE_CLIENT                = local.use_stub_postcode_client
       }
     }
   }
@@ -541,7 +582,7 @@ inputs = {
 
   # CORS — API Gateway OPTIONS responses and gateway error responses use this origin.
   # Must match the SPA domain exactly (credentials require a specific origin, not '*').
-  cors_allowed_origin = "https://${local.env_domain}"
+  cors_allowed_origin = local.spa_origin
 
   # Per-environment certificate creation (set via domain.hcl in child dirs)
   create_cloudfront_certificate = local.create_cloudfront_certificate

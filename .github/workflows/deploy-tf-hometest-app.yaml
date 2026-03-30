@@ -22,8 +22,8 @@ on:
         type: choice
         default: dev
         options:
-          - dev
           # - dev-example
+          - dev
           - uat
           - demo
       action:
