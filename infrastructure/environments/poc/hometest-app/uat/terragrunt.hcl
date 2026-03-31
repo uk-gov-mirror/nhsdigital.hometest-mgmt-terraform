@@ -20,3 +20,8 @@ include "app" {
 # No environment-specific overrides needed.
 # All inputs, hooks, and lambdas come from app.hcl.
 # Domain and certificate config comes from domain.hcl.
+
+inputs = {
+  # WireMock - enabled for dev to stub 3rd-party APIs and support Playwright tests
+  enable_wiremock = true
+}

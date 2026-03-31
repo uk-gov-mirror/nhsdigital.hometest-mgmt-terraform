@@ -59,6 +59,16 @@ data "aws_iam_policy_document" "infrastructure_policy" {
       # Compute
       "lambda:*",
       "ecr:*",
+      "ecs:*",
+
+      # Load Balancing
+      "elasticloadbalancing:*",
+
+      # Service Discovery (Cloud Map)
+      "servicediscovery:*",
+
+      # WAF
+      "wafv2:*",
 
       # Storage
       "s3:*",
@@ -188,6 +198,10 @@ resource "aws_iam_policy" "gha_permissions_boundary" {
           "cloudfront:*",
           "cloudwatch:*",
           "ecr:*",
+          "ecs:*",
+          "elasticloadbalancing:*",
+          "servicediscovery:*",
+          "wafv2:*",
           "resource-groups:*",
           "tag:*",
           "sts:*"

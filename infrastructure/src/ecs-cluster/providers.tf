@@ -1,5 +1,5 @@
 ################################################################################
-# Terraform and Provider Configuration
+# ECS Cluster Provider Configuration
 ################################################################################
 
 terraform {
@@ -9,10 +9,6 @@ terraform {
     aws = {
       source  = "hashicorp/aws"
       version = "~> 6.37.0"
-    }
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.6"
     }
   }
 }

@@ -415,6 +415,88 @@ variable "geo_restriction_locations" {
 }
 
 ################################################################################
+# WireMock Configuration
+################################################################################
+
+variable "enable_wiremock" {
+  description = "Enable WireMock ECS Fargate service for API stubbing and Playwright tests"
+  type        = bool
+  default     = false
+}
+
+variable "wiremock_ecs_cluster_arn" {
+  description = "ARN of the ECS cluster to deploy WireMock into"
+  type        = string
+  default     = null
+}
+
+variable "wiremock_subnet_ids" {
+  description = "Private subnet IDs for WireMock ECS tasks"
+  type        = list(string)
+  default     = []
+}
+
+variable "wiremock_alb_https_listener_arn" {
+  description = "ARN of the shared ALB HTTPS listener (from core ECS cluster)"
+  type        = string
+  default     = null
+}
+
+variable "wiremock_alb_security_group_id" {
+  description = "Security group ID of the shared ALB (from core ECS cluster)"
+  type        = string
+  default     = null
+}
+
+variable "wiremock_alb_dns_name" {
+  description = "DNS name of the shared ALB (from core ECS cluster, for Route53 alias)"
+  type        = string
+  default     = null
+}
+
+variable "wiremock_alb_zone_id" {
+  description = "Canonical hosted zone ID of the shared ALB (from core ECS cluster, for Route53 alias)"
+  type        = string
+  default     = null
+}
+
+variable "wiremock_domain_name" {
+  description = "Custom domain for WireMock (e.g., wiremock-dev.poc.hometest.service.nhs.uk). Must be covered by acm_regional_certificate_arn."
+  type        = string
+  default     = null
+}
+
+variable "wiremock_service_discovery_namespace_id" {
+  description = "Cloud Map namespace ID for service discovery (from core ECS cluster)"
+  type        = string
+  default     = null
+}
+
+variable "wiremock_image_tag" {
+  description = "Docker image tag for wiremock/wiremock (e.g., '3.13.2', 'latest')"
+  type        = string
+  default     = "3.13.2"
+}
+
+variable "wiremock_cpu" {
+  description = "CPU units for the WireMock Fargate task (256 = 0.25 vCPU)"
+  type        = number
+  default     = 256
+}
+
+variable "wiremock_memory" {
+  description = "Memory (MiB) for the WireMock Fargate task"
+  type        = number
+  default     = 512
+}
+
+variable "wiremock_desired_count" {
+  description = "Number of WireMock tasks to run"
+  type        = number
+  default     = 1
+}
+
+################################################################################
 # Region Configuration
 ################################################################################
 

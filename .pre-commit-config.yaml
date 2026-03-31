@@ -88,8 +88,15 @@ repos:
           - --args=--terragrunt-strict-validate
 
       - id: terragrunt_validate_inputs
+        name: Terragrunt validate inputs ECS
+        files: ^infrastructure/environments/poc/core/ecs/[^/]+$
+        args:
+          # Optionally check for unused inputs
+          - --args=--terragrunt-strict-validate
+
+      - id: terragrunt_validate_inputs
         name: Terragrunt validate inputs Lambda Goose Migrator
-        files: ^infrastructure/environments/poc/core/lambda-goose-migrator/[^/]+$
+        files: ^infrastructure/environments/poc/hometest-app/dev/lambda-goose-migrator/[^/]+$
         args:
           # Optionally check for unused inputs
           - --args=--terragrunt-strict-validate

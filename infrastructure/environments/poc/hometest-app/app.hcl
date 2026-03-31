@@ -212,6 +212,7 @@ dependency "network" {
     route53_zone_id              = "Z0123456789ABCDEFGHIJ"
     vpc_id                       = "vpc-mock12345"
     private_subnet_ids           = ["subnet-mock1", "subnet-mock2", "subnet-mock3"]
+    public_subnet_ids            = ["subnet-pub-mock1", "subnet-pub-mock2", "subnet-pub-mock3"]
     lambda_security_group_id     = "sg-mock12345"
     lambda_rds_security_group_id = "sg-mock67890"
   }
@@ -252,6 +253,23 @@ dependency "aurora_postgres" {
   }
 
   # mock_outputs_merge_with_state           = true
+  mock_outputs_allowed_terraform_commands = ["validate", "plan"]
+}
+
+dependency "ecs" {
+  config_path = "${get_terragrunt_dir()}/../../core/ecs"
+
+  mock_outputs = {
+    cluster_arn                      = "arn:aws:ecs:eu-west-2:123456789012:cluster/mock-ecs-cluster"
+    cluster_name                     = "mock-ecs-cluster"
+    service_discovery_namespace_id   = "ns-mock1234567890"
+    service_discovery_namespace_name = "ecs.mock.local"
+    alb_arn                          = "arn:aws:elasticloadbalancing:eu-west-2:123456789012:loadbalancer/app/mock-alb/1234567890"
+    alb_dns_name                     = "mock-alb-123456.eu-west-2.elb.amazonaws.com"
+    alb_zone_id                      = "ZHURV8PSTC4K8"
+    alb_security_group_id            = "sg-mock-alb-12345"
+    alb_https_listener_arn           = "arn:aws:elasticloadbalancing:eu-west-2:123456789012:listener/app/mock-alb/1234567890/abcdef"
+  }
   mock_outputs_allowed_terraform_commands = ["validate", "plan"]
 }
 
@@ -590,4 +608,19 @@ inputs = {
 
   # CloudFront Configuration
   cloudfront_price_class = local.cloudfront_price_class
+
+  # ---------------------------------------------------------------------------
+  # WireMock (ECS Fargate) — routes via shared ALB with host-based rules
+  # Disabled by default — enable per-environment in child terragrunt.hcl
+  # Used for Playwright E2E tests and stubbing 3rd-party APIs in dev envs
+  # ---------------------------------------------------------------------------
+  enable_wiremock                         = false
+  wiremock_ecs_cluster_arn                = dependency.ecs.outputs.cluster_arn
+  wiremock_subnet_ids                     = dependency.network.outputs.private_subnet_ids
+  wiremock_alb_https_listener_arn         = dependency.ecs.outputs.alb_https_listener_arn
+  wiremock_alb_security_group_id          = dependency.ecs.outputs.alb_security_group_id
+  wiremock_alb_dns_name                   = dependency.ecs.outputs.alb_dns_name
+  wiremock_alb_zone_id                    = dependency.ecs.outputs.alb_zone_id
+  wiremock_service_discovery_namespace_id = dependency.ecs.outputs.service_discovery_namespace_id
+  wiremock_domain_name                    = "wiremock-${local.environment}.${local.base_domain}"
 }
