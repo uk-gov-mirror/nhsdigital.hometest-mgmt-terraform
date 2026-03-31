@@ -141,7 +141,7 @@ repos:
         args: [--fix]
 
   - repo: https://github.com/sqlfluff/sqlfluff
-    rev: 4.0.4        # pin to a specific version
+    rev: 4.1.0        # pin to a specific version
     hooks:
       - id: sqlfluff-lint
         args: ["--config", ".sqlfluff"]   # optional, if you keep config elsewhere
