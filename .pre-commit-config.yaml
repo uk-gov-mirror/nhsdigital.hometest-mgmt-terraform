@@ -88,8 +88,15 @@ repos:
           - --args=--terragrunt-strict-validate
 
       - id: terragrunt_validate_inputs
+        name: Terragrunt validate inputs ECS
+        files: ^infrastructure/environments/poc/core/ecs/[^/]+$
+        args:
+          # Optionally check for unused inputs
+          - --args=--terragrunt-strict-validate
+
+      - id: terragrunt_validate_inputs
         name: Terragrunt validate inputs Lambda Goose Migrator
-        files: ^infrastructure/environments/poc/core/lambda-goose-migrator/[^/]+$
+        files: ^infrastructure/environments/poc/hometest-app/dev/lambda-goose-migrator/[^/]+$
         args:
           # Optionally check for unused inputs
           - --args=--terragrunt-strict-validate
@@ -134,7 +141,7 @@ repos:
         args: [--fix]
 
   - repo: https://github.com/sqlfluff/sqlfluff
-    rev: 4.0.4        # pin to a specific version
+    rev: 4.1.0        # pin to a specific version
     hooks:
       - id: sqlfluff-lint
         args: ["--config", ".sqlfluff"]   # optional, if you keep config elsewhere
@@ -142,7 +149,7 @@ repos:
         args: ["--config", ".sqlfluff"]   # auto-fix style issues
 
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.7.11
+    rev: v1.7.12
     hooks:
       - id: actionlint
 

@@ -164,3 +164,33 @@ output "deployment_info" {
     api_prefixes  = [for prefix in local.api_prefixes : prefix]
   }
 }
+
+#------------------------------------------------------------------------------
+# WireMock (when enabled)
+#------------------------------------------------------------------------------
+
+output "wiremock_url" {
+  description = "URL for WireMock API (custom domain if set, otherwise shared ALB DNS)"
+  value = (
+    var.enable_wiremock
+    ? (
+      var.wiremock_domain_name != null
+      ? "https://${var.wiremock_domain_name}"
+      : try("https://${var.wiremock_alb_dns_name}", null)
+    )
+    : null
+  )
+}
+
+output "wiremock_admin_url" {
+  description = "URL for WireMock admin API"
+  value = (
+    var.enable_wiremock
+    ? (
+      var.wiremock_domain_name != null
+      ? "https://${var.wiremock_domain_name}/__admin"
+      : try("https://${var.wiremock_alb_dns_name}/__admin", null)
+    )
+    : null
+  )
+}

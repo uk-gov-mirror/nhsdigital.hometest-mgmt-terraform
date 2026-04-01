@@ -18,6 +18,7 @@ locals {
     [module.sqs_order_results.queue_arn],
     [module.sqs_order_placement.queue_arn],
     [module.sqs_notifications.queue_arn],
+    [module.sqs_notify_messages.queue_arn],
   ))
 }
 
@@ -54,5 +55,11 @@ module "lambda_iam" {
 
   tags = local.common_tags
 
-  depends_on = [module.sqs_events, module.sqs_order_results, module.sqs_order_placement, module.sqs_notifications]
+  depends_on = [
+    module.sqs_events,
+    module.sqs_order_results,
+    module.sqs_order_placement,
+    module.sqs_notifications,
+    module.sqs_notify_messages
+  ]
 }

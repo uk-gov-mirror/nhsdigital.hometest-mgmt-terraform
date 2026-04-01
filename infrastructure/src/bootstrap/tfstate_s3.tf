@@ -10,7 +10,7 @@ resource "aws_s3_bucket" "tfstate" {
   bucket = local.tfstate_s3_bucket_name
 
   lifecycle {
-    prevent_destroy = false
+    prevent_destroy = true
   }
 
   tags = merge(local.common_tags, {

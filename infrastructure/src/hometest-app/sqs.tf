@@ -38,6 +38,34 @@ module "sqs_order_placement" {
 }
 
 ################################################################################
+# Notify Messages Queue
+################################################################################
+
+module "sqs_notify_messages" {
+  source = "../../modules/sqs"
+
+  project_name          = var.project_name
+  aws_account_shortname = var.aws_account_shortname
+  environment           = var.environment
+  queue_name_suffix     = "notify-messages"
+
+  visibility_timeout_seconds = 300     # 5 min — align with order-placement defaults
+  message_retention_seconds  = 1209600 # 14 days
+  receive_wait_time_seconds  = 20      # Long polling
+
+  create_dlq        = true
+  max_receive_count = 3
+
+  kms_master_key_id       = var.kms_key_arn
+  sqs_managed_sse_enabled = false
+
+  create_cloudwatch_alarms = true
+  alarm_actions            = [var.sns_alerts_topic_arn]
+
+  tags = local.common_tags
+}
+
+################################################################################
 # Order Results Queue
 # Written to by order-result-lambda
 ################################################################################
@@ -257,4 +285,14 @@ output "order_placement_queue_url" {
 output "order_placement_queue_arn" {
   description = "ARN of the order placement SQS queue"
   value       = module.sqs_order_placement.queue_arn
+}
+
+output "notify_messages_queue_url" {
+  description = "URL of the notify messages SQS queue"
+  value       = module.sqs_notify_messages.queue_url
+}
+
+output "notify_messages_queue_arn" {
+  description = "ARN of the notify messages SQS queue"
+  value       = module.sqs_notify_messages.queue_arn
 }
