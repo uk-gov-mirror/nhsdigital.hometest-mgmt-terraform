@@ -631,7 +631,7 @@ No modules.
 | <a name="input_aws_account_shortname"></a> [aws\_account\_shortname](#input\_aws\_account\_shortname) | AWS account short name/alias for resource naming | `string` | n/a | yes |
 | <a name="input_aws_allowed_regions"></a> [aws\_allowed\_regions](#input\_aws\_allowed\_regions) | List of AWS regions allowed for resource deployment | `list(string)` | <pre>[<br/>  "eu-west-2",<br/>  "us-east-1"<br/>]</pre> | no |
 | <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | AWS region for resources | `string` | n/a | yes |
-| <a name="input_az_count"></a> [az\_count](#input\_az\_count) | Number of Availability Zones to use (2-3 recommended for high availability) | `number` | `3` | no |
+| <a name="input_az_count"></a> [az\_count](#input\_az\_count) | Number of Availability Zones to use. Use 1 for cost-optimised non-production (single NAT GW / single firewall endpoint), 2-3 for high availability. | `number` | `3` | no |
 | <a name="input_create_db_subnet_group"></a> [create\_db\_subnet\_group](#input\_create\_db\_subnet\_group) | Create a DB subnet group for RDS | `bool` | `true` | no |
 | <a name="input_create_health_check"></a> [create\_health\_check](#input\_create\_health\_check) | Create a Route 53 health check for the domain | `bool` | `false` | no |
 | <a name="input_create_lambda_rds_sg"></a> [create\_lambda\_rds\_sg](#input\_create\_lambda\_rds\_sg) | Create a dedicated security group for Lambda to RDS access | `bool` | `true` | no |

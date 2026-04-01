@@ -57,13 +57,13 @@ variable "vpc_cidr" {
 }
 
 variable "az_count" {
-  description = "Number of Availability Zones to use (2-3 recommended for high availability)"
+  description = "Number of Availability Zones to use. Use 1 for cost-optimised non-production (single NAT GW / single firewall endpoint), 2-3 for high availability."
   type        = number
   default     = 3
 
   validation {
-    condition     = var.az_count >= 2 && var.az_count <= 3
-    error_message = "AZ count must be between 2 and 3 for high availability."
+    condition     = var.az_count >= 1 && var.az_count <= 3
+    error_message = "AZ count must be between 1 and 3."
   }
 }
 
