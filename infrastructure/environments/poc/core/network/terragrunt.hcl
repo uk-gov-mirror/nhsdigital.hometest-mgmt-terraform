@@ -15,15 +15,13 @@ terraform {
 }
 
 # poc is non-production - cost optimisations vs production HA:
-#   single_nat_gateway        = true  : ~$65/month saving (1 NAT GW instead of per-AZ)
-#   az_count                  = 2     : ~$284/month saving if network firewall enabled (2 endpoints not 3)
-#                                       ~$36/month saving on VPC interface endpoint ENIs
+#   az_count = 1                     : single NAT GW + single firewall endpoint; ~$65/month saving vs per-AZ NAT,
+#                                      ~$284/month saving vs 3 firewall endpoints (if network firewall enabled)
 #   enable_firewall_flow_logs = false : removes high-volume FLOW logs from CloudWatch (keep ALERT only)
 #   firewall_logs_retention_days = 7  : reduces CloudWatch storage for POC logs
-# For production, remove these overrides to restore per-AZ NAT gateways, 3-AZ redundancy, and full logging.
+# For production, remove these overrides to restore az_count = 3 and full logging.
 inputs = {
-  single_nat_gateway           = true
-  az_count                     = 2
+  az_count                     = 1
   enable_firewall_flow_logs    = false
   firewall_logs_retention_days = 7
 }

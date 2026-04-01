@@ -76,12 +76,8 @@ variable "enable_ipv6" {
 #------------------------------------------------------------------------------
 # NAT Gateway Configuration
 #------------------------------------------------------------------------------
-
-variable "single_nat_gateway" {
-  description = "Use a single NAT Gateway for all AZs (cost savings, but less HA). Set to false for production."
-  type        = bool
-  default     = false
-}
+# NAT Gateway count is controlled by az_count. Set az_count = 1 for single NAT (cost saving),
+# or az_count = 2/3 for per-AZ NAT gateways (high availability).
 
 # #------------------------------------------------------------------------------
 # # VPC Flow Logs Configuration

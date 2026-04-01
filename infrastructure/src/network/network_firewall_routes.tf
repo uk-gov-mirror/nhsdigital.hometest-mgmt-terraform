@@ -4,11 +4,11 @@
 
 # Update private subnet routes to go through firewall (when enabled)
 resource "aws_route" "private_to_firewall" {
-  count = var.enable_network_firewall ? (var.single_nat_gateway ? 1 : length(local.azs)) : 0
+  count = var.enable_network_firewall ? length(local.azs) : 0
 
   route_table_id         = aws_route_table.private[count.index].id
   destination_cidr_block = "0.0.0.0/0"
-  vpc_endpoint_id        = local.firewall_endpoint_ids[local.azs[var.single_nat_gateway ? 0 : count.index]]
+  vpc_endpoint_id        = local.firewall_endpoint_ids[local.azs[count.index]]
 
   depends_on = [aws_networkfirewall_firewall.main]
 }

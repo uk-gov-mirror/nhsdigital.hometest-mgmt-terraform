@@ -14,15 +14,16 @@ terraform {
   source = "../../../..//src/network"
 }
 
-# poc is non-production - use single NAT gateway to reduce costs (~$65/month saving vs one per AZ)
-# For production environments, remove this override to restore per-AZ NAT gateways (HA)
+# dev is non-production - az_count = 1 uses a single NAT GW and single firewall endpoint (~$65/month saving vs per-AZ)
+# For production environments, remove this override to restore az_count = 3 (per-AZ NAT gateways + HA)
 inputs = {
-  single_nat_gateway = true
-
   # Network Firewall - Enable for egress/ingress filtering
   enable_network_firewall      = true
-  firewall_logs_retention_days = 90
-  firewall_default_deny        = true
+  az_count                     = 1
+  enable_firewall_flow_logs    = false
+  firewall_logs_retention_days = 7
+
+  firewall_default_deny = true
 
   # Allow specific inbound connections (e.g., from ALB, API Gateway)
   allowed_ingress_ips = [
