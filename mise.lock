@@ -4,6 +4,11 @@
 version = "v0.69.3"
 backend = "aqua:aquasecurity/trivy"
 
+[tools."aqua:aquasecurity/trivy"."platforms.linux-arm64"]
+checksum = "sha256:7e3924a974e912e57b4a99f65ece7931f8079584dae12eb7845024f97087bdfd"
+url = "https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_Linux-ARM64.tar.gz"
+provenance = "cosign"
+
 [tools."aqua:aquasecurity/trivy"."platforms.linux-x64"]
 checksum = "sha256:1816b632dfe529869c740c0913e36bd1629cb7688bd5634f4a858c1d57c88b75"
 url = "https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_Linux-64bit.tar.gz"
@@ -45,6 +50,10 @@ url = "https://awscli.amazonaws.com/AWSCLIV2-2.34.15.pkg"
 [[tools.gitleaks]]
 version = "8.30.1"
 backend = "aqua:gitleaks/gitleaks"
+
+[tools.gitleaks."platforms.linux-arm64"]
+checksum = "sha256:e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080"
+url = "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_arm64.tar.gz"
 
 [tools.gitleaks."platforms.linux-x64"]
 checksum = "sha256:551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
@@ -98,6 +107,10 @@ backend = "go:github.com/pressly/goose/v3/cmd/goose"
 version = "1.11.0"
 backend = "aqua:pypa/pipx"
 
+[tools.pipx."platforms.linux-arm64"]
+checksum = "sha256:088012ed44db557464e48721275b62b2c2a9a943f444cde05f82cf7a23e63dbc"
+url = "https://github.com/pypa/pipx/releases/download/1.11.0/pipx.pyz"
+
 [tools.pipx."platforms.linux-x64"]
 checksum = "sha256:088012ed44db557464e48721275b62b2c2a9a943f444cde05f82cf7a23e63dbc"
 url = "https://github.com/pypa/pipx/releases/download/1.11.0/pipx.pyz"
@@ -114,6 +127,10 @@ backend = "pipx:checkov"
 version = "4.5.1"
 backend = "aqua:pre-commit/pre-commit"
 
+[tools.pre-commit."platforms.linux-arm64"]
+checksum = "sha256:19d00ba35cbf9c04dc3736cd8bb641e8633f3eddd4cedde71809574ae68a2cd1"
+url = "https://github.com/pre-commit/pre-commit/releases/download/v4.5.1/pre-commit-4.5.1.pyz"
+
 [tools.pre-commit."platforms.linux-x64"]
 checksum = "sha256:19d00ba35cbf9c04dc3736cd8bb641e8633f3eddd4cedde71809574ae68a2cd1"
 url = "https://github.com/pre-commit/pre-commit/releases/download/v4.5.1/pre-commit-4.5.1.pyz"
@@ -125,6 +142,10 @@ url = "https://github.com/pre-commit/pre-commit/releases/download/v4.5.1/pre-com
 [[tools.python]]
 version = "3.14.3"
 backend = "core:python"
+
+[tools.python."platforms.linux-arm64"]
+checksum = "sha256:53700338695e402a1a1fe22be4a41fbdacc70e22bb308a48eca8ed67cb7992be"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260324/cpython-3.14.3+20260324-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz"
 
 [tools.python."platforms.linux-x64"]
 checksum = "sha256:d7a9f970914bb4c88756fe3bdcc186d4feb90e9500e54f1db47dae4dc9687e39"
@@ -142,6 +163,10 @@ url = "https://github.com/astral-sh/python-build-standalone/releases/download/20
 version = "1.14.7"
 backend = "aqua:hashicorp/terraform"
 
+[tools.terraform."platforms.linux-arm64"]
+checksum = "sha256:04f88ee8924db27c0e26c379721965273c80c9b6a94bc5d8d8048a69163952ba"
+url = "https://releases.hashicorp.com/terraform/1.14.7/terraform_1.14.7_linux_arm64.zip"
+
 [tools.terraform."platforms.linux-x64"]
 checksum = "sha256:e8bbcefea8015156e04e2a325cde37a0b2fb761728bda548e2fe3b8ad7c18c96"
 url = "https://releases.hashicorp.com/terraform/1.14.7/terraform_1.14.7_linux_amd64.zip"
@@ -157,6 +182,10 @@ url = "https://releases.hashicorp.com/terraform/1.14.7/terraform_1.14.7_windows_
 [[tools.terraform-docs]]
 version = "0.21.0"
 backend = "aqua:terraform-docs/terraform-docs"
+
+[tools.terraform-docs."platforms.linux-arm64"]
+checksum = "sha256:35b2e6846268841484e6eea7d00d7dfe2c94b4725e52cfe19aa6c26a86c32edc"
+url = "https://github.com/terraform-docs/terraform-docs/releases/download/v0.21.0/terraform-docs-v0.21.0-linux-arm64.tar.gz"
 
 [tools.terraform-docs."platforms.linux-x64"]
 checksum = "sha256:2fdd81b8d21ff1498cd559af0dcc5d155835f84600db06d3923e217124fc735a"
@@ -174,6 +203,10 @@ url = "https://github.com/terraform-docs/terraform-docs/releases/download/v0.21.
 version = "0.99.4"
 backend = "aqua:gruntwork-io/terragrunt"
 
+[tools.terragrunt."platforms.linux-arm64"]
+checksum = "sha256:2aa9738d039fce1b8123b9c9dad5c5d94f5b90a93addfddd37c313909156223a"
+url = "https://github.com/gruntwork-io/terragrunt/releases/download/v0.99.4/terragrunt_linux_arm64.tar.gz"
+
 [tools.terragrunt."platforms.linux-x64"]
 checksum = "sha256:6098c70b39a0a4416769ead3003670ecac4284136720003ec6efa9fe618a4004"
 url = "https://github.com/gruntwork-io/terragrunt/releases/download/v0.99.4/terragrunt_linux_amd64.tar.gz"
@@ -190,6 +223,10 @@ url = "https://github.com/gruntwork-io/terragrunt/releases/download/v0.99.4/terr
 version = "0.61.0"
 backend = "aqua:terraform-linters/tflint"
 
+[tools.tflint."platforms.linux-arm64"]
+checksum = "sha256:999c25cfdb5208fe1133dec6b219e666a39fc2a7a0786a781dc9924ea5945ebf"
+url = "https://github.com/terraform-linters/tflint/releases/download/v0.61.0/tflint_linux_arm64.zip"
+
 [tools.tflint."platforms.linux-x64"]
 checksum = "sha256:ca4e4e8cb7cc3436f2b6979e9c4fd4e2623a66fcca1ad1fe12f8669967636ae2"
 url = "https://github.com/terraform-linters/tflint/releases/download/v0.61.0/tflint_linux_amd64.zip"
@@ -205,6 +242,10 @@ url = "https://github.com/terraform-linters/tflint/releases/download/v0.61.0/tfl
 [[tools.vale]]
 version = "3.14.1"
 backend = "aqua:errata-ai/vale"
+
+[tools.vale."platforms.linux-arm64"]
+checksum = "sha256:6a442a4ff1e67ff0beb08b608b039a38ab1f5bd6170afef903130a63831d1b2b"
+url = "https://github.com/vale-cli/vale/releases/download/v3.14.1/vale_3.14.1_Linux_arm64.tar.gz"
 
 [tools.vale."platforms.linux-x64"]
 checksum = "sha256:ff2b49ffaa9dcd246fd5008f03ff67746d2790b75bf4d3657e2fb9530fb96db3"
