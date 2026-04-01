@@ -235,6 +235,7 @@ After deployment, you'll have access to:
 | <a name="module_lambdas"></a> [lambdas](#module\_lambdas) | ../../modules/lambda | n/a |
 | <a name="module_sqs_events"></a> [sqs\_events](#module\_sqs\_events) | ../../modules/sqs | n/a |
 | <a name="module_sqs_notifications"></a> [sqs\_notifications](#module\_sqs\_notifications) | ../../modules/sqs | n/a |
+| <a name="module_sqs_notify_messages"></a> [sqs\_notify\_messages](#module\_sqs\_notify\_messages) | ../../modules/sqs | n/a |
 | <a name="module_sqs_order_placement"></a> [sqs\_order\_placement](#module\_sqs\_order\_placement) | ../../modules/sqs | n/a |
 | <a name="module_sqs_order_results"></a> [sqs\_order\_results](#module\_sqs\_order\_results) | ../../modules/sqs | n/a |
 | <a name="module_wiremock_service"></a> [wiremock\_service](#module\_wiremock\_service) | terraform-aws-modules/ecs/aws//modules/service | ~> 7.5.0 |
@@ -381,6 +382,8 @@ After deployment, you'll have access to:
 | <a name="output_notifications_dlq_url"></a> [notifications\_dlq\_url](#output\_notifications\_dlq\_url) | URL of the notifications dead letter queue |
 | <a name="output_notifications_queue_arn"></a> [notifications\_queue\_arn](#output\_notifications\_queue\_arn) | ARN of the notifications SQS queue (FIFO) |
 | <a name="output_notifications_queue_url"></a> [notifications\_queue\_url](#output\_notifications\_queue\_url) | URL of the notifications SQS queue (FIFO) |
+| <a name="output_notify_messages_queue_arn"></a> [notify\_messages\_queue\_arn](#output\_notify\_messages\_queue\_arn) | ARN of the notify messages SQS queue |
+| <a name="output_notify_messages_queue_url"></a> [notify\_messages\_queue\_url](#output\_notify\_messages\_queue\_url) | URL of the notify messages SQS queue |
 | <a name="output_order_placement_queue_arn"></a> [order\_placement\_queue\_arn](#output\_order\_placement\_queue\_arn) | ARN of the order placement SQS queue |
 | <a name="output_order_placement_queue_url"></a> [order\_placement\_queue\_url](#output\_order\_placement\_queue\_url) | URL of the order placement SQS queue |
 | <a name="output_order_results_queue_arn"></a> [order\_results\_queue\_arn](#output\_order\_results\_queue\_arn) | ARN of the order results SQS queue |
