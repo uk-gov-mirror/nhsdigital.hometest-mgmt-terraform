@@ -13,6 +13,7 @@ set -euo pipefail
 LAMBDAS_DIR_INPUT="${1:-}"
 CACHE_DIR_INPUT="${2:-.lambda-build-cache}"
 FORCE_REBUILD="${FORCE_LAMBDA_REBUILD:-false}"
+NODE_ENV="${NODE_ENV:-production}"
 
 if [[ -z "$LAMBDAS_DIR_INPUT" ]]; then
   echo "Usage: $0 <lambdas-directory> [cache-directory]"
@@ -21,6 +22,7 @@ if [[ -z "$LAMBDAS_DIR_INPUT" ]]; then
   echo ""
   echo "Environment variables:"
   echo "  FORCE_LAMBDA_REBUILD=true  Force rebuild even if no changes detected"
+  echo "  NODE_ENV=production|development  Set build mode (default: production, enables minification)"
   exit 1
 fi
 
@@ -196,11 +198,11 @@ install_dependencies() {
 }
 
 build_lambdas() {
-  echo "Building lambdas..."
+  echo "Building lambdas (NODE_ENV=$NODE_ENV)..."
   cd "$LAMBDAS_DIR"
 
-  # Run the build script
-  npm run build --silent 2>/dev/null || npm run build
+  # NODE_ENV controls minification in esbuild: production=minified, development=unminified+sourcemaps
+  NODE_ENV="$NODE_ENV" npm run build --silent 2>/dev/null || NODE_ENV="$NODE_ENV" npm run build
 }
 
 package_lambdas() {
