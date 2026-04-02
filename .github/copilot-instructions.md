@@ -213,6 +213,7 @@ terragrunt apply
 - Profile: Admin-PoC
 - Terraform plugin cache: `.terraform-plugin-cache/` (set via `TF_PLUGIN_CACHE_DIR`)
 - Terragrunt experiment: `dependency-fetch-output-from-state` enabled
+- `AWS_PAGER=""` — always set this environment variable to disable the AWS CLI pager (prevents output being piped through `less`)
 
 ## Files to Reference
 

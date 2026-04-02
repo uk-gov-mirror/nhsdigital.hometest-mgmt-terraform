@@ -11,6 +11,7 @@ on:
         type: choice
         options:
           - poc
+          - dev
         default: poc
       module:
         description: "Terraform module to deploy"
@@ -22,6 +23,7 @@ on:
           - network
           - aurora-postgres
           - shared_services
+          - ecs
           - all
       action:
         description: "Terraform action to perform"
@@ -31,7 +33,7 @@ on:
           - plan
           - apply
           # - destroy-plan
-          # - destroy
+          - destroy
         default: plan
 
 env:
@@ -61,7 +63,7 @@ jobs:
 
           if [ "${{ inputs.module || 'all' }}" == "all" ]; then
             # Deploy in dependency order
-            echo 'modules=["bootstrap", "network", "aurora-postgres", "shared_services", "lambda-goose-migrator"]' >> "$GITHUB_OUTPUT"
+            echo 'modules=["bootstrap", "network", "aurora-postgres", "shared_services", "ecs", "lambda-goose-migrator"]' >> "$GITHUB_OUTPUT"
           else
             echo 'modules=["${{ inputs.module || 'all' }}"]' >> "$GITHUB_OUTPUT"
           fi
@@ -93,6 +95,7 @@ jobs:
     name: "Deploy ${{ matrix.module }}"
     runs-on: ubuntu-latest
     needs: [validate-inputs]
+    environment: ${{ inputs.environment || 'poc' }}
     timeout-minutes: 30
     permissions:
       id-token: write
@@ -120,132 +123,6 @@ jobs:
           aws_region: ${{ env.AWS_REGION }}
           working_directory: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.module }}
           action: ${{ inputs.action || 'plan' }}
-
-      - name: "Invoke Lambda migrator and print logs"
-        if: matrix.module == 'lambda-goose-migrator' && (inputs.action == 'apply')
-        run: |
-          # Find the Lambda function by name pattern
-          FUNCTION_NAME=$(aws lambda list-functions \
-            --query "Functions[?contains(FunctionName, 'lambda-goose-migrator')].FunctionName | [0]" \
-            --output text)
-
-          if [ -z "$FUNCTION_NAME" ] || [ "$FUNCTION_NAME" == "None" ]; then
-            echo "::error::Could not find Lambda function matching 'lambda-goose-migrator'"
-            exit 1
-          fi
-
-          echo "Found Lambda function: ${FUNCTION_NAME}"
-          LOG_GROUP="/aws/lambda/${FUNCTION_NAME}"
-
-          # Record start time before invocation for CloudWatch log filtering
-          START_TIME_MS=$(date +%s%3N)
-
-          # Invoke the Lambda synchronously; --log-type Tail returns last 4 KB of logs.
-          # --cli-read-timeout 0 disables the default 60s socket read timeout so the CLI
-          # waits for the full Lambda execution (max 15 min) before returning.
-          echo "Invoking Lambda function..."
-          aws lambda invoke \
-            --function-name "$FUNCTION_NAME" \
-            --invocation-type RequestResponse \
-            --log-type Tail \
-            --cli-read-timeout 0 \
-            --cli-binary-format raw-in-base64-out \
-            --payload '{}' \
-            /tmp/lambda-response.json > /tmp/lambda-invoke-meta.json
-
-          STATUS_CODE=$(jq -r '.StatusCode // empty' /tmp/lambda-invoke-meta.json)
-          FUNCTION_ERROR=$(jq -r '.FunctionError // empty' /tmp/lambda-invoke-meta.json)
-          LOG_RESULT_B64=$(jq -r '.LogResult // empty' /tmp/lambda-invoke-meta.json)
-
-          echo "Status code: ${STATUS_CODE}"
-
-          # Decode inline log tail and extract the RequestId
-          LOG_TAIL=""
-          REQUEST_ID=""
-          if [ -n "$LOG_RESULT_B64" ]; then
-            LOG_TAIL=$(echo "$LOG_RESULT_B64" | base64 -d)
-            REQUEST_ID=$(echo "$LOG_TAIL" | grep -oP 'START RequestId: \K[a-f0-9-]+' || true)
-          fi
-          echo "Request ID: ${REQUEST_ID}"
-
-          # Poll CloudWatch until the END marker for this invocation appears, then fetch all logs
-          LOGS=""
-          if [ -n "$REQUEST_ID" ]; then
-            echo "Waiting for CloudWatch to ingest logs..."
-            sleep 10
-
-            echo "Polling CloudWatch for completed invocation logs (RequestId: ${REQUEST_ID})..."
-            MAX_WAIT=120
-            ELAPSED=0
-            INTERVAL=5
-            LOG_STREAM=""
-            while [ "$ELAPSED" -lt "$MAX_WAIT" ]; do
-              FILTER_RESULT=$(aws logs filter-log-events \
-                --log-group-name "$LOG_GROUP" \
-                --filter-pattern "\"END RequestId: ${REQUEST_ID}\"" \
-                --start-time "$START_TIME_MS" \
-                --query "events[0]" \
-                --output json 2>/dev/null || echo "null")
-
-              LOG_STREAM=$(echo "$FILTER_RESULT" | jq -r '.logStreamName // empty')
-              if [ -n "$LOG_STREAM" ]; then
-                echo "Lambda execution complete. Log stream: ${LOG_STREAM}"
-                break
-              fi
-
-              echo "  Waiting for END marker... (${ELAPSED}s elapsed)"
-              sleep "$INTERVAL"
-              ELAPSED=$(( ELAPSED + INTERVAL ))
-            done
-
-            if [ -z "$LOG_STREAM" ]; then
-              echo "::warning::Timed out waiting for END marker; logs may be incomplete."
-            else
-              # Fetch ALL events from the stream (no filter), scoped to the invocation window
-              LOGS=$(aws logs get-log-events \
-                --log-group-name "$LOG_GROUP" \
-                --log-stream-name "$LOG_STREAM" \
-                --start-time "$START_TIME_MS" \
-                --start-from-head \
-                --query "events[*].message" \
-                --output text 2>/dev/null || true)
-            fi
-          fi
-
-          # Print logs to the job output and the step summary
-          echo "=== Lambda Execution Logs ==="
-          if [ -n "$LOGS" ]; then
-            echo "$LOGS"
-
-            {
-              echo "### Lambda Migrator Logs"
-              echo "**Function**: \`${FUNCTION_NAME}\`"
-              echo "**Request ID**: \`${REQUEST_ID}\`"
-              echo '```'
-              echo "$LOGS"
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-          else
-            # Fall back to the inline tail returned by the invoke call
-            echo "::warning::Could not fetch CloudWatch logs; printing inline log tail."
-            echo "$LOG_TAIL"
-            {
-              echo "### Lambda Migrator Logs (tail)"
-              echo "**Function**: \`${FUNCTION_NAME}\`"
-              echo "**Request ID**: \`${REQUEST_ID}\`"
-              echo '```'
-              echo "$LOG_TAIL"
-              echo '```'
-            } >> "$GITHUB_STEP_SUMMARY"
-          fi
-
-          # Fail the step if the Lambda itself reported an error
-          if [ -n "$FUNCTION_ERROR" ] && [ "$FUNCTION_ERROR" != "null" ]; then
-            echo "::error::Lambda function error: ${FUNCTION_ERROR}"
-            echo "Function response:"
-            cat /tmp/lambda-response.json
-            exit 1
-          fi
 
       - name: "Post deployment summary"
         if: always()

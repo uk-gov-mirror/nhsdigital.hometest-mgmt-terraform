@@ -31,9 +31,8 @@ enable_ipv6 = false
 # NAT Gateway Configuration
 #------------------------------------------------------------------------------
 
-# For production: set to false for high availability (one NAT per AZ)
-# For dev/staging: set to true to reduce costs (single NAT Gateway)
-single_nat_gateway = false
+# For production: use az_count = 3 for per-AZ NAT gateways (high availability)
+# For dev/non-production: use az_count = 1 for a single NAT Gateway (cost saving)
 
 #------------------------------------------------------------------------------
 # VPC Flow Logs
@@ -109,6 +108,22 @@ allowed_egress_ips = [
     port        = "8443"
     protocol    = "TCP"
     description = "Third-party Integration Endpoint"
+  }
+]
+
+# Specific IP addresses/CIDRs allowed for ingress (inbound traffic to VPC)
+allowed_ingress_ips = [
+  {
+    ip          = "0.0.0.0/0"
+    port        = "443"
+    protocol    = "TCP"
+    description = "HTTPS from anywhere"
+  },
+  {
+    ip          = "0.0.0.0/0"
+    port        = "80"
+    protocol    = "TCP"
+    description = "HTTP from anywhere"
   }
 ]
 

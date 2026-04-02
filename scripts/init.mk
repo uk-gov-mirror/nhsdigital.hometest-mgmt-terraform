@@ -58,6 +58,10 @@ clean:: # Remove all generated and temporary files (common) @Operations
 		docs/diagrams/.*.bkp \
 		docs/diagrams/.*.dtmp \
 		.version
+		find . -type d -name ".terragrunt-cache" -exec rm -rf {} + 2>/dev/null ||:
+		find . -type d -name ".lambda-build-cache" -exec rm -rf {} + 2>/dev/null ||:
+		find . -type d -name ".spa-build-cache" -exec rm -rf {} + 2>/dev/null ||:
+		find . -type d -name ".trivy-cache" -exec rm -rf {} + 2>/dev/null ||:
 
 config:: # Configure development environment (common) @Configuration
 	make \

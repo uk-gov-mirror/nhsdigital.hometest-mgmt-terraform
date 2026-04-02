@@ -41,7 +41,7 @@ resource "aws_networkfirewall_rule_group" "allow_aws_services" {
 }
 
 ################################################################################
-# Network Firewall Rule Group - Stateful IP Filtering
+# Network Firewall Rule Group - Stateful IP Filtering (Egress)
 ################################################################################
 
 resource "aws_networkfirewall_rule_group" "egress_ip_filter" {
@@ -80,6 +80,49 @@ resource "aws_networkfirewall_rule_group" "egress_ip_filter" {
 
   tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-egress-ip-filter"
+  })
+}
+
+################################################################################
+# Network Firewall Rule Group - Stateful IP Filtering (Ingress)
+################################################################################
+
+resource "aws_networkfirewall_rule_group" "ingress_ip_filter" {
+  count = var.enable_network_firewall && length(var.allowed_ingress_ips) > 0 ? 1 : 0
+
+  capacity = 100
+  name     = "${local.resource_prefix}-ingress-ip-filter"
+  type     = "STATEFUL"
+
+  rule_group {
+    rules_source {
+      dynamic "stateful_rule" {
+        for_each = var.allowed_ingress_ips
+        content {
+          action = "PASS"
+          header {
+            destination      = var.vpc_cidr
+            destination_port = stateful_rule.value.port
+            direction        = "FORWARD"
+            protocol         = upper(stateful_rule.value.protocol)
+            source           = stateful_rule.value.ip
+            source_port      = "ANY"
+          }
+          rule_option {
+            keyword  = "sid"
+            settings = [stateful_rule.key + 10001]
+          }
+        }
+      }
+    }
+
+    stateful_rule_options {
+      rule_order = "STRICT_ORDER"
+    }
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-ingress-ip-filter"
   })
 }
 

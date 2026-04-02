@@ -57,13 +57,13 @@ variable "vpc_cidr" {
 }
 
 variable "az_count" {
-  description = "Number of Availability Zones to use (2-3 recommended for high availability)"
+  description = "Number of Availability Zones to use. Use 1 for cost-optimised non-production (single NAT GW / single firewall endpoint), 2-3 for high availability."
   type        = number
   default     = 3
 
   validation {
-    condition     = var.az_count >= 2 && var.az_count <= 3
-    error_message = "AZ count must be between 2 and 3 for high availability."
+    condition     = var.az_count >= 1 && var.az_count <= 3
+    error_message = "AZ count must be between 1 and 3."
   }
 }
 
@@ -76,27 +76,23 @@ variable "enable_ipv6" {
 #------------------------------------------------------------------------------
 # NAT Gateway Configuration
 #------------------------------------------------------------------------------
+# NAT Gateway count is controlled by az_count. Set az_count = 1 for single NAT (cost saving),
+# or az_count = 2/3 for per-AZ NAT gateways (high availability).
 
-variable "single_nat_gateway" {
-  description = "Use a single NAT Gateway for all AZs (cost savings, but less HA). Set to false for production."
-  type        = bool
-  default     = false
-}
+# #------------------------------------------------------------------------------
+# # VPC Flow Logs Configuration
+# #------------------------------------------------------------------------------
 
-#------------------------------------------------------------------------------
-# VPC Flow Logs Configuration
-#------------------------------------------------------------------------------
+# variable "flow_logs_retention_days" {
+#   description = "Number of days to retain VPC Flow Logs in CloudWatch"
+#   type        = number
+#   default     = 90
 
-variable "flow_logs_retention_days" {
-  description = "Number of days to retain VPC Flow Logs in CloudWatch"
-  type        = number
-  default     = 90
-
-  validation {
-    condition     = contains([1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653], var.flow_logs_retention_days)
-    error_message = "Flow logs retention must be a valid CloudWatch Logs retention period."
-  }
-}
+#   validation {
+#     condition     = contains([1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, 3653], var.flow_logs_retention_days)
+#     error_message = "Flow logs retention must be a valid CloudWatch Logs retention period."
+#   }
+# }
 
 #------------------------------------------------------------------------------
 # VPC Endpoints Configuration
@@ -174,6 +170,12 @@ variable "firewall_logs_retention_days" {
   }
 }
 
+variable "enable_firewall_flow_logs" {
+  description = "Enable FLOW log type for Network Firewall. FLOW logs record every packet and can be very high volume (10-100x ALERT logs). Disable for non-production environments to reduce CloudWatch ingestion costs."
+  type        = bool
+  default     = true
+}
+
 variable "firewall_default_deny" {
   description = "Enable default deny rule - drops all traffic not explicitly allowed. CAUTION: Ensure all required destinations are in allowed lists before enabling."
   type        = bool
@@ -219,6 +221,33 @@ variable "allowed_egress_domains" {
   #   "api.stripe.com",
   #   ".nhs.uk",
   #   ".gov.uk"
+  # ]
+}
+
+variable "allowed_ingress_ips" {
+  description = "List of allowed ingress IP addresses with port and protocol. These IPs will be permitted through the firewall for inbound traffic."
+  type = list(object({
+    ip          = string # IP address or CIDR (e.g., "203.0.113.10/32")
+    port        = string # Port number or "ANY"
+    protocol    = string # Protocol: TCP, UDP, or IP
+    description = string # Description for documentation
+  }))
+  default = []
+
+  # Example:
+  # allowed_ingress_ips = [
+  #   {
+  #     ip          = "0.0.0.0/0"
+  #     port        = "443"
+  #     protocol    = "TCP"
+  #     description = "HTTPS from anywhere"
+  #   },
+  #   {
+  #     ip          = "0.0.0.0/0"
+  #     port        = "80"
+  #     protocol    = "TCP"
+  #     description = "HTTP from anywhere"
+  #   }
   # ]
 }
 

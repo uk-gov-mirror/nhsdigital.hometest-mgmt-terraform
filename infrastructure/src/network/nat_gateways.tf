@@ -3,7 +3,7 @@
 ################################################################################
 
 resource "aws_eip" "nat" {
-  count  = var.single_nat_gateway ? 1 : length(local.azs)
+  count  = length(local.azs)
   domain = "vpc"
 
   tags = merge(local.common_tags, {
@@ -14,7 +14,7 @@ resource "aws_eip" "nat" {
 }
 
 resource "aws_nat_gateway" "main" {
-  count = var.single_nat_gateway ? 1 : length(local.azs)
+  count = length(local.azs)
 
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id

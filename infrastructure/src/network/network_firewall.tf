@@ -7,7 +7,7 @@ resource "aws_subnet" "firewall" {
   count = var.enable_network_firewall ? length(local.azs) : 0
 
   vpc_id            = aws_vpc.main.id
-  cidr_block        = cidrsubnet(var.vpc_cidr, 6, count.index + 48)
+  cidr_block        = local.firewall_subnets[count.index]
   availability_zone = local.azs[count.index]
 
   tags = merge(local.common_tags, {
@@ -18,28 +18,29 @@ resource "aws_subnet" "firewall" {
 
 # Route table for firewall subnets
 resource "aws_route_table" "firewall" {
-  count = var.enable_network_firewall ? 1 : 0
+  count = var.enable_network_firewall ? length(local.azs) : 0
 
   vpc_id = aws_vpc.main.id
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-firewall-rt"
+    Name = "${local.resource_prefix}-firewall-rt-${count.index + 1}"
   })
 }
 
-resource "aws_route" "firewall_internet" {
-  count = var.enable_network_firewall ? 1 : 0
+# Route from firewall subnet to NAT Gateway (for egress filtering)
+resource "aws_route" "firewall_nat" {
+  count = var.enable_network_firewall ? length(local.azs) : 0
 
-  route_table_id         = aws_route_table.firewall[0].id
+  route_table_id         = aws_route_table.firewall[count.index].id
   destination_cidr_block = "0.0.0.0/0"
-  gateway_id             = aws_internet_gateway.main.id
+  nat_gateway_id         = aws_nat_gateway.main[count.index].id
 }
 
 resource "aws_route_table_association" "firewall" {
   count = var.enable_network_firewall ? length(local.azs) : 0
 
   subnet_id      = aws_subnet.firewall[count.index].id
-  route_table_id = aws_route_table.firewall[0].id
+  route_table_id = aws_route_table.firewall[count.index].id
 }
 
 ################################################################################
@@ -149,12 +150,15 @@ resource "aws_networkfirewall_logging_configuration" "main" {
       log_type             = "ALERT"
     }
 
-    log_destination_config {
-      log_destination = {
-        logGroup = aws_cloudwatch_log_group.network_firewall[0].name
+    dynamic "log_destination_config" {
+      for_each = var.enable_firewall_flow_logs ? [1] : []
+      content {
+        log_destination = {
+          logGroup = aws_cloudwatch_log_group.network_firewall[0].name
+        }
+        log_destination_type = "CloudWatchLogs"
+        log_type             = "FLOW"
       }
-      log_destination_type = "CloudWatchLogs"
-      log_type             = "FLOW"
     }
   }
 }

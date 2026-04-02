@@ -336,20 +336,21 @@ sequenceDiagram
 
 ## Network Firewall & Egress Filtering
 
-When `enable_network_firewall = true`, AWS Network Firewall is deployed for advanced egress filtering:
+When `enable_network_firewall = true`, AWS Network Firewall is deployed for advanced ingress/egress filtering:
 
 ### Features
-- **IP-based filtering**: Allow traffic only to specific IP addresses/CIDRs
+- **IP-based filtering**: Allow traffic only to specific IP addresses/CIDRs (both inbound and outbound)
 - **Domain-based filtering**: Allow HTTPS/TLS traffic only to specific domains (SNI inspection)
 - **Default deny**: Optional policy to drop all traffic not explicitly allowed
-- **Deep packet inspection**: Stateful inspection of all egress traffic
+- **Deep packet inspection**: Stateful inspection of all ingress/egress traffic
 - **Centralized logging**: All firewall decisions logged to CloudWatch
 
 ### Rule Evaluation Order (Strict Order)
 1. **AWS Services** (Priority 100): `.amazonaws.com`, `.aws.amazon.com` - Always allowed
-2. **Allowed IPs** (Priority 200): Custom IP/CIDR list from `allowed_egress_ips`
-3. **Allowed Domains** (Priority 300): Custom domain list from `allowed_egress_domains`
-4. **Default Deny** (Priority 65535): Drop all other traffic (when enabled)
+2. **Allowed Ingress IPs** (Priority 150): Custom IP/CIDR list from `allowed_ingress_ips` for inbound traffic
+3. **Allowed Egress IPs** (Priority 200): Custom IP/CIDR list from `allowed_egress_ips` for outbound traffic
+4. **Allowed Domains** (Priority 300): Custom domain list from `allowed_egress_domains`
+5. **Default Deny** (Priority 65535): Drop all other traffic (when enabled)
 
 ### Example Configuration
 
@@ -357,7 +358,23 @@ When `enable_network_firewall = true`, AWS Network Firewall is deployed for adva
 enable_network_firewall = true
 firewall_default_deny   = true
 
-# Allow specific IP addresses
+# Allow specific inbound connections
+allowed_ingress_ips = [
+  {
+    ip          = "0.0.0.0/0"
+    port        = "443"
+    protocol    = "TCP"
+    description = "HTTPS from anywhere"
+  },
+  {
+    ip          = "0.0.0.0/0"
+    port        = "80"
+    protocol    = "TCP"
+    description = "HTTP from anywhere"
+  }
+]
+
+# Allow specific outbound connections
 allowed_egress_ips = [
   {
     ip          = "203.0.113.10/32"
@@ -525,7 +542,6 @@ No modules.
 | [aws_cloudwatch_log_group.dns_query_firehose](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group) | resource |
 | [aws_cloudwatch_log_group.dns_query_logs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group) | resource |
 | [aws_cloudwatch_log_group.network_firewall](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group) | resource |
-| [aws_cloudwatch_log_group.vpc_flow_logs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group) | resource |
 | [aws_cloudwatch_log_resource_policy.dns_query_logs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_resource_policy) | resource |
 | [aws_cloudwatch_log_stream.dns_query_firehose](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_stream) | resource |
 | [aws_cloudwatch_log_subscription_filter.dns_query_logs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_subscription_filter) | resource |
@@ -558,13 +574,12 @@ No modules.
 | [aws_networkfirewall_rule_group.drop_all](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/networkfirewall_rule_group) | resource |
 | [aws_networkfirewall_rule_group.egress_domain_filter](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/networkfirewall_rule_group) | resource |
 | [aws_networkfirewall_rule_group.egress_ip_filter](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/networkfirewall_rule_group) | resource |
+| [aws_networkfirewall_rule_group.ingress_ip_filter](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/networkfirewall_rule_group) | resource |
 | [aws_resourcegroups_group.rg](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/resourcegroups_group) | resource |
-| [aws_route.firewall_internet](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route) | resource |
+| [aws_route.firewall_nat](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route) | resource |
 | [aws_route.igw_to_firewall](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route) | resource |
 | [aws_route.private_nat](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route) | resource |
 | [aws_route.private_to_firewall](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route) | resource |
-| [aws_route.public_firewall_internet](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route) | resource |
-| [aws_route.public_firewall_private](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route) | resource |
 | [aws_route.public_internet](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route) | resource |
 | [aws_route53_health_check.main](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_health_check) | resource |
 | [aws_route53_hosted_zone_dnssec.main](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_hosted_zone_dnssec) | resource |
@@ -579,7 +594,6 @@ No modules.
 | [aws_route_table.igw](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table) | resource |
 | [aws_route_table.private](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table) | resource |
 | [aws_route_table.public](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table) | resource |
-| [aws_route_table.public_firewall](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table) | resource |
 | [aws_route_table_association.data](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table_association) | resource |
 | [aws_route_table_association.firewall](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table_association) | resource |
 | [aws_route_table_association.igw](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route_table_association) | resource |
@@ -604,6 +618,7 @@ No modules.
 | [aws_vpc_endpoint.s3](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_endpoint) | resource |
 | [aws_availability_zones.available](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/availability_zones) | data source |
 | [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
+| [aws_cloudwatch_log_group.vpc_flow_logs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/cloudwatch_log_group) | data source |
 
 ## Inputs
 
@@ -611,11 +626,12 @@ No modules.
 |------|-------------|------|---------|:--------:|
 | <a name="input_allowed_egress_domains"></a> [allowed\_egress\_domains](#input\_allowed\_egress\_domains) | List of allowed egress domains (for HTTPS/TLS traffic). Supports wildcards like '.example.com'. | `list(string)` | `[]` | no |
 | <a name="input_allowed_egress_ips"></a> [allowed\_egress\_ips](#input\_allowed\_egress\_ips) | List of allowed egress IP addresses with port and protocol. These IPs will be permitted through the firewall. | <pre>list(object({<br/>    ip          = string # IP address or CIDR (e.g., "203.0.113.10/32")<br/>    port        = string # Port number or "ANY"<br/>    protocol    = string # Protocol: TCP, UDP, or IP<br/>    description = string # Description for documentation<br/>  }))</pre> | `[]` | no |
+| <a name="input_allowed_ingress_ips"></a> [allowed\_ingress\_ips](#input\_allowed\_ingress\_ips) | List of allowed ingress IP addresses with port and protocol. These IPs will be permitted through the firewall for inbound traffic. | <pre>list(object({<br/>    ip          = string # IP address or CIDR (e.g., "203.0.113.10/32")<br/>    port        = string # Port number or "ANY"<br/>    protocol    = string # Protocol: TCP, UDP, or IP<br/>    description = string # Description for documentation<br/>  }))</pre> | `[]` | no |
 | <a name="input_aws_account_id"></a> [aws\_account\_id](#input\_aws\_account\_id) | AWS account ID for resources | `string` | n/a | yes |
 | <a name="input_aws_account_shortname"></a> [aws\_account\_shortname](#input\_aws\_account\_shortname) | AWS account short name/alias for resource naming | `string` | n/a | yes |
 | <a name="input_aws_allowed_regions"></a> [aws\_allowed\_regions](#input\_aws\_allowed\_regions) | List of AWS regions allowed for resource deployment | `list(string)` | <pre>[<br/>  "eu-west-2",<br/>  "us-east-1"<br/>]</pre> | no |
 | <a name="input_aws_region"></a> [aws\_region](#input\_aws\_region) | AWS region for resources | `string` | n/a | yes |
-| <a name="input_az_count"></a> [az\_count](#input\_az\_count) | Number of Availability Zones to use (2-3 recommended for high availability) | `number` | `3` | no |
+| <a name="input_az_count"></a> [az\_count](#input\_az\_count) | Number of Availability Zones to use. Use 1 for cost-optimised non-production (single NAT GW / single firewall endpoint), 2-3 for high availability. | `number` | `3` | no |
 | <a name="input_create_db_subnet_group"></a> [create\_db\_subnet\_group](#input\_create\_db\_subnet\_group) | Create a DB subnet group for RDS | `bool` | `true` | no |
 | <a name="input_create_health_check"></a> [create\_health\_check](#input\_create\_health\_check) | Create a Route 53 health check for the domain | `bool` | `false` | no |
 | <a name="input_create_lambda_rds_sg"></a> [create\_lambda\_rds\_sg](#input\_create\_lambda\_rds\_sg) | Create a dedicated security group for Lambda to RDS access | `bool` | `true` | no |
@@ -627,13 +643,13 @@ No modules.
 | <a name="input_dns_query_logs_retention_days"></a> [dns\_query\_logs\_retention\_days](#input\_dns\_query\_logs\_retention\_days) | Number of days to retain DNS query logs in S3 before expiration | `number` | `90` | no |
 | <a name="input_enable_dns_query_logging"></a> [enable\_dns\_query\_logging](#input\_enable\_dns\_query\_logging) | Enable DNS query logging for Route 53 with near real-time delivery to S3 | `bool` | `true` | no |
 | <a name="input_enable_dnssec"></a> [enable\_dnssec](#input\_enable\_dnssec) | Enable DNSSEC signing for the hosted zone (recommended for security) | `bool` | `false` | no |
+| <a name="input_enable_firewall_flow_logs"></a> [enable\_firewall\_flow\_logs](#input\_enable\_firewall\_flow\_logs) | Enable FLOW log type for Network Firewall. FLOW logs record every packet and can be very high volume (10-100x ALERT logs). Disable for non-production environments to reduce CloudWatch ingestion costs. | `bool` | `true` | no |
 | <a name="input_enable_interface_endpoints"></a> [enable\_interface\_endpoints](#input\_enable\_interface\_endpoints) | Enable VPC Interface Endpoints for AWS services (incurs costs) | `bool` | `true` | no |
 | <a name="input_enable_ipv6"></a> [enable\_ipv6](#input\_enable\_ipv6) | Enable IPv6 CIDR block assignment for the VPC (dual-stack) | `bool` | `false` | no |
 | <a name="input_enable_network_firewall"></a> [enable\_network\_firewall](#input\_enable\_network\_firewall) | Enable AWS Network Firewall for egress filtering and deep packet inspection | `bool` | `false` | no |
 | <a name="input_environment"></a> [environment](#input\_environment) | Environment name (e.g., mgmt, dev, staging, prod) | `string` | n/a | yes |
 | <a name="input_firewall_default_deny"></a> [firewall\_default\_deny](#input\_firewall\_default\_deny) | Enable default deny rule - drops all traffic not explicitly allowed. CAUTION: Ensure all required destinations are in allowed lists before enabling. | `bool` | `true` | no |
 | <a name="input_firewall_logs_retention_days"></a> [firewall\_logs\_retention\_days](#input\_firewall\_logs\_retention\_days) | Number of days to retain Network Firewall logs in CloudWatch | `number` | `90` | no |
-| <a name="input_flow_logs_retention_days"></a> [flow\_logs\_retention\_days](#input\_flow\_logs\_retention\_days) | Number of days to retain VPC Flow Logs in CloudWatch | `number` | `90` | no |
 | <a name="input_health_check_failure_threshold"></a> [health\_check\_failure\_threshold](#input\_health\_check\_failure\_threshold) | The number of consecutive health check failures required before considering the endpoint unhealthy | `number` | `3` | no |
 | <a name="input_health_check_fqdn"></a> [health\_check\_fqdn](#input\_health\_check\_fqdn) | The FQDN to health check (defaults to route53\_zone\_name if not specified) | `string` | `""` | no |
 | <a name="input_health_check_path"></a> [health\_check\_path](#input\_health\_check\_path) | The path for HTTP/HTTPS health checks | `string` | `"/health"` | no |
@@ -644,7 +660,6 @@ No modules.
 | <a name="input_private_zone_name"></a> [private\_zone\_name](#input\_private\_zone\_name) | The domain name for the private hosted zone (defaults to route53\_zone\_name if not specified) | `string` | `""` | no |
 | <a name="input_project_name"></a> [project\_name](#input\_project\_name) | Project name used for resource naming | `string` | n/a | yes |
 | <a name="input_route53_zone_name"></a> [route53\_zone\_name](#input\_route53\_zone\_name) | The domain name for the Route 53 hosted zone | `string` | `"hometest.service.nhs.uk"` | no |
-| <a name="input_single_nat_gateway"></a> [single\_nat\_gateway](#input\_single\_nat\_gateway) | Use a single NAT Gateway for all AZs (cost savings, but less HA). Set to false for production. | `bool` | `false` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | Additional tags to apply to all resources | `map(string)` | `{}` | no |
 | <a name="input_vpc_cidr"></a> [vpc\_cidr](#input\_vpc\_cidr) | CIDR block for the VPC. Recommended /16 for full subnet allocation. | `string` | `"10.0.0.0/16"` | no |
 
@@ -671,6 +686,8 @@ No modules.
 | <a name="output_dnssec_enabled"></a> [dnssec\_enabled](#output\_dnssec\_enabled) | Whether DNSSEC is enabled for the hosted zone |
 | <a name="output_dnssec_kms_key_arn"></a> [dnssec\_kms\_key\_arn](#output\_dnssec\_kms\_key\_arn) | The ARN of the KMS key used for DNSSEC signing |
 | <a name="output_egress_filtering_config"></a> [egress\_filtering\_config](#output\_egress\_filtering\_config) | Summary of egress filtering configuration |
+| <a name="output_firewall_subnet_arns"></a> [firewall\_subnet\_arns](#output\_firewall\_subnet\_arns) | List of firewall subnet ARNs |
+| <a name="output_firewall_subnet_cidrs"></a> [firewall\_subnet\_cidrs](#output\_firewall\_subnet\_cidrs) | List of firewall subnet CIDR blocks |
 | <a name="output_firewall_subnet_ids"></a> [firewall\_subnet\_ids](#output\_firewall\_subnet\_ids) | List of firewall subnet IDs |
 | <a name="output_interface_vpc_endpoint_ids"></a> [interface\_vpc\_endpoint\_ids](#output\_interface\_vpc\_endpoint\_ids) | Map of Interface VPC Endpoint IDs |
 | <a name="output_lambda_rds_security_group_id"></a> [lambda\_rds\_security\_group\_id](#output\_lambda\_rds\_security\_group\_id) | Security group ID for Lambda functions accessing RDS |

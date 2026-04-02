@@ -40,6 +40,16 @@ output "public_subnet_cidrs" {
   value       = aws_subnet.public[*].cidr_block
 }
 
+output "firewall_subnet_arns" {
+  description = "List of firewall subnet ARNs"
+  value       = aws_subnet.firewall[*].arn
+}
+
+output "firewall_subnet_cidrs" {
+  description = "List of firewall subnet CIDR blocks"
+  value       = aws_subnet.firewall[*].cidr_block
+}
+
 output "private_subnet_ids" {
   description = "List of private subnet IDs (use for Lambda VPC configuration)"
   value       = aws_subnet.private[*].id
@@ -190,7 +200,7 @@ output "vpc_flow_log_id" {
 
 output "vpc_flow_log_group_arn" {
   description = "ARN of the CloudWatch Log Group for VPC Flow Logs"
-  value       = aws_cloudwatch_log_group.vpc_flow_logs.arn
+  value       = data.aws_cloudwatch_log_group.vpc_flow_logs.arn
 }
 
 output "vpc_flow_log_kms_key_arn" {

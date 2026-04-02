@@ -11,7 +11,7 @@ include "root" {
 }
 
 include "goose-migrator" {
-  path           = find_in_parent_folders("goose-migrator.hcl")
+  path           = find_in_parent_folders("_envcommon/goose-migrator.hcl")
   expose         = true
   merge_strategy = "deep"
 }

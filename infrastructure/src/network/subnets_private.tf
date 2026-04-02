@@ -17,7 +17,7 @@ resource "aws_subnet" "private" {
 }
 
 resource "aws_route_table" "private" {
-  count = var.single_nat_gateway ? 1 : length(local.azs)
+  count = length(local.azs)
 
   vpc_id = aws_vpc.main.id
 
@@ -28,7 +28,7 @@ resource "aws_route_table" "private" {
 
 resource "aws_route" "private_nat" {
   # Only create direct NAT route when firewall is disabled
-  count = var.enable_network_firewall ? 0 : (var.single_nat_gateway ? 1 : length(local.azs))
+  count = var.enable_network_firewall ? 0 : length(local.azs)
 
   route_table_id         = aws_route_table.private[count.index].id
   destination_cidr_block = "0.0.0.0/0"
@@ -39,5 +39,5 @@ resource "aws_route_table_association" "private" {
   count = length(local.azs)
 
   subnet_id      = aws_subnet.private[count.index].id
-  route_table_id = aws_route_table.private[var.single_nat_gateway ? 0 : count.index].id
+  route_table_id = aws_route_table.private[count.index].id
 }

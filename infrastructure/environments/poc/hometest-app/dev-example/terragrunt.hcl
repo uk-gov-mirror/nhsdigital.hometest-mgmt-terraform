@@ -11,7 +11,7 @@ include "root" {
 }
 
 include "app" {
-  path           = find_in_parent_folders("app.hcl")
+  path           = find_in_parent_folders("_envcommon/app.hcl")
   expose         = true
   merge_strategy = "deep"
 }

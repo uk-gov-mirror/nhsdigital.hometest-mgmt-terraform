@@ -26,6 +26,16 @@ locals {
 
   # Environment: from env.hcl if available, otherwise derived from directory name
   environment = try(local._env_locals.environment, basename(path_relative_to_include()))
+
+  # Verify that the AWS CLI is authenticated to the expected account
+  # Set SKIP_AWS_ACCOUNT_CHECK=true to bypass this check (e.g. in pre-commit hooks)
+  skip_account_check = get_env("SKIP_AWS_ACCOUNT_CHECK", "false") == "true"
+  current_account_id = local.skip_account_check ? local.account_id : trimspace(run_cmd("--terragrunt-quiet", "aws", "sts", "get-caller-identity", "--query", "Account", "--output", "text"))
+  account_check = (
+    local.skip_account_check || local.current_account_id == local.account_id
+    ? local.current_account_id
+    : error("AWS account mismatch! Expected ${local.account_id} (${local.account_name}) but AWS CLI is authenticated to ${local.current_account_id}. Check your AWS profile/credentials.")
+  )
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -61,7 +71,7 @@ terraform {
 remote_state {
   backend = "s3"
   config = {
-    bucket       = "nhs-hometest-poc-core-s3-tfstate"
+    bucket       = "${local.account_name}-core-s3-tfstate"
     use_lockfile = true
     # IMPORTANT: This key derives `environment` from env.hcl (via find_in_parent_folders)
     # and uses basename(path) as the module name. For NESTED modules (e.g., dev/lambda-goose-migrator)
@@ -70,7 +80,7 @@ remote_state {
     # Without it, all environments share the same key and overwrite each other's state.
     key        = "${local.account_name}-${local.environment}-${basename(path_relative_to_include())}.tfstate"
     encrypt    = true
-    kms_key_id = "arn:aws:kms:eu-west-2:781863586270:key/3e87d63f-febc-4dd4-a771-92c3c07a51f5"
+    kms_key_id = "arn:aws:kms:${local.region}:${local.account_id}:alias/${local.account_name}-core-kms-tfstate-key"
     region     = local.region
   }
   generate = {

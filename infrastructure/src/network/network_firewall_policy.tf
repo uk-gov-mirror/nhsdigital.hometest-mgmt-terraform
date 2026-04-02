@@ -21,6 +21,14 @@ resource "aws_networkfirewall_firewall_policy" "main" {
     }
 
     dynamic "stateful_rule_group_reference" {
+      for_each = length(var.allowed_ingress_ips) > 0 ? [1] : []
+      content {
+        priority     = 150
+        resource_arn = aws_networkfirewall_rule_group.ingress_ip_filter[0].arn
+      }
+    }
+
+    dynamic "stateful_rule_group_reference" {
       for_each = length(var.allowed_egress_ips) > 0 ? [1] : []
       content {
         priority     = 200

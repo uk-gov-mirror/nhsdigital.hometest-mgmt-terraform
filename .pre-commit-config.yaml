@@ -65,6 +65,7 @@ repos:
         args:
           # Optionally check for unused inputs
           - --args=--terragrunt-strict-validate
+          - --envs=SKIP_AWS_ACCOUNT_CHECK=true
 
       - id: terragrunt_validate_inputs
         name: Terragrunt validate inputs Network
@@ -72,6 +73,7 @@ repos:
         args:
           # Optionally check for unused inputs
           - --args=--terragrunt-strict-validate
+          - --envs=SKIP_AWS_ACCOUNT_CHECK=true
 
       - id: terragrunt_validate_inputs
         name: Terragrunt validate inputs Shared Services
@@ -79,6 +81,7 @@ repos:
         args:
           # Optionally check for unused inputs
           - --args=--terragrunt-strict-validate
+          - --envs=SKIP_AWS_ACCOUNT_CHECK=true
 
       - id: terragrunt_validate_inputs
         name: Terragrunt validate inputs Aurora
@@ -86,6 +89,7 @@ repos:
         args:
           # Optionally check for unused inputs
           - --args=--terragrunt-strict-validate
+          - --envs=SKIP_AWS_ACCOUNT_CHECK=true
 
       - id: terragrunt_validate_inputs
         name: Terragrunt validate inputs ECS
@@ -93,6 +97,7 @@ repos:
         args:
           # Optionally check for unused inputs
           - --args=--terragrunt-strict-validate
+          - --envs=SKIP_AWS_ACCOUNT_CHECK=true
 
       - id: terragrunt_validate_inputs
         name: Terragrunt validate inputs Lambda Goose Migrator
@@ -100,6 +105,7 @@ repos:
         args:
           # Optionally check for unused inputs
           - --args=--terragrunt-strict-validate
+          - --envs=SKIP_AWS_ACCOUNT_CHECK=true
 
       - id: terragrunt_validate_inputs
         name: Terragrunt validate inputs Dev
@@ -107,6 +113,7 @@ repos:
         args:
           # Optionally check for unused inputs
           - --args=--terragrunt-strict-validate
+          - --envs=SKIP_AWS_ACCOUNT_CHECK=true
 
       # - id: terragrunt_validate
       #   files: ^infrastructure/environments/poc/core/bootstrap/[^/]+$

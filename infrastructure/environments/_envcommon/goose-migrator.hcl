@@ -1,6 +1,6 @@
 # ---------------------------------------------------------------------------------------------------------------------
 # COMMON TERRAGRUNT CONFIGURATION FOR GOOSE MIGRATOR
-# Location: poc/hometest-app/goose-migrator.hcl
+# Location: _envcommon/goose-migrator.hcl
 #
 # Shared configuration for database migrations across all environments (dev, uat, prod).
 # Runs Goose migrations for schema-per-environment in the shared Aurora cluster.
@@ -10,7 +10,7 @@
 #
 # Usage in child terragrunt.hcl:
 #   include "goose-migrator" {
-#     path           = find_in_parent_folders("goose-migrator.hcl")
+#     path           = find_in_parent_folders("_envcommon/goose-migrator.hcl")
 #     expose         = true
 #     merge_strategy = "deep"
 #   }

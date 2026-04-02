@@ -1,6 +1,6 @@
 # ---------------------------------------------------------------------------------------------------------------------
 # COMMON TERRAGRUNT CONFIGURATION FOR HOMETEST-APP
-# Location: poc/hometest-app/app.hcl
+# Location: _envcommon/app.hcl
 #
 # Shared configuration for all environments (dev, dev-mikmio, etc.) under poc/hometest-app/.
 # Environment-specific terragrunt.hcl files include this and override only what's needed.
@@ -9,7 +9,7 @@
 #
 # Usage in child terragrunt.hcl:
 #   include "app" {
-#     path           = find_in_parent_folders("app.hcl")
+#     path           = find_in_parent_folders("_envcommon/app.hcl")
 #     expose         = true
 #     merge_strategy = "deep"
 #   }
@@ -95,6 +95,7 @@ locals {
   lambda_timeout     = 30
   lambda_memory_size = 256
   log_retention_days = 14
+  lambda_node_env    = "production" # "production" = minified, "development" = unminified + sourcemaps
 
   # API Gateway Defaults
   api_stage_name             = "v1"
@@ -128,6 +129,9 @@ locals {
   sqs_prefix                = "https://sqs.${local.aws_region}.amazonaws.com/${local.account_id}/${local.project_name}-${local.aws_account_shortname}-${local.environment}"
   order_placement_queue_url = "${local.sqs_prefix}-order-placement"
 
+  # ECS dependency — only enabled when the core/ecs stack exists (needed for WireMock)
+  _ecs_enabled = fileexists("${get_terragrunt_dir()}/../../core/ecs/terragrunt.hcl")
+
   # Security headers
   content_security_policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none';"
   permissions_policy      = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
@@ -155,7 +159,7 @@ terraform {
     "apply"]
     execute = [
       "bash", "-c",
-      "mise exec -C '${local.hometest_service_dir}' -- '${local.scripts_dir}/build-lambdas.sh' '${local.lambdas_source_dir}' '${local.lambda_build_cache}'"
+      "cd '${local.hometest_service_dir}' && NODE_ENV=${local.lambda_node_env} mise exec -- '${local.scripts_dir}/build-lambdas.sh' '${local.lambdas_source_dir}' '${local.lambda_build_cache}'"
     ]
   }
 
@@ -166,7 +170,7 @@ terraform {
     commands = ["plan", "apply"]
     execute = [
       "bash", "-c",
-      "mise exec -C '${local.hometest_service_dir}' -- '${local.scripts_dir}/build-spa.sh' '${local.spa_source_dir}' '${local.spa_build_cache}' 'https://${local.api_domain}' '${local.spa_type}'"
+      "cd '${local.hometest_service_dir}' && mise exec -- '${local.scripts_dir}/build-spa.sh' '${local.spa_source_dir}' '${local.spa_build_cache}' 'https://${local.api_domain}' '${local.spa_type}'"
     ]
   }
 
@@ -257,6 +261,7 @@ dependency "aurora_postgres" {
 }
 
 dependency "ecs" {
+  enabled     = local._ecs_enabled
   config_path = "${get_terragrunt_dir()}/../../core/ecs"
 
   mock_outputs = {
