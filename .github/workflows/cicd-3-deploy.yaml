@@ -1,6 +1,6 @@
 ---
 name: "CI/CD deploy"
-run-name: "Deploy hometest-mgmt-terraform to env: poc, tf: apply"
+run-name: "Deploy hometest-mgmt-terraform to env: ${{ inputs.environment || 'poc' }}, tf: apply"
 
 on:
   push:
