@@ -68,10 +68,14 @@ inputs = {
   # Allow specific domains for egress (HTTPS/TLS traffic)
   # Note: AWS service domains (.amazonaws.com) are automatically allowed
   allowed_egress_domains = [
-    ".nhs.uk",               # NHS domains
-    ".gov.uk",               # Government domains
-    ".github.com",           # GitHub
-    ".githubusercontent.com" # GitHub content
+    ".nhs.uk",                # NHS domains
+    ".gov.uk",                # Government domains
+    ".github.com",            # GitHub
+    ".githubusercontent.com", # GitHub content
     # Add more domains as needed for your application
+    ".prevx.io",          # Preventx staging/prod API
+    ".preventx.com",      # Preventx website
+    ".azurewebsites.net", # Preventx Azure functions
+    ".sh24.org.uk"        # SH24 all environments
   ]
 }
