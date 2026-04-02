@@ -27,6 +27,10 @@ locals {
   # Using /20 for public (4096 IPs), /19 for private (8192 IPs), /21 for data (2048 IPs)
   azs = slice(data.aws_availability_zones.available.names, 0, var.az_count)
 
+  # Data/database subnets always span >= 2 AZs (Aurora DB subnet group requirement)
+  data_az_count = max(var.az_count, 2)
+  data_azs      = slice(data.aws_availability_zones.available.names, 0, local.data_az_count)
+
   # Subnet CIDR calculations for a /16 VPC
   # Layout:
   #   Public  /20 (newbits=4):  indices 0-2   -> 10.0.0.0/20, 10.0.16.0/20, 10.0.32.0/20
@@ -40,7 +44,7 @@ locals {
     for i, az in local.azs : cidrsubnet(var.vpc_cidr, 3, i + 2)
   ]
   data_subnets = [
-    for i, az in local.azs : cidrsubnet(var.vpc_cidr, 5, i + 28)
+    for i, az in local.data_azs : cidrsubnet(var.vpc_cidr, 5, i + 28)
   ]
   firewall_subnets = [
     for i, az in local.azs : cidrsubnet(var.vpc_cidr, 6, i + 48)
