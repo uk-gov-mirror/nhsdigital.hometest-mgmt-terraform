@@ -25,4 +25,8 @@ include "app" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 inputs = {
+  # TEMPORARY FIX: staging uses devtest.hometest.service.nhs.uk zone (Z10312861T421RGJG6CVB)
+  # instead of the default hometest.service.nhs.uk zone from the network module.
+  # TODO: Remove once the network module outputs the correct zone for this subenv.
+  route53_zone_id = "Z10312861T421RGJG6CVB"
 }
