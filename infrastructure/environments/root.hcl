@@ -28,9 +28,11 @@ locals {
   environment = try(local._env_locals.environment, basename(path_relative_to_include()))
 
   # Verify that the AWS CLI is authenticated to the expected account
-  current_account_id = trimspace(run_cmd("--terragrunt-quiet", "aws", "sts", "get-caller-identity", "--query", "Account", "--output", "text"))
+  # Set SKIP_AWS_ACCOUNT_CHECK=true to bypass this check (e.g. in pre-commit hooks)
+  skip_account_check = get_env("SKIP_AWS_ACCOUNT_CHECK", "false") == "true"
+  current_account_id = local.skip_account_check ? local.account_id : trimspace(run_cmd("--terragrunt-quiet", "aws", "sts", "get-caller-identity", "--query", "Account", "--output", "text"))
   account_check = (
-    local.current_account_id == local.account_id
+    local.skip_account_check || local.current_account_id == local.account_id
     ? local.current_account_id
     : error("AWS account mismatch! Expected ${local.account_id} (${local.account_name}) but AWS CLI is authenticated to ${local.current_account_id}. Check your AWS profile/credentials.")
   )

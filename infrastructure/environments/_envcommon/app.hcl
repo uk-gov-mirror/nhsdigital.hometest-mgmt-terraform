@@ -158,7 +158,7 @@ terraform {
     "apply"]
     execute = [
       "bash", "-c",
-      "mise exec -C '${local.hometest_service_dir}' -- '${local.scripts_dir}/build-lambdas.sh' '${local.lambdas_source_dir}' '${local.lambda_build_cache}'"
+      "cd '${local.hometest_service_dir}' && mise exec -- '${local.scripts_dir}/build-lambdas.sh' '${local.lambdas_source_dir}' '${local.lambda_build_cache}'"
     ]
   }
 
@@ -169,7 +169,7 @@ terraform {
     commands = ["plan", "apply"]
     execute = [
       "bash", "-c",
-      "mise exec -C '${local.hometest_service_dir}' -- '${local.scripts_dir}/build-spa.sh' '${local.spa_source_dir}' '${local.spa_build_cache}' 'https://${local.api_domain}' '${local.spa_type}'"
+      "cd '${local.hometest_service_dir}' && mise exec -- '${local.scripts_dir}/build-spa.sh' '${local.spa_source_dir}' '${local.spa_build_cache}' 'https://${local.api_domain}' '${local.spa_type}'"
     ]
   }
 
