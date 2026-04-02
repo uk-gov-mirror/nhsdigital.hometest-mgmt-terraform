@@ -10,7 +10,7 @@ resource "aws_subnet" "data" {
   availability_zone = local.data_azs[count.index]
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-data-${local.azs[count.index]}"
+    Name = "${local.resource_prefix}-data-${local.data_azs[count.index]}"
     Tier = "data"
   })
 }
