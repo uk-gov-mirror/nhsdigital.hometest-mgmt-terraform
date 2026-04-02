@@ -190,17 +190,27 @@ jobs:
           path: hometest-service
           ssh-key: ${{ secrets.NHS_HOMETEST_SERVICE_DEPLOY_KEY_SSH_PRIV }}
 
-      - name: "Cache node_modules"
-        uses: actions/cache@v5
+      - name: "Restore mise hometest-service cache"
+        uses: actions/cache/restore@v5
+        with:
+          path: |
+            ~/.local/share/mise
+            hometest-service/.mise-cache
+          key: mise-hometest-service-${{ runner.os }}-mgmt-${{ hashFiles('hometest-service/.mise.toml') }}
+          restore-keys: |
+            mise-hometest-service-${{ runner.os }}-mgmt-
+            mise-hometest-service-${{ runner.os }}-
+
+      - name: "Restore node_modules cache"
+        uses: actions/cache/restore@v5
         with:
           path: |
             hometest-service/node_modules
             hometest-service/ui/node_modules
             hometest-service/lambdas/node_modules
             hometest-service/tests/node_modules
-          key: node-modules-${{ runner.os }}-mgmt-${{ github.event_name == 'pull_request' && 'pr' || 'push' }}-${{ hashFiles('hometest-service/**/package-lock.json') }}
+          key: node-modules-${{ runner.os }}-mgmt-${{ hashFiles('hometest-service/**/package-lock.json') }}
           restore-keys: |
-            node-modules-${{ runner.os }}-mgmt-${{ github.event_name == 'pull_request' && 'pr' || 'push' }}-
             node-modules-${{ runner.os }}-mgmt-
             node-modules-${{ runner.os }}-
 
@@ -217,6 +227,26 @@ jobs:
           working_directory: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.subenv }}
           action: ${{ inputs.action || 'plan' }}
           targets: ${{ inputs.targets }}
+
+      - name: "Save mise hometest-service cache"
+        if: always()
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            ~/.local/share/mise
+            hometest-service/.mise-cache
+          key: mise-hometest-service-${{ runner.os }}-mgmt-${{ hashFiles('hometest-service/.mise.toml') }}
+
+      - name: "Save node_modules cache"
+        if: always()
+        uses: actions/cache/save@v5
+        with:
+          path: |
+            hometest-service/node_modules
+            hometest-service/ui/node_modules
+            hometest-service/lambdas/node_modules
+            hometest-service/tests/node_modules
+          key: node-modules-${{ runner.os }}-mgmt-${{ hashFiles('hometest-service/**/package-lock.json') }}
 
       - name: "Post deployment summary"
         if: always()
