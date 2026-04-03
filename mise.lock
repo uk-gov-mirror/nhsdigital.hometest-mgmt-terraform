@@ -111,11 +111,23 @@ backend = "aqua:pypa/pipx"
 checksum = "sha256:088012ed44db557464e48721275b62b2c2a9a943f444cde05f82cf7a23e63dbc"
 url = "https://github.com/pypa/pipx/releases/download/1.11.0/pipx.pyz"
 
+[tools.pipx."platforms.linux-arm64-musl"]
+checksum = "sha256:088012ed44db557464e48721275b62b2c2a9a943f444cde05f82cf7a23e63dbc"
+url = "https://github.com/pypa/pipx/releases/download/1.11.0/pipx.pyz"
+
 [tools.pipx."platforms.linux-x64"]
 checksum = "sha256:088012ed44db557464e48721275b62b2c2a9a943f444cde05f82cf7a23e63dbc"
 url = "https://github.com/pypa/pipx/releases/download/1.11.0/pipx.pyz"
 
+[tools.pipx."platforms.linux-x64-musl"]
+checksum = "sha256:088012ed44db557464e48721275b62b2c2a9a943f444cde05f82cf7a23e63dbc"
+url = "https://github.com/pypa/pipx/releases/download/1.11.0/pipx.pyz"
+
 [tools.pipx."platforms.macos-arm64"]
+checksum = "sha256:088012ed44db557464e48721275b62b2c2a9a943f444cde05f82cf7a23e63dbc"
+url = "https://github.com/pypa/pipx/releases/download/1.11.0/pipx.pyz"
+
+[tools.pipx."platforms.macos-x64"]
 checksum = "sha256:088012ed44db557464e48721275b62b2c2a9a943f444cde05f82cf7a23e63dbc"
 url = "https://github.com/pypa/pipx/releases/download/1.11.0/pipx.pyz"
 
@@ -148,7 +160,17 @@ checksum = "sha256:53700338695e402a1a1fe22be4a41fbdacc70e22bb308a48eca8ed67cb799
 url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260324/cpython-3.14.3+20260324-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
+[tools.python."platforms.linux-arm64-musl"]
+checksum = "sha256:53700338695e402a1a1fe22be4a41fbdacc70e22bb308a48eca8ed67cb7992be"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260324/cpython-3.14.3+20260324-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz"
+provenance = "github-attestations"
+
 [tools.python."platforms.linux-x64"]
+checksum = "sha256:d7a9f970914bb4c88756fe3bdcc186d4feb90e9500e54f1db47dae4dc9687e39"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260324/cpython-3.14.3+20260324-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
+provenance = "github-attestations"
+
+[tools.python."platforms.linux-x64-musl"]
 checksum = "sha256:d7a9f970914bb4c88756fe3bdcc186d4feb90e9500e54f1db47dae4dc9687e39"
 url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260324/cpython-3.14.3+20260324-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
 provenance = "github-attestations"
@@ -156,6 +178,11 @@ provenance = "github-attestations"
 [tools.python."platforms.macos-arm64"]
 checksum = "sha256:c43aecde4a663aebff99b9b83da0efec506479f1c3f98331442f33d2c43501f9"
 url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260324/cpython-3.14.3+20260324-aarch64-apple-darwin-install_only_stripped.tar.gz"
+provenance = "github-attestations"
+
+[tools.python."platforms.macos-x64"]
+checksum = "sha256:9ab41dbc2f100a2a45d1833b9c11165f51051c558b5213eda9a9731d5948a0c0"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260324/cpython-3.14.3+20260324-x86_64-apple-darwin-install_only_stripped.tar.gz"
 provenance = "github-attestations"
 
 [tools.python."platforms.windows-x64"]
