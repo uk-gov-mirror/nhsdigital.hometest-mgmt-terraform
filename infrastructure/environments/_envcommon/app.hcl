@@ -129,6 +129,7 @@ locals {
 
   sqs_prefix                = "https://sqs.${local.aws_region}.amazonaws.com/${local.account_id}/${local.project_name}-${local.aws_account_shortname}-${local.environment}"
   order_placement_queue_url = "${local.sqs_prefix}-order-placement"
+  notify_messages_queue_url = "${local.sqs_prefix}-notify-messages"
 
   # ECS dependency — only enabled when the core/ecs stack exists (needed for WireMock)
   _ecs_enabled = fileexists("${get_terragrunt_dir()}/../../core/ecs/terragrunt.hcl")
@@ -464,15 +465,17 @@ inputs = {
       timeout         = local.lambda_timeout
       memory_size     = local.lambda_memory_size
       environment = {
-        NODE_OPTIONS = "--enable-source-maps"
-        ENVIRONMENT  = local.environment
-        DB_USERNAME  = local.db_app_user
-        DB_ADDRESS   = dependency.aurora_postgres.outputs.cluster_endpoint
-        DB_PORT      = tostring(dependency.aurora_postgres.outputs.cluster_port)
-        DB_NAME      = dependency.aurora_postgres.outputs.cluster_database_name
-        DB_SCHEMA    = local.db_schema
-        USE_IAM_AUTH = "true"
-        DB_REGION    = local.aws_region
+        NODE_OPTIONS              = "--enable-source-maps"
+        ENVIRONMENT               = local.environment
+        DB_USERNAME               = local.db_app_user
+        DB_ADDRESS                = dependency.aurora_postgres.outputs.cluster_endpoint
+        DB_PORT                   = tostring(dependency.aurora_postgres.outputs.cluster_port)
+        DB_NAME                   = dependency.aurora_postgres.outputs.cluster_database_name
+        DB_SCHEMA                 = local.db_schema
+        USE_IAM_AUTH              = "true"
+        DB_REGION                 = local.aws_region
+        NOTIFY_MESSAGES_QUEUE_URL = local.notify_messages_queue_url
+        HOME_TEST_BASE_URL        = local.spa_origin
       }
       authorization        = "COGNITO_USER_POOLS"
       authorization_scopes = ["results/write"]
@@ -560,16 +563,18 @@ inputs = {
       timeout         = local.lambda_timeout
       memory_size     = local.lambda_memory_size
       environment = {
-        NODE_OPTIONS = "--enable-source-maps"
-        ENVIRONMENT  = local.environment
-        ALLOW_ORIGIN = local.spa_origin
-        DB_USERNAME  = local.db_app_user
-        DB_ADDRESS   = dependency.aurora_postgres.outputs.cluster_endpoint
-        DB_PORT      = tostring(dependency.aurora_postgres.outputs.cluster_port)
-        DB_NAME      = dependency.aurora_postgres.outputs.cluster_database_name
-        DB_SCHEMA    = local.db_schema
-        USE_IAM_AUTH = "true"
-        DB_REGION    = local.aws_region
+        NODE_OPTIONS              = "--enable-source-maps"
+        ENVIRONMENT               = local.environment
+        ALLOW_ORIGIN              = local.spa_origin
+        DB_USERNAME               = local.db_app_user
+        DB_ADDRESS                = dependency.aurora_postgres.outputs.cluster_endpoint
+        DB_PORT                   = tostring(dependency.aurora_postgres.outputs.cluster_port)
+        DB_NAME                   = dependency.aurora_postgres.outputs.cluster_database_name
+        DB_SCHEMA                 = local.db_schema
+        USE_IAM_AUTH              = "true"
+        DB_REGION                 = local.aws_region
+        NOTIFY_MESSAGES_QUEUE_URL = local.notify_messages_queue_url
+        HOME_TEST_BASE_URL        = local.spa_origin
       }
 
       authorization        = "COGNITO_USER_POOLS"
