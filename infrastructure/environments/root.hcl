@@ -64,7 +64,7 @@ locals {
 terraform {
   extra_arguments "parallelism" {
     commands  = ["plan", "apply", "destroy"]
-    arguments = ["-parallelism=20"]
+    arguments = ["-parallelism=30"]
   }
 }
 
