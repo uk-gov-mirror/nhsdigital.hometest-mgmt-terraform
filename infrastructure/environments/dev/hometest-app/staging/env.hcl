@@ -2,4 +2,11 @@
 # feed forward to the child modules.
 locals {
   environment = "staging"
+
+  # Domain overrides for staging environment.
+  env_domain = "staging.hometest.service.nhs.uk"
+  api_domain = "api.staging.hometest.service.nhs.uk"
+
+  create_cloudfront_certificate = true
+  create_api_certificate        = true
 }

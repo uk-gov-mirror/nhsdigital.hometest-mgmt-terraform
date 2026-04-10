@@ -2,4 +2,11 @@
 # feed forward to the child modules.
 locals {
   environment = "demo"
+
+  # Domain overrides for demo environment.
+  env_domain = "demo.hometest.service.nhs.uk"
+  api_domain = "api.demo.hometest.service.nhs.uk"
+
+  create_cloudfront_certificate = true
+  create_api_certificate        = true
 }

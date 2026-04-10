@@ -6,6 +6,10 @@ inputs:
     description: "Directory containing the .tool-versions file"
     required: false
     default: "."
+  github_token:
+    description: "GitHub token for API rate limits (use a PAT for higher limits)"
+    required: false
+    default: ""
 
 runs:
   using: "composite"
@@ -40,7 +44,8 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working_directory }}
       env:
-        GITHUB_TOKEN: ${{ github.token }}
+        GITHUB_TOKEN: ${{ inputs.github_token || github.token }}
+        MISE_GITHUB_TOKEN: ${{ inputs.github_token || github.token }}
       run: |
         curl https://mise.run | sh
         echo "$HOME/.local/share/mise/bin" >> $GITHUB_PATH
@@ -50,6 +55,7 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working_directory }}
       env:
-        GITHUB_TOKEN: ${{ github.token }}
+        GITHUB_TOKEN: ${{ inputs.github_token || github.token }}
+        MISE_GITHUB_TOKEN: ${{ inputs.github_token || github.token }}
       run: |
-        mise install
+        mise install --verbose

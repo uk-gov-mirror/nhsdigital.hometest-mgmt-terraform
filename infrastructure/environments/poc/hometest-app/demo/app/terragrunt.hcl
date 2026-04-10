@@ -1,10 +1,10 @@
 # ---------------------------------------------------------------------------------------------------------------------
-# TERRAGRUNT CONFIGURATION FOR prod ENVIRONMENT
-# Deployment with: cd poc/hometest-app/prod && terragrunt apply
+# TERRAGRUNT CONFIGURATION FOR demo ENVIRONMENT
+# Deployment with: cd poc/hometest-app/demo/app && terragrunt apply
 #
-# All shared configuration (dependencies, lambda definitions, hooks) comes from ../app.hcl.
-# Domain overrides (apex domain, api.hometest.* pattern) are in ./domain.hcl.
-# Environment name ("prod") is derived automatically from this directory name.
+# All shared configuration (dependencies, lambda definitions, hooks) comes from _envcommon/hometest-app.hcl.
+# Domain overrides and env flags are in ../env.hcl.
+# Environment name ("demo") is derived from the parent directory name.
 # ---------------------------------------------------------------------------------------------------------------------
 
 include "root" {
@@ -12,7 +12,7 @@ include "root" {
 }
 
 include "app" {
-  path           = find_in_parent_folders("_envcommon/app.hcl")
+  path           = find_in_parent_folders("_envcommon/hometest-app.hcl")
   expose         = true
   merge_strategy = "deep"
 }

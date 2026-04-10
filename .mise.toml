@@ -1,9 +1,14 @@
 [settings]
+locked = true
 lockfile = true
 install_before = "7d"
 
 [settings.python]
 compile = false
+
+# Disable to avoid calling Github API
+[settings.aqua]
+cosign = false
 
 [tools]
 # Custom registries are not included in mise-versions
@@ -42,7 +47,7 @@ go = "1.26.2"
 ## Security scanning
 
 # https://github.com/aquasecurity/trivy/releases
-# "aqua:aquasecurity/trivy" = "v0.69.3"
+"aqua:aquasecurity/trivy" = "v0.69.3"
 
 # https://github.com/pypa/pipx/releases
 pipx = "1.11.0"

@@ -1,10 +1,10 @@
 # ---------------------------------------------------------------------------------------------------------------------
 # TERRAGRUNT CONFIGURATION FOR uat ENVIRONMENT
-# Deployment with: cd poc/hometest-app/uat && terragrunt apply
+# Deployment with: cd poc/hometest-app/uat/app && terragrunt apply
 #
-# All shared configuration (dependencies, lambda definitions, hooks) comes from ../app.hcl.
-# Domain overrides (custom cert, api.uat.* pattern) are in ./domain.hcl.
-# Environment name ("uat") is derived automatically from this directory name.
+# All shared configuration (dependencies, lambda definitions, hooks) comes from _envcommon/hometest-app.hcl.
+# Domain overrides and env flags (WireMock etc.) are in ../env.hcl.
+# Environment name ("uat") is derived from the parent directory name.
 # ---------------------------------------------------------------------------------------------------------------------
 
 include "root" {
@@ -12,7 +12,7 @@ include "root" {
 }
 
 include "app" {
-  path           = find_in_parent_folders("_envcommon/app.hcl")
+  path           = find_in_parent_folders("_envcommon/hometest-app.hcl")
   expose         = true
   merge_strategy = "deep"
 }

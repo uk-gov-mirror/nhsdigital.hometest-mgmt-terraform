@@ -109,7 +109,7 @@ repos:
 
       - id: terragrunt_validate_inputs
         name: Terragrunt validate inputs Dev
-        files: ^infrastructure/environments/poc/hometest-app/dev/[^/]+$
+        files: ^infrastructure/environments/poc/hometest-app/dev/app/[^/]+$
         args:
           # Optionally check for unused inputs
           - --args=--terragrunt-strict-validate

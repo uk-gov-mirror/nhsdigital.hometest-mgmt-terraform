@@ -1,10 +1,10 @@
 # ---------------------------------------------------------------------------------------------------------------------
 # TERRAGRUNT CONFIGURATION FOR dev ENVIRONMENT
-# Deployment with: cd poc/hometest-app/dev && terragrunt apply
+# Deployment with: cd poc/hometest-app/dev/app && terragrunt apply
 #
-# All shared configuration (dependencies, lambda definitions, hooks) comes from ../app.hcl.
-# Domain overrides (custom cert, api.dev.* pattern) are in ./domain.hcl.
-# Environment name ("dev") is derived automatically from this directory name.
+# All shared configuration (dependencies, lambda definitions, hooks) comes from _envcommon/hometest-app.hcl.
+# Domain overrides and env flags are in ../env.hcl.
+# Environment name ("dev") is derived from the parent directory name.
 # Only truly env-specific overrides (e.g., extra lambdas) belong here.
 # ---------------------------------------------------------------------------------------------------------------------
 
@@ -13,15 +13,15 @@ include "root" {
 }
 
 include "app" {
-  path           = find_in_parent_folders("_envcommon/app.hcl")
+  path           = find_in_parent_folders("_envcommon/hometest-app.hcl")
   expose         = true
   merge_strategy = "deep"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
 # ENVIRONMENT-SPECIFIC OVERRIDES
-# Deep-merged with ../app.hcl inputs.
-# Domain, certs, hooks, and lambda env vars are handled by app.hcl + domain.hcl.
+# Deep-merged with _envcommon/hometest-app.hcl inputs.
+# Domain, certs, hooks, and lambda env vars are handled by app.hcl + env.hcl.
 # ---------------------------------------------------------------------------------------------------------------------
 
 inputs = {

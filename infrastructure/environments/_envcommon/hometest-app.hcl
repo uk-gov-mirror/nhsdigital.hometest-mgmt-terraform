@@ -1,15 +1,23 @@
 # ---------------------------------------------------------------------------------------------------------------------
 # COMMON TERRAGRUNT CONFIGURATION FOR HOMETEST-APP
-# Location: _envcommon/app.hcl
+# Location: _envcommon/hometest-app.hcl
 #
 # Shared configuration for all environments (dev, dev-mikmio, etc.) under poc/hometest-app/.
-# Environment-specific terragrunt.hcl files include this and override only what's needed.
+# Environment-specific app/terragrunt.hcl files include this and override only what's needed.
 #
-# Environment name is derived automatically from the child directory name (e.g., dev/, dev-mikmio/).
+# Expected directory layout per environment:
+#   poc/hometest-app/{env}/
+#   ├── env.hcl                  (environment name + optional domain/wiremock overrides)
+#   ├── app/
+#   │   └── terragrunt.hcl       (includes this file)
+#   └── lambda-goose-migrator/
+#       └── terragrunt.hcl
 #
-# Usage in child terragrunt.hcl:
+# Environment name is derived from the parent directory name (dirname of get_terragrunt_dir()).
+#
+# Usage in child app/terragrunt.hcl:
 #   include "app" {
-#     path           = find_in_parent_folders("_envcommon/app.hcl")
+#     path           = find_in_parent_folders("_envcommon/hometest-app.hcl")
 #     expose         = true
 #     merge_strategy = "deep"
 #   }
@@ -24,11 +32,14 @@
 
 locals {
   # Load configuration from parent folders
-  account_vars = read_terragrunt_config(find_in_parent_folders("account.hcl"))
-  global_vars  = read_terragrunt_config(find_in_parent_folders("_envcommon/all.hcl"))
+  account_vars     = read_terragrunt_config(find_in_parent_folders("account.hcl"))
+  global_vars      = read_terragrunt_config(find_in_parent_folders("_envcommon/all.hcl"))
+  account_app_vars = read_terragrunt_config(find_in_parent_folders("app.hcl"))
 
-  # Environment derived from child directory name (e.g., dev/, dev-mikmio/)
-  environment = basename(get_terragrunt_dir())
+  # Environment derived from parent directory name (e.g., dev/, dev-mikmio/)
+  # get_terragrunt_dir() returns {env}/app/, so dirname gives {env}/
+  _env_dir    = dirname(get_terragrunt_dir())
+  environment = basename(local._env_dir)
 
   # Extract commonly used values
   project_name          = local.global_vars.locals.project_name
@@ -42,14 +53,14 @@ locals {
   #   SPA: dev.poc.hometest.service.nhs.uk
   #   API: api-dev.poc.hometest.service.nhs.uk
   #
-  # Children that require a different pattern (e.g., dev.hometest.service.nhs.uk)
-  # create a domain.hcl file in their directory — see domain.hcl.example.
+  # To override, add domain locals (env_domain, api_domain, create_*_certificate)
+  # directly in the environment's env.hcl file.
   # ---------------------------------------------------------------------------
-  _domain_overrides = try(read_terragrunt_config("${get_terragrunt_dir()}/domain.hcl").locals, {})
 
-  # Read per-environment flags from env.hcl (same file that carries the environment name).
-  # Defaults to an empty map so environments without the key get the safe default.
-  _env_flags                 = try(read_terragrunt_config("${get_terragrunt_dir()}/env.hcl").locals, {})
+  # Read per-environment config from env.hcl in the parent (environment) directory.
+  # env.hcl carries the environment name, domain overrides, and feature flags (e.g., wiremock).
+  _env_flags                 = try(read_terragrunt_config("${local._env_dir}/env.hcl").locals, {})
+  _domain_overrides          = local._env_flags
   enable_wiremock            = lookup(local._env_flags, "enable_wiremock", false)
   wiremock_bypass_waf        = lookup(local._env_flags, "wiremock_bypass_waf", false)
   wiremock_scheduled_scaling = lookup(local._env_flags, "wiremock_scheduled_scaling", false)
@@ -72,15 +83,13 @@ locals {
   db_app_user = "app_user_${local.db_schema}"
 
   # ---------------------------------------------------------------------------
-  # SECRET NAMES (environment-aware)
+  # SECRET NAMES (from account-level app.hcl, overridable per-environment)
   # ---------------------------------------------------------------------------
-  # secret_prefix                     = "nhs-hometest/${local.environment}"
-  secret_prefix = "nhs-hometest/dev"
-  # app_user_secret_name              = "nhs-hometest/${local.environment}/app-user-db-secret"
-  preventx_client_secret_name       = "${local.secret_prefix}/preventex-dev-client-secret"
-  sh24_client_secret_name           = "${local.secret_prefix}/sh24-dev-client-secret"
-  nhs_login_private_key_secret_name = "${local.secret_prefix}/nhs-login-private-key"
-  os_places_creds_secret_name       = "${local.secret_prefix}/os-places-creds"
+  secret_prefix                     = local.account_app_vars.locals.secret_prefix
+  preventx_client_secret_name       = local.account_app_vars.locals.preventx_client_secret_name
+  sh24_client_secret_name           = local.account_app_vars.locals.sh24_client_secret_name
+  nhs_login_private_key_secret_name = local.account_app_vars.locals.nhs_login_private_key_secret_name
+  os_places_creds_secret_name       = local.account_app_vars.locals.os_places_creds_secret_name
 
   # Secrets Manager ARN prefix for building IAM policies
   secrets_arn_prefix = "arn:aws:secretsmanager:${local.aws_region}:${local.account_id}:secret"
@@ -117,10 +126,10 @@ locals {
   # CloudFront Defaults
   cloudfront_price_class = "PriceClass_100"
 
-  # NHS Login Configuration
-  nhs_login_base_url                         = "https://auth.sandpit.signin.nhs.uk"
+  # NHS Login Configuration (from account-level app.hcl)
+  nhs_login_base_url                         = local.account_app_vars.locals.nhs_login_base_url
   nhs_login_authorize_url                    = "${local.nhs_login_base_url}/authorize"
-  nhs_login_client_id                        = "hometest"
+  nhs_login_client_id                        = local.account_app_vars.locals.nhs_login_client_id
   auth_session_max_duration_minutes          = "60"
   auth_access_token_expiry_duration_minutes  = "60"
   auth_refresh_token_expiry_duration_minutes = "60"
@@ -168,7 +177,7 @@ locals {
   notify_messages_queue_url = "${local.sqs_prefix}-notify-messages"
 
   # ECS dependency — only enabled when the core/ecs stack exists (needed for WireMock)
-  _ecs_enabled = fileexists("${get_terragrunt_dir()}/../../core/ecs/terragrunt.hcl")
+  _ecs_enabled = fileexists("${local._env_dir}/../../core/ecs/terragrunt.hcl")
 
   # Security headers
   content_security_policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none';"
@@ -256,7 +265,7 @@ terraform {
 # ---------------------------------------------------------------------------------------------------------------------
 
 dependency "network" {
-  config_path = "${get_terragrunt_dir()}/../../core/network"
+  config_path = "${get_terragrunt_dir()}/../../../core/network"
 
   mock_outputs = {
     route53_zone_id              = "Z0123456789ABCDEFGHIJ"
@@ -270,7 +279,7 @@ dependency "network" {
 }
 
 dependency "shared_services" {
-  config_path = "${get_terragrunt_dir()}/../../core/shared_services"
+  config_path = "${get_terragrunt_dir()}/../../../core/shared_services"
 
   mock_outputs = {
     kms_key_arn                     = "arn:aws:kms:eu-west-2:123456789012:key/mock-key-id"
@@ -290,7 +299,7 @@ dependency "shared_services" {
 }
 
 dependency "aurora_postgres" {
-  config_path = "${get_terragrunt_dir()}/../../core/aurora-postgres"
+  config_path = "${get_terragrunt_dir()}/../../../core/aurora-postgres"
 
   mock_outputs = {
     connection_string               = "postgresql://mock-user:mock-pass@mock-aurora-cluster.cluster-abc123.eu-west-2.rds.amazonaws.com:5432/hometest"
@@ -309,7 +318,7 @@ dependency "aurora_postgres" {
 
 dependency "ecs" {
   enabled     = local._ecs_enabled
-  config_path = "${get_terragrunt_dir()}/../../core/ecs"
+  config_path = "${get_terragrunt_dir()}/../../../core/ecs"
 
   mock_outputs = {
     cluster_arn                      = "arn:aws:ecs:eu-west-2:123456789012:cluster/mock-ecs-cluster"

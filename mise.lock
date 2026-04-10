@@ -59,13 +59,13 @@ backend = "aqua:pre-commit/pre-commit"
 "platforms.windows-x64" = { checksum = "sha256:19d00ba35cbf9c04dc3736cd8bb641e8633f3eddd4cedde71809574ae68a2cd1", url = "https://github.com/pre-commit/pre-commit/releases/download/v4.5.1/pre-commit-4.5.1.pyz"}
 
 [[tools.python]]
-version = "3.14.3"
+version = "3.14.2"
 backend = "core:python"
-"platforms.linux-arm64" = { checksum = "sha256:77f81867483955dad377da5d88dc3a6a9c3425ef501a1c79a36efa6e9afdd459", url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260324/cpython-3.14.3+20260324-aarch64-unknown-linux-gnu-freethreaded-install_only_stripped.tar.gz"}
-"platforms.linux-x64" = { checksum = "sha256:5d2a24823b7a4138010f15005f5deda932acdd86a45c51e6e5145492663a3d39", url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260324/cpython-3.14.3+20260324-x86_64-unknown-linux-gnu-freethreaded-install_only_stripped.tar.gz"}
-"platforms.macos-arm64" = { checksum = "sha256:d490d864a2a3f6af75224728521e7c715af9a6f539892f762a82e20eecceed3e", url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260324/cpython-3.14.3+20260324-aarch64-apple-darwin-freethreaded-install_only_stripped.tar.gz"}
-"platforms.macos-x64" = { checksum = "sha256:bd50469b37f9539a3a3726e3162faa98f9b767afc430a92dbd6721ef47c2bf42", url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260324/cpython-3.14.3+20260324-x86_64-apple-darwin-freethreaded-install_only_stripped.tar.gz"}
-"platforms.windows-x64" = { checksum = "sha256:002b2b6731b1d0b3c77e893ca6de34df3597ccec683a115dc19f3654db7a63da", url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260324/cpython-3.14.3+20260324-x86_64-pc-windows-msvc-freethreaded-install_only_stripped.tar.gz"}
+"platforms.linux-arm64" = { checksum = "sha256:1d243bfab134c9fd3e099780a811079d8c6158283bddde65de2bc5f6eda74f7c", url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260127/cpython-3.14.2+20260127-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz"}
+"platforms.linux-x64" = { checksum = "sha256:c2926d6707f4339e3bf30e90437b387712b47e60e9e55bff1dcb36bf7688b01d", url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260127/cpython-3.14.2+20260127-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"}
+"platforms.macos-arm64" = { checksum = "sha256:2f82ed0cf902c8a2863a3fc5864909645c761e4e0a96525850c9ef8f7e3b79e7", url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260127/cpython-3.14.2+20260127-aarch64-apple-darwin-install_only_stripped.tar.gz"}
+"platforms.macos-x64" = { checksum = "sha256:51e886261fb79f64079b20181a7f8adfca738f2b2882882e981b67a165e1809b", url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260127/cpython-3.14.2+20260127-x86_64-apple-darwin-install_only_stripped.tar.gz"}
+"platforms.windows-x64" = { checksum = "sha256:42638ce9bd8c177010c44c7a6a6fb3e1dc0b04ea372089036c689ccb57dc0d09", url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260127/cpython-3.14.2+20260127-x86_64-pc-windows-msvc-install_only_stripped.tar.gz"}
 
 [[tools.terraform]]
 version = "1.14.8"
