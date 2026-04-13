@@ -141,11 +141,6 @@ output "lambda_rds_security_group_id" {
   value       = var.create_lambda_rds_sg ? aws_security_group.lambda_rds[0].id : null
 }
 
-output "rds_security_group_id" {
-  description = "Security group ID for RDS databases"
-  value       = var.create_rds_sg ? aws_security_group.rds[0].id : null
-}
-
 # output "elasticache_security_group_id" {
 #   description = "Security group ID for ElastiCache"
 #   value       = var.create_elasticache_sg ? aws_security_group.elasticache[0].id : null

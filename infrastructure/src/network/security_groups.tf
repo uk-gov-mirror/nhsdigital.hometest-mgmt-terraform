@@ -95,70 +95,9 @@ resource "aws_vpc_security_group_egress_rule" "lambda_rds_postgres" {
   })
 }
 
-resource "aws_vpc_security_group_egress_rule" "lambda_rds_https" {
-  count = var.create_lambda_rds_sg ? 1 : 0
+# NOTE: Lambda RDS SG does not need its own HTTPS egress rule because Lambdas
+# always receive both the lambda SG (which already has HTTPS egress) and this SG.
 
-  security_group_id = aws_security_group.lambda_rds[0].id
-  description       = "HTTPS for AWS API calls"
-  from_port         = 443
-  to_port           = 443
-  ip_protocol       = "tcp"
-  # trivy:ignore:AVD-AWS-0104
-  cidr_ipv4 = "0.0.0.0/0"
-
-  tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-lambda-rds-https-egress"
-  })
-}
-
-################################################################################
-# Security Group for RDS/Database
-################################################################################
-
-resource "aws_security_group" "rds" {
-  count = var.create_rds_sg ? 1 : 0
-
-  name        = "${local.resource_prefix}-rds-sg"
-  description = "Security group for RDS databases"
-  vpc_id      = aws_vpc.main.id
-
-  tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-rds-sg"
-  })
-
-  lifecycle {
-    create_before_destroy = true
-  }
-}
-
-resource "aws_vpc_security_group_ingress_rule" "rds_from_lambda" {
-  count = var.create_rds_sg ? 1 : 0
-
-  security_group_id            = aws_security_group.rds[0].id
-  description                  = "PostgreSQL from Lambda"
-  from_port                    = 5432
-  to_port                      = 5432
-  ip_protocol                  = "tcp"
-  referenced_security_group_id = aws_security_group.lambda.id
-
-  tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-rds-from-lambda-ingress"
-  })
-}
-
-resource "aws_vpc_security_group_ingress_rule" "rds_from_lambda_rds" {
-  count = var.create_rds_sg && var.create_lambda_rds_sg ? 1 : 0
-
-  security_group_id            = aws_security_group.rds[0].id
-  description                  = "PostgreSQL from Lambda RDS SG"
-  from_port                    = 5432
-  to_port                      = 5432
-  ip_protocol                  = "tcp"
-  referenced_security_group_id = aws_security_group.lambda_rds[0].id
-
-  tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-rds-from-lambda-rds-ingress"
-  })
-}
-
-# ElastiCache not used in this deployment - only RDS PostgreSQL, Lambda, API Gateway, WAF, SQS, S3
+# NOTE: No standalone RDS SG is needed here. The Aurora module creates its own
+# security group and receives allowed_security_group_ids (Lambda SG IDs) via
+# Terragrunt inputs, keeping ingress rules co-located with the database.

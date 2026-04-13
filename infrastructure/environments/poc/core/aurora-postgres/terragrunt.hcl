@@ -26,9 +26,11 @@ dependency "network" {
 
   # Mock outputs for plan operations when network hasn't been deployed yet
   mock_outputs = {
-    vpc_id               = "vpc-mock-12345678"
-    data_subnet_ids      = ["subnet-mock-1", "subnet-mock-2"]
-    db_subnet_group_name = "mock-db-subnet-group"
+    vpc_id                       = "vpc-mock-12345678"
+    data_subnet_ids              = ["subnet-mock-1", "subnet-mock-2"]
+    db_subnet_group_name         = "mock-db-subnet-group"
+    lambda_security_group_id     = "sg-mock-lambda"
+    lambda_rds_security_group_id = "sg-mock-lambda-rds"
   }
   mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy"]
 }
@@ -66,8 +68,11 @@ inputs = {
 
   number_of_instances = 1
 
-  # Network - Allow access from VPC CIDR for POC
-  allowed_cidr_blocks = ["10.0.0.0/16"]
+  # Network - Allow access from Lambda security groups only (least privilege)
+  allowed_security_group_ids = [
+    dependency.network.outputs.lambda_security_group_id,
+    dependency.network.outputs.lambda_rds_security_group_id
+  ]
 
   # Backup - minimal for POC (default is 7 days)
   backup_retention_period = 3

@@ -143,12 +143,6 @@ variable "create_lambda_rds_sg" {
   default     = true
 }
 
-variable "create_rds_sg" {
-  description = "Create a security group for RDS databases"
-  type        = bool
-  default     = true
-}
-
 #------------------------------------------------------------------------------
 # Network Firewall & Egress Filtering
 #------------------------------------------------------------------------------
