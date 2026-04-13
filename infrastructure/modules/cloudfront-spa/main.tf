@@ -80,7 +80,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "spa" {
       sse_algorithm     = var.s3_kms_key_arn != null ? "aws:kms" : "AES256"
       kms_master_key_id = var.s3_kms_key_arn
     }
-    bucket_key_enabled = var.s3_kms_key_arn != null
+    bucket_key_enabled       = var.s3_kms_key_arn != null
+    blocked_encryption_types = ["SSE-C"]
   }
 }
 
@@ -194,6 +195,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "spa_logs" {
       # S3 server access log delivery only supports SSE-S3 (AES256), not SSE-KMS
       sse_algorithm = "AES256"
     }
+    blocked_encryption_types = ["SSE-C"]
   }
 }
 

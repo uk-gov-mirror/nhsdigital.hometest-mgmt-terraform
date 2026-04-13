@@ -142,7 +142,8 @@ locals {
   # as the NHS Login stub and sets NEXT_PUBLIC_USE_WIREMOCK_AUTH=true.
   # When false, the real NHS Login sandpit is used.
   # ---------------------------------------------------------------------------
-  wiremock_base_url_for_spa   = "https://wiremock-${local.environment}.${local.base_domain}"
+  wiremock_domain             = "wiremock-${local.environment}.${local.base_domain}"
+  wiremock_base_url_for_spa   = "https://${local.wiremock_domain}"
   spa_nhs_login_authorize_url = local.enable_wiremock ? "${local.wiremock_base_url_for_spa}/authorize" : local.nhs_login_authorize_url
   use_wiremock_auth           = local.enable_wiremock
 
@@ -218,13 +219,26 @@ terraform {
       "bash", "-c",
       <<-EOF
         cd '${local.hometest_service_dir}' && \
+        OLD_HASH="" && \
+        if [[ -f '${local.spa_build_cache}/spa.hash' ]]; then
+          OLD_HASH=$(cat '${local.spa_build_cache}/spa.hash')
+        fi && \
         SPA_SOURCE_DIR='${local.spa_source_dir}' \
         SPA_CACHE_DIR='${local.spa_build_cache}' \
         SPA_TYPE='${local.spa_type}' \
         NEXT_PUBLIC_BACKEND_URL='https://${local.api_domain}' \
         NEXT_PUBLIC_NHS_LOGIN_AUTHORIZE_URL='${local.spa_nhs_login_authorize_url}' \
         NEXT_PUBLIC_USE_WIREMOCK_AUTH='${local.use_wiremock_auth}' \
-        mise exec -- '${local.scripts_dir}/build-spa.sh'
+        mise exec -- '${local.scripts_dir}/build-spa.sh' && \
+        NEW_HASH="" && \
+        if [[ -f '${local.spa_build_cache}/spa.hash' ]]; then
+          NEW_HASH=$(cat '${local.spa_build_cache}/spa.hash')
+        fi && \
+        if [[ "$OLD_HASH" != "$NEW_HASH" ]]; then
+          touch '${local.spa_build_cache}/.spa-rebuilt'
+        else
+          rm -f '${local.spa_build_cache}/.spa-rebuilt'
+        fi
       EOF
     ]
   }
@@ -232,12 +246,18 @@ terraform {
   # Upload SPA to S3 after terraform creates the bucket, then invalidate CloudFront.
   # Uses scripts/upload-spa.sh with type-specific caching (Next.js / Vite).
   # Bucket name and CloudFront ID are read from terraform outputs at runtime.
+  # Upload SPA only if it was rebuilt (marker set by build_spa hook).
   after_hook "upload_spa" {
     commands     = ["apply"]
     run_on_error = false
     execute = [
       "bash", "-c",
       <<-EOF
+        if [[ ! -f '${local.spa_build_cache}/.spa-rebuilt' ]]; then
+          echo "SPA was not rebuilt, skipping upload."
+          exit 0
+        fi
+        rm -f '${local.spa_build_cache}/.spa-rebuilt'
         SPA_BUCKET=$(terraform output -raw spa_bucket_id 2>/dev/null || echo "")
         CLOUDFRONT_ID=$(terraform output -raw cloudfront_distribution_id 2>/dev/null || echo "")
         if [[ -n "$SPA_BUCKET" ]]; then
@@ -252,6 +272,26 @@ terraform {
             $CF_FLAG
         else
           echo "Could not determine SPA bucket from terraform outputs, skipping upload..."
+        fi
+      EOF
+    ]
+  }
+
+  # Push WireMock stubs after apply when WireMock is enabled for the environment.
+  # Runs `npm run wiremock:push` from hometest-service/tests with the correct base URL.
+  after_hook "push_wiremock_stubs" {
+    commands     = ["apply"]
+    run_on_error = false
+    execute = [
+      "bash", "-c",
+      <<-EOF
+        if [[ "${local.enable_wiremock}" == "true" ]]; then
+          echo "Pushing WireMock stubs to ${local.wiremock_base_url_for_spa} ..."
+          cd '${local.hometest_service_dir}/tests' && \
+          WIREMOCK_BASE_URL='${local.wiremock_base_url_for_spa}' \
+          npm run wiremock:push
+        else
+          echo "WireMock not enabled for this environment, skipping stub push."
         fi
       EOF
     ]
@@ -693,7 +733,7 @@ inputs = {
   wiremock_alb_dns_name                   = dependency.ecs.outputs.alb_dns_name
   wiremock_alb_zone_id                    = dependency.ecs.outputs.alb_zone_id
   wiremock_service_discovery_namespace_id = dependency.ecs.outputs.service_discovery_namespace_id
-  wiremock_domain_name                    = "wiremock-${local.environment}.${local.base_domain}"
+  wiremock_domain_name                    = local.wiremock_domain
   wiremock_scheduled_scaling              = local.wiremock_scheduled_scaling
   wiremock_ecs_cluster_name               = local.wiremock_scheduled_scaling ? dependency.ecs.outputs.cluster_name : null
   wiremock_use_spot                       = local.wiremock_use_spot
