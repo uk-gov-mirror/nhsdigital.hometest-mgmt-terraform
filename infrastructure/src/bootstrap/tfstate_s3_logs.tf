@@ -34,7 +34,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "tfstate_logs" {
       sse_algorithm     = "aws:kms"
       kms_master_key_id = aws_kms_key.logs.arn
     }
-    bucket_key_enabled = true
+    bucket_key_enabled       = true
+    blocked_encryption_types = ["NONE"]
   }
 }
 

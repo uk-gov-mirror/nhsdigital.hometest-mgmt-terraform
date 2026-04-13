@@ -35,7 +35,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "dns_query_logs" {
       kms_master_key_id = var.logs_kms_key_arn
       sse_algorithm     = "aws:kms"
     }
-    bucket_key_enabled = true
+    bucket_key_enabled       = true
+    blocked_encryption_types = ["NONE"]
   }
 }
 
