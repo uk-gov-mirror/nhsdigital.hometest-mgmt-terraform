@@ -246,10 +246,11 @@ terraform {
           if [[ -n "$CLOUDFRONT_ID" ]]; then
             CF_FLAG="--cloudfront-id $CLOUDFRONT_ID"
           fi
-          "${local.scripts_dir}/upload-spa.sh" "${local.spa_dist_dir}" "$SPA_BUCKET" \
-            --spa-type "${local.spa_type}" \
-            --region "${local.aws_region}" \
-            --spa-source-dir "${local.spa_source_dir}" \
+          cd '${local.hometest_service_dir}' && \
+          mise exec -- '${local.scripts_dir}/upload-spa.sh' '${local.spa_dist_dir}' "$SPA_BUCKET" \
+            --spa-type '${local.spa_type}' \
+            --region '${local.aws_region}' \
+            --spa-source-dir '${local.spa_source_dir}' \
             $CF_FLAG
         else
           echo "Could not determine SPA bucket from terraform outputs, skipping upload..."
