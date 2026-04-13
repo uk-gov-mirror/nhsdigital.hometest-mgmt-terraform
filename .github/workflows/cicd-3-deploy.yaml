@@ -6,9 +6,6 @@ on:
   push:
     branches:
       - main
-  schedule:
-    # Nightly redeploy of hometest-app/dev at 06:00 UTC (Mon-Fri)
-    - cron: "0 6 * * 1-5"
   workflow_dispatch:
     inputs:
       environment:
@@ -218,122 +215,62 @@ jobs:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           working_directory: ${{ env.DEPLOY_PATH }}
 
-  # ---------------------------------------------------------------------------
-  # DEPLOY hometest-app/dev — runs after core infra (aurora depends on shared_services)
-  # Triggered on every push to main and on the nightly schedule.
-  # ---------------------------------------------------------------------------
+  # deploy-dev:
+  #   name: "Deploy TF dev"
+  #   runs-on: ubuntu-latest
+  #   needs: [deploy-shared-services]
+  #   timeout-minutes: 10
+  #   permissions:
+  #     id-token: write    # REQUIRED for OIDC token
+  #     contents: read     # For checkout
+  #   steps:
+  #     - name: "Checkout code"
+  #       uses: actions/checkout@v6
+  #       with:
+  #         path: hometest-mgmt-terraform
 
-  deploy-dev-migrator:
-    name: "Deploy hometest-app/dev migrator"
-    runs-on: ubuntu-latest
-    needs: [deploy-aurora]
-    environment: ${{ inputs.environment || 'poc' }}
-    timeout-minutes: 30
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v6
-        with:
-          path: hometest-mgmt-terraform
+  #     - name: "Checkout hometest-service"
+  #       uses: actions/checkout@v6
+  #       with:
+  #         repository: "NHSDigital/hometest-service"
+  #         ref: ${{ inputs.hometest_service_ref }}
+  #         path: hometest-service
+  #         token: ${{ secrets.NHS_HOMETEST_ORG_PAT }}
 
-      - name: Install mise tools
-        uses: ./hometest-mgmt-terraform/.github/actions/install-mise
-        with:
-          working_directory: hometest-mgmt-terraform/infrastructure/environments/${{ inputs.environment || 'poc' }}/hometest-app/dev/lambda-goose-migrator
+  #     - name: "Checkout hometest-mgmt-terraform"
+  #       uses: actions/checkout@v6
+  #       with:
+  #         path: hometest-mgmt-terraform
 
-      - name: "Deploy goose migrator (dev)"
-        uses: ./hometest-mgmt-terraform/.github/actions/deploy-terragrunt
-        with:
-          aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
-          aws_region: ${{ env.AWS_REGION }}
-          working_directory: hometest-mgmt-terraform/infrastructure/environments/${{ inputs.environment || 'poc' }}/hometest-app/dev/lambda-goose-migrator
+  #     - name: "Checkout hometest-service"
+  #       uses: actions/checkout@v6
+  #       with:
+  #         repository: "NHSDigital/hometest-service"
+  #         ref: ${{ inputs.hometest_service_ref }}
+  #         path: hometest-service
+  #         ssh-key: ${{ secrets.NHS_HOMETEST_SERVICE_DEPLOY_KEY_SSH_PRIV }}
 
-  deploy-dev-app:
-    name: "Deploy hometest-app/dev app"
-    runs-on: ubuntu-latest
-    needs: [deploy-dev-migrator]
-    environment: ${{ inputs.environment || 'poc' }}
-    timeout-minutes: 30
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v6
-        with:
-          path: hometest-mgmt-terraform
+  #     - name: Deploy TF Dev
+  #       uses: ./hometest-mgmt-terraform/.github/actions/deploy-terragrunt
+  #       with:
+  #         working_directory: hometest-mgmt-terraform/infrastructure/environments/${{ inputs.environment || 'poc' }}/dev/hometest-app
+  #         aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
 
-      - name: "Checkout hometest-service"
-        uses: actions/checkout@v6
-        with:
-          repository: "NHSDigital/hometest-service"
-          ref: main
-          path: hometest-service
-          ssh-key: ${{ secrets.NHS_HOMETEST_SERVICE_DEPLOY_KEY_SSH_PRIV }}
-
-      - name: "Restore mise hometest-service cache"
-        uses: actions/cache/restore@v5
-        with:
-          path: |
-            ~/.local/share/mise
-            hometest-service/.mise-cache
-          key: mise-hometest-service-${{ runner.os }}-mgmt-${{ hashFiles('hometest-service/.mise.toml') }}
-          restore-keys: |
-            mise-hometest-service-${{ runner.os }}-mgmt-
-            mise-hometest-service-${{ runner.os }}-
-
-      - name: "Restore node_modules cache"
-        uses: actions/cache/restore@v5
-        with:
-          path: |
-            hometest-service/node_modules
-            hometest-service/ui/node_modules
-            hometest-service/lambdas/node_modules
-            hometest-service/tests/node_modules
-          key: node-modules-${{ runner.os }}-mgmt-${{ hashFiles('hometest-service/**/package-lock.json') }}
-          restore-keys: |
-            node-modules-${{ runner.os }}-mgmt-
-            node-modules-${{ runner.os }}-
-
-      - name: Install mise tools
-        uses: ./hometest-mgmt-terraform/.github/actions/install-mise
-        with:
-          working_directory: hometest-mgmt-terraform/infrastructure/environments/${{ inputs.environment || 'poc' }}/hometest-app/dev/app
-
-      - name: "Deploy app (dev)"
-        uses: ./hometest-mgmt-terraform/.github/actions/deploy-terragrunt
-        with:
-          aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
-          aws_region: ${{ env.AWS_REGION }}
-          working_directory: hometest-mgmt-terraform/infrastructure/environments/${{ inputs.environment || 'poc' }}/hometest-app/dev/app
-
-      - name: "Save mise hometest-service cache"
-        if: always()
-        uses: actions/cache/save@v5
-        with:
-          path: |
-            ~/.local/share/mise
-            hometest-service/.mise-cache
-          key: mise-hometest-service-${{ runner.os }}-mgmt-${{ hashFiles('hometest-service/.mise.toml') }}
-
-      - name: "Save node_modules cache"
-        if: always()
-        uses: actions/cache/save@v5
-        with:
-          path: |
-            hometest-service/node_modules
-            hometest-service/ui/node_modules
-            hometest-service/lambdas/node_modules
-            hometest-service/tests/node_modules
-          key: node-modules-${{ runner.os }}-mgmt-${{ hashFiles('hometest-service/**/package-lock.json') }}
-
-      - name: "Post deployment summary"
-        if: always()
-        run: |
-          {
-            echo "## Deploy hometest-app/dev"
-            echo "- **Status**: ${{ job.status }}"
-            echo "- **Trigger**: ${{ github.event_name }}"
-          } >> "$GITHUB_STEP_SUMMARY"
+  # TODO: More jobs or/and steps here
+  # success:
+  #   name: "Success notification"
+  #   runs-on: ubuntu-latest
+  #   needs: [deploy]
+  #   steps:
+  #     - name: "Check prerequisites for notification"
+  #       id: check
+  #       run: echo "secret_exist=${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL != '' }}" >> $GITHUB_OUTPUT
+  #     - name: "Notify on deployment to an environment"
+  #       if: steps.check.outputs.secret_exist == 'true'
+  #       uses: nhs-england-tools/notify-msteams-action@v0.0.4
+  #       with:
+  #         github-token: ${{ secrets.GITHUB_TOKEN }}
+  #         teams-webhook-url: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL }}
+  #         message-title: "Notification title"
+  #         message-text: "This is a notification body"
+  #         link: ${{ github.event.pull_request.html_url }}
