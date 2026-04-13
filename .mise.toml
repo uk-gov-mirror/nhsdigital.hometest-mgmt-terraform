@@ -1,5 +1,5 @@
 [settings]
-# locked = true
+locked = true
 lockfile = true
 install_before = "7d"
 

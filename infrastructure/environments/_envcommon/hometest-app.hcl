@@ -219,26 +219,13 @@ terraform {
       "bash", "-c",
       <<-EOF
         cd '${local.hometest_service_dir}' && \
-        OLD_HASH="" && \
-        if [[ -f '${local.spa_build_cache}/spa.hash' ]]; then
-          OLD_HASH=$(cat '${local.spa_build_cache}/spa.hash')
-        fi && \
         SPA_SOURCE_DIR='${local.spa_source_dir}' \
         SPA_CACHE_DIR='${local.spa_build_cache}' \
         SPA_TYPE='${local.spa_type}' \
         NEXT_PUBLIC_BACKEND_URL='https://${local.api_domain}' \
         NEXT_PUBLIC_NHS_LOGIN_AUTHORIZE_URL='${local.spa_nhs_login_authorize_url}' \
         NEXT_PUBLIC_USE_WIREMOCK_AUTH='${local.use_wiremock_auth}' \
-        mise exec -- '${local.scripts_dir}/build-spa.sh' && \
-        NEW_HASH="" && \
-        if [[ -f '${local.spa_build_cache}/spa.hash' ]]; then
-          NEW_HASH=$(cat '${local.spa_build_cache}/spa.hash')
-        fi && \
-        if [[ "$OLD_HASH" != "$NEW_HASH" ]]; then
-          touch '${local.spa_build_cache}/.spa-rebuilt'
-        else
-          rm -f '${local.spa_build_cache}/.spa-rebuilt'
-        fi
+        mise exec -- '${local.scripts_dir}/build-spa.sh'
       EOF
     ]
   }
@@ -246,18 +233,12 @@ terraform {
   # Upload SPA to S3 after terraform creates the bucket, then invalidate CloudFront.
   # Uses scripts/upload-spa.sh with type-specific caching (Next.js / Vite).
   # Bucket name and CloudFront ID are read from terraform outputs at runtime.
-  # Upload SPA only if it was rebuilt (marker set by build_spa hook).
   after_hook "upload_spa" {
     commands     = ["apply"]
     run_on_error = false
     execute = [
       "bash", "-c",
       <<-EOF
-        if [[ ! -f '${local.spa_build_cache}/.spa-rebuilt' ]]; then
-          echo "SPA was not rebuilt, skipping upload."
-          exit 0
-        fi
-        rm -f '${local.spa_build_cache}/.spa-rebuilt'
         SPA_BUCKET=$(terraform output -raw spa_bucket_id 2>/dev/null || echo "")
         CLOUDFRONT_ID=$(terraform output -raw cloudfront_distribution_id 2>/dev/null || echo "")
         if [[ -n "$SPA_BUCKET" ]]; then
@@ -289,7 +270,7 @@ terraform {
           echo "Pushing WireMock stubs to ${local.wiremock_base_url_for_spa} ..."
           cd '${local.hometest_service_dir}/tests' && \
           WIREMOCK_BASE_URL='${local.wiremock_base_url_for_spa}' \
-          npm run wiremock:push
+          mise exec -- npm run wiremock:push
         else
           echo "WireMock not enabled for this environment, skipping stub push."
         fi
