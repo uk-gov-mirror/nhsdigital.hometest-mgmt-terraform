@@ -279,7 +279,7 @@ Click **"Run workflow"** and configure the following inputs:
 >     - staging
 >     - dev2  # ← add your new environment here
 > ```
-
+>
 > **Tip:** For a first deployment of a new environment, use `action: plan` first to review the changes, then re-run with `action: apply`.
 
 Both local and pipeline deployments will:
