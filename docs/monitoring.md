@@ -141,3 +141,61 @@ CloudWatch Alarm → SNS Topic → AWS Chatbot → Slack Channel
 5. **GitHub Actions deploy notification** — one workflow step addition
 
 Want me to implement any of these as Terraform modules/resources?
+
+
+All changes are in place. Here's a complete summary of everything that was created and modified:
+
+---
+
+## Summary of Changes
+
+### New Modules Created (6)
+
+| Module | Location | Purpose |
+|--------|----------|---------|
+| **slack-alerts** | modules/slack-alerts/ | AWS Chatbot → Slack channel integration |
+| **api-gateway-alarms** | modules/api-gateway-alarms/ | 5XX, 4XX, latency, integration latency per API |
+| **aurora-alarms** | modules/aurora-alarms/ | CPU, memory, connections, deadlocks, capacity, storage |
+| **waf-alarms** | modules/waf-alarms/ | Blocked request spikes, rate limiting, SQLi detection |
+| **cloudfront-alarms** | modules/cloudfront-alarms/ | 5XX, 4XX, origin latency |
+| **network-alarms** | modules/network-alarms/ | NAT Gateway port allocation/packet drops, firewall dropped packets |
+
+### Enhanced Existing Module
+
+- **lambda module** (modules/lambda/main.tf) — Added **throttle**, **duration (p99 vs timeout)**, and **concurrent executions** alarms alongside existing error alarm
+
+### Tiered SNS Topics (shared_services)
+
+| Topic | Routing | Slack Channel |
+|-------|---------|---------------|
+| `alerts-critical` | Lambda errors, DLQ, 5XX, deadlocks | `#hometest-alerts-critical` |
+| `alerts-warning` | High latency, capacity, NAT/firewall | `#hometest-alerts-warning` |
+| `alerts-security` | WAF SQLi, rate limiting, blocked spikes | `#hometest-alerts-security` |
+
+### Wiring By Layer
+
+| Layer | File | What's wired |
+|-------|------|-------------|
+| **shared_services** | sns.tf | 3 new SNS topics + Slack Chatbot |
+| **shared_services** | alarms_waf.tf | Regional + CloudFront WAF alarms → security topic |
+| **shared_services** | alarms_network.tf | NAT GW + firewall alarms → warning topic |
+| **aurora-postgres** | alarms.tf | All DB alarms → critical topic |
+| **hometest-app** | alarms.tf | API Gateway + CloudFront alarms → critical topic |
+| **hometest-app** | lambda.tf | Lambda error/throttle/duration alarms → critical topic |
+| **hometest-app** | sqs.tf | SQS DLQ/age/depth alarms → critical topic |
+
+### GitHub Actions Slack Notifications
+
+- Created .github/actions/notify-slack/action.yaml composite action
+- Added notification job to cicd-3-deploy.yaml
+- Added notification step to deploy-tf-hometest-app.yaml summary job
+
+### Setup Required
+
+To activate Slack integration:
+1. Authorize Slack workspace in **AWS Chatbot console** (one-time)
+2. Set these Terragrunt variables for shared_services:
+   - `enable_slack_alerts = true`
+   - `slack_workspace_id = "T0XXXXXXX"`
+   - `slack_channel_id_critical`, `slack_channel_id_warning`, `slack_channel_id_security`
+3. Set **`SLACK_DEPLOYMENTS_WEBHOOK_URL`** as a GitHub Actions repository variable for deploy notifications

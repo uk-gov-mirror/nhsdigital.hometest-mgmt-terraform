@@ -20,7 +20,10 @@ dependency "network" {
   config_path = "../network"
 
   mock_outputs = {
-    route53_zone_id = "Z0123456789ABCDEFGHIJ"
+    route53_zone_id          = "Z0123456789ABCDEFGHIJ"
+    nat_gateway_ids          = ["nat-mock12345"]
+    network_firewall_enabled = false
+    network_firewall_name    = null
   }
   mock_outputs_allowed_terraform_commands = ["validate", "plan"]
 }
@@ -69,4 +72,8 @@ inputs = {
   ]
 
   enable_mtls = false # Set to true to enable mTLS support for API Gateway custom domain (requires additional client cert configuration)
+
+  # Network alarm inputs — NAT Gateway and Network Firewall monitoring
+  nat_gateway_ids       = dependency.network.outputs.nat_gateway_ids
+  network_firewall_name = dependency.network.outputs.network_firewall_name
 }

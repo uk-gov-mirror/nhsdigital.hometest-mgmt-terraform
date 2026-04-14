@@ -197,6 +197,34 @@ variable "alarm_error_threshold" {
   default     = 1
 }
 
+variable "alarm_throttle_threshold" {
+  description = "Threshold for Lambda throttle alarm (number of throttles per evaluation period)"
+  type        = number
+  default     = 1
+}
+
+variable "alarm_duration_threshold_pct" {
+  description = "Trigger duration alarm when p99 exceeds this percentage of the function timeout"
+  type        = number
+  default     = 80
+
+  validation {
+    condition     = var.alarm_duration_threshold_pct > 0 && var.alarm_duration_threshold_pct <= 100
+    error_message = "alarm_duration_threshold_pct must be between 1 and 100."
+  }
+}
+
+variable "alarm_concurrency_threshold_pct" {
+  description = "Trigger concurrency alarm when concurrent executions exceed this percentage of reserved concurrency"
+  type        = number
+  default     = 80
+
+  validation {
+    condition     = var.alarm_concurrency_threshold_pct > 0 && var.alarm_concurrency_threshold_pct <= 100
+    error_message = "alarm_concurrency_threshold_pct must be between 1 and 100."
+  }
+}
+
 # Tracing
 variable "tracing_mode" {
   description = "X-Ray tracing mode (Active or PassThrough)"

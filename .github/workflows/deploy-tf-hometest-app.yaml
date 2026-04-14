@@ -403,3 +403,29 @@ jobs:
             echo "| Run ID | ${GITHUB_RUN_ID} |"
             echo "| Triggered by | ${GITHUB_ACTOR} |"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: "Checkout code"
+        if: vars.SLACK_DEPLOYMENTS_WEBHOOK_URL != ''
+        uses: actions/checkout@v6
+        with:
+          path: hometest-mgmt-terraform
+
+      - name: "Determine overall status"
+        id: status
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "result=failure" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "result=cancelled" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=success" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "Notify Slack"
+        if: inputs.action != 'plan' && vars.SLACK_DEPLOYMENTS_WEBHOOK_URL != ''
+        uses: ./hometest-mgmt-terraform/.github/actions/notify-slack
+        with:
+          slack_webhook_url: ${{ vars.SLACK_DEPLOYMENTS_WEBHOOK_URL }}
+          status: ${{ steps.status.outputs.result }}
+          environment: "${{ inputs.environment || 'poc' }}/${{ inputs.subenv || 'dev' }}"
+          module: "hometest-app (${{ inputs.action || 'plan' }})"

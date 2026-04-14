@@ -32,7 +32,9 @@ module "sqs_order_placement" {
   sqs_managed_sse_enabled = false
 
   create_cloudwatch_alarms = true
-  alarm_actions            = [var.sns_alerts_topic_arn]
+  alarm_actions = var.sns_alerts_critical_topic_arn != null ? [var.sns_alerts_critical_topic_arn] : (
+    var.sns_alerts_topic_arn != null ? [var.sns_alerts_topic_arn] : []
+  )
 
   tags = local.common_tags
 }
@@ -60,7 +62,9 @@ module "sqs_notify_messages" {
   sqs_managed_sse_enabled = false
 
   create_cloudwatch_alarms = true
-  alarm_actions            = [var.sns_alerts_topic_arn]
+  alarm_actions = var.sns_alerts_critical_topic_arn != null ? [var.sns_alerts_critical_topic_arn] : (
+    var.sns_alerts_topic_arn != null ? [var.sns_alerts_topic_arn] : []
+  )
 
   tags = local.common_tags
 }
@@ -89,7 +93,9 @@ module "sqs_order_results" {
   sqs_managed_sse_enabled = false
 
   create_cloudwatch_alarms = true
-  alarm_actions            = [var.sns_alerts_topic_arn]
+  alarm_actions = var.sns_alerts_critical_topic_arn != null ? [var.sns_alerts_critical_topic_arn] : (
+    var.sns_alerts_topic_arn != null ? [var.sns_alerts_topic_arn] : []
+  )
 
   tags = local.common_tags
 }
@@ -124,7 +130,9 @@ module "sqs_notifications" {
   sqs_managed_sse_enabled = false
 
   create_cloudwatch_alarms = true
-  alarm_actions            = [var.sns_alerts_topic_arn]
+  alarm_actions = var.sns_alerts_critical_topic_arn != null ? [var.sns_alerts_critical_topic_arn] : (
+    var.sns_alerts_topic_arn != null ? [var.sns_alerts_topic_arn] : []
+  )
 
   tags = local.common_tags
 }
@@ -178,7 +186,9 @@ module "sqs_events" {
   }
 
   create_cloudwatch_alarms = true
-  alarm_actions            = [var.sns_alerts_topic_arn]
+  alarm_actions = var.sns_alerts_critical_topic_arn != null ? [var.sns_alerts_critical_topic_arn] : (
+    var.sns_alerts_topic_arn != null ? [var.sns_alerts_topic_arn] : []
+  )
 
   tags = local.common_tags
 }

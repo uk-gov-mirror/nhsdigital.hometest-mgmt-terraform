@@ -282,3 +282,34 @@ jobs:
   #         message-title: "Notification title"
   #         message-text: "This is a notification body"
   #         link: ${{ github.event.pull_request.html_url }}
+
+  notify-slack:
+    name: "Slack Deployment Notification"
+    runs-on: ubuntu-latest
+    if: always() && vars.SLACK_DEPLOYMENTS_WEBHOOK_URL != ''
+    needs: [deploy-bootstrap, deploy-network, deploy-shared-services, deploy-aurora, deploy-ecs]
+    timeout-minutes: 2
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v6
+        with:
+          path: hometest-mgmt-terraform
+
+      - name: "Determine overall status"
+        id: status
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "result=failure" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "result=cancelled" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=success" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "Notify Slack"
+        uses: ./hometest-mgmt-terraform/.github/actions/notify-slack
+        with:
+          slack_webhook_url: ${{ vars.SLACK_DEPLOYMENTS_WEBHOOK_URL }}
+          status: ${{ steps.status.outputs.result }}
+          environment: ${{ inputs.environment || 'poc' }}
+          module: "hometest-mgmt-terraform"

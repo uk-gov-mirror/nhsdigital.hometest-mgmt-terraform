@@ -203,6 +203,15 @@ variable "tags" {
 }
 
 ################################################################################
+# Alerting
+################################################################################
+variable "sns_alerts_critical_topic_arn" {
+  description = "ARN of the critical alerts SNS topic (from shared_services). When set, creates CloudWatch alarms."
+  type        = string
+  default     = null
+}
+
+################################################################################
 # Region Configuration
 ################################################################################
 variable "aws_allowed_regions" {

@@ -57,6 +57,18 @@ variable "sns_alerts_topic_arn" {
   default     = null
 }
 
+variable "sns_alerts_critical_topic_arn" {
+  description = "ARN of critical alerts SNS topic for P1 alerts (from shared_services)"
+  type        = string
+  default     = null
+}
+
+variable "sns_alerts_warning_topic_arn" {
+  description = "ARN of warning alerts SNS topic for P2 alerts (from shared_services)"
+  type        = string
+  default     = null
+}
+
 variable "waf_cloudfront_arn" {
   description = "ARN of CloudFront WAF Web ACL (from shared_services)"
   type        = string

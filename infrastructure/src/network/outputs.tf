@@ -248,6 +248,11 @@ output "network_firewall_arn" {
   value       = var.enable_network_firewall ? aws_networkfirewall_firewall.main[0].arn : null
 }
 
+output "network_firewall_name" {
+  description = "Name of the Network Firewall"
+  value       = var.enable_network_firewall ? aws_networkfirewall_firewall.main[0].name : null
+}
+
 output "network_firewall_policy_arn" {
   description = "ARN of the Network Firewall Policy"
   value       = var.enable_network_firewall ? aws_networkfirewall_firewall_policy.main[0].arn : null

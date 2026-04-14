@@ -312,6 +312,8 @@ dependency "shared_services" {
     kms_key_arn                     = "arn:aws:kms:eu-west-2:123456789012:key/mock-key-id"
     pii_data_kms_key_arn            = "arn:aws:kms:eu-west-2:123456789012:key/mock-pii-key-id"
     sns_alerts_topic_arn            = "arn:aws:sns:eu-west-2:123456789012:mock-alerts-topic"
+    sns_alerts_critical_topic_arn   = "arn:aws:sns:eu-west-2:123456789012:mock-alerts-critical-topic"
+    sns_alerts_warning_topic_arn    = "arn:aws:sns:eu-west-2:123456789012:mock-alerts-warning-topic"
     waf_regional_arn                = "arn:aws:wafv2:eu-west-2:123456789012:regional/webacl/mock/mock-id"
     waf_cloudfront_arn              = "arn:aws:wafv2:us-east-1:123456789012:global/webacl/mock/mock-id"
     acm_regional_certificate_arn    = "arn:aws:acm:eu-west-2:123456789012:certificate/mock-cert"
@@ -384,11 +386,13 @@ inputs = {
   route53_zone_id = dependency.network.outputs.route53_zone_id
 
   # Dependencies from shared_services
-  kms_key_arn          = dependency.shared_services.outputs.kms_key_arn
-  pii_data_kms_key_arn = dependency.shared_services.outputs.pii_data_kms_key_arn
-  sns_alerts_topic_arn = dependency.shared_services.outputs.sns_alerts_topic_arn
-  waf_cloudfront_arn   = dependency.shared_services.outputs.waf_cloudfront_arn
-  waf_regional_arn     = dependency.shared_services.outputs.waf_regional_arn
+  kms_key_arn                   = dependency.shared_services.outputs.kms_key_arn
+  pii_data_kms_key_arn          = dependency.shared_services.outputs.pii_data_kms_key_arn
+  sns_alerts_topic_arn          = dependency.shared_services.outputs.sns_alerts_topic_arn
+  sns_alerts_critical_topic_arn = dependency.shared_services.outputs.sns_alerts_critical_topic_arn
+  sns_alerts_warning_topic_arn  = dependency.shared_services.outputs.sns_alerts_warning_topic_arn
+  waf_cloudfront_arn            = dependency.shared_services.outputs.waf_cloudfront_arn
+  waf_regional_arn              = dependency.shared_services.outputs.waf_regional_arn
 
   # Lambda Configuration
   enable_vpc_access  = true
