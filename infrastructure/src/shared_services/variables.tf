@@ -127,33 +127,21 @@ variable "require_mfa" {
 ################################################################################
 
 variable "enable_slack_alerts" {
-  description = "Enable AWS Chatbot Slack integration for alert notifications"
+  description = "Enable Slack notifications for CloudWatch alarm alerts via incoming webhook"
   type        = bool
   default     = false
 }
 
-variable "slack_workspace_id" {
-  description = "Slack workspace (team) ID. Authorize workspace in AWS Chatbot console first."
+variable "slack_webhook_secret_name" {
+  description = "Name of the Secrets Manager secret containing the Slack incoming webhook URL"
   type        = string
-  default     = ""
+  default     = "nhs-hometest/slack/hometest-ops-alerts/incoming-webhook"
 }
 
-variable "slack_channel_id_critical" {
-  description = "Slack channel ID for critical (P1) alerts"
+variable "slack_channel_name" {
+  description = "Slack channel name to post alerts to (used in message context, not routing)"
   type        = string
-  default     = ""
-}
-
-variable "slack_channel_id_warning" {
-  description = "Slack channel ID for warning (P2) alerts"
-  type        = string
-  default     = ""
-}
-
-variable "slack_channel_id_security" {
-  description = "Slack channel ID for security alerts (WAF blocks, SQLi, rate limiting)"
-  type        = string
-  default     = ""
+  default     = "hometest-ops-alerts"
 }
 
 ################################################################################

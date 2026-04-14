@@ -99,9 +99,9 @@ module "sns_alerts_security" {
 }
 
 ################################################################################
-# Slack Integration (AWS Chatbot)
-# NOTE: The Slack workspace must first be authorized in the AWS Chatbot console.
-# This is a one-time manual step per AWS account.
+# Slack Integration (SNS → Lambda → Webhook)
+# The Lambda reads the incoming webhook URL from Secrets Manager and posts
+# formatted alarm messages to the configured Slack channel.
 ################################################################################
 
 module "slack_alerts" {
@@ -112,22 +112,17 @@ module "slack_alerts" {
   aws_account_shortname = var.aws_account_shortname
   environment           = var.environment
 
-  slack_workspace_id = var.slack_workspace_id
+  slack_webhook_secret_name = var.slack_webhook_secret_name
+  slack_channel_name        = var.slack_channel_name
 
-  slack_channels = {
-    critical = {
-      channel_id     = var.slack_channel_id_critical
-      sns_topic_arns = [module.sns_alerts_critical.topic_arn]
-    }
-    warning = {
-      channel_id     = var.slack_channel_id_warning
-      sns_topic_arns = [module.sns_alerts_warning.topic_arn]
-    }
-    security = {
-      channel_id     = var.slack_channel_id_security
-      sns_topic_arns = [module.sns_alerts_security.topic_arn]
-    }
-  }
+  # All tiered SNS topics route to the same channel — override per-channel later if needed
+  sns_topic_arns = [
+    module.sns_alerts_critical.topic_arn,
+    module.sns_alerts_warning.topic_arn,
+    module.sns_alerts_security.topic_arn,
+  ]
+
+  kms_key_arn = aws_kms_key.main.id
 
   tags = local.common_tags
 }

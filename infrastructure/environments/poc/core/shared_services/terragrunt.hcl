@@ -76,4 +76,10 @@ inputs = {
   # Network alarm inputs — NAT Gateway and Network Firewall monitoring
   nat_gateway_ids       = dependency.network.outputs.nat_gateway_ids
   network_firewall_name = dependency.network.outputs.network_firewall_name
+
+  # https://app.slack.com/client/TJ00QR03U
+  # Slack alert notifications — all alarm tiers post to a single channel for now
+  enable_slack_alerts        = true
+  slack_webhook_secret_name  = "nhs-hometest/slack/hometest-ops-alerts/incoming-webhook"
+  slack_channel_name         = "hometest-ops-alerts"
 }

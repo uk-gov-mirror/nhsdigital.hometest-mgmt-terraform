@@ -405,7 +405,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: "Checkout code"
-        if: vars.SLACK_DEPLOYMENTS_WEBHOOK_URL != ''
+        if: secrets.SLACK_WEBHOOK_URL != ''
         uses: actions/checkout@v6
         with:
           path: hometest-mgmt-terraform
@@ -422,10 +422,10 @@ jobs:
           fi
 
       - name: "Notify Slack"
-        if: inputs.action != 'plan' && vars.SLACK_DEPLOYMENTS_WEBHOOK_URL != ''
+        if: inputs.action != 'plan' && secrets.SLACK_WEBHOOK_URL != ''
         uses: ./hometest-mgmt-terraform/.github/actions/notify-slack
         with:
-          slack_webhook_url: ${{ vars.SLACK_DEPLOYMENTS_WEBHOOK_URL }}
+          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
           status: ${{ steps.status.outputs.result }}
           environment: "${{ inputs.environment || 'poc' }}/${{ inputs.subenv || 'dev' }}"
           module: "hometest-app (${{ inputs.action || 'plan' }})"

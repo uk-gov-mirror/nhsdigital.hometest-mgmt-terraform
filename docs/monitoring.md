@@ -1,201 +1,211 @@
-Based on my thorough scan of the repository, here's what I found and recommend:
+# HomeTest Monitoring & Alerting
 
-## Current State
+This document describes the monitoring, alerting, and notification infrastructure for NHS HomeTest.
 
-**Existing alerting** is minimal:
+## Architecture Overview
 
-- SNS topic publishing to `england.HomeTestInfraAdmins@nhs.net` (email only)
-- SQS alarms for queue age, depth, and DLQ depth
-- Lambda CloudWatch logs with X-Ray tracing
-- Container Insights on ECS
-
-**No Slack integration exists** — no webhooks, no AWS Chatbot, no SNS-to-Slack Lambda.
-
----
-
-## Recommended Alerts to Add
-
-### Lambda (10 functions per env — critical)
-
-| Alert | Metric | Threshold | Priority |
-|-------|--------|-----------|----------|
-| Lambda Errors | `Errors` | > 0 for 1 min | **P1** |
-| Lambda Throttles | `Throttles` | > 0 for 1 min | **P1** |
-| Lambda Duration High | `Duration` p99 | > 80% of timeout | **P2** |
-| Lambda Concurrent Executions | `ConcurrentExecutions` | > 80% reserved concurrency | **P2** |
-| Lambda Iterator Age (SQS-triggered) | `IteratorAge` | > 60s for `order-router-lambda` | **P1** |
-
-### API Gateway
-
-| Alert | Metric | Threshold | Priority |
-|-------|--------|-----------|----------|
-| 5XX Error Rate | `5XXError` | > 1% of requests | **P1** |
-| 4XX Error Rate | `4XXError` | > 10% of requests | **P2** |
-| Latency High | `Latency` p99 | > 3s | **P2** |
-| Integration Latency | `IntegrationLatency` p99 | > 2s | **P2** |
-
-### Aurora PostgreSQL Serverless v2
-
-| Alert | Metric | Threshold | Priority |
-|-------|--------|-----------|----------|
-| CPU Utilisation | `CPUUtilization` | > 80% for 5 min | **P2** |
-| Freeable Memory Low | `FreeableMemory` | < 256MB | **P2** |
-| DB Connections High | `DatabaseConnections` | > 80% max | **P1** |
-| Deadlocks | `Deadlocks` | > 0 | **P1** |
-| Replication Lag | `AuroraReplicaLag` | > 100ms | **P2** |
-| ServerlessDatabaseCapacity | `ServerlessDatabaseCapacity` | > 80% max ACU | **P2** |
-
-### SQS (enhance existing)
-
-| Alert | Metric | Threshold | Priority |
-|-------|--------|-----------|----------|
-| **DLQ Non-Empty** (already exists) | `ApproximateNumberOfMessagesVisible` | > 0 on any DLQ | **P1** |
-| Order Placement Queue Backlog | `ApproximateNumberOfMessagesVisible` | > 100 on `order-placement` | **P1** |
-| Notifications FIFO Stuck | `ApproximateAgeOfOldestMessage` | > 300s on `notifications` | **P1** |
-
-### WAF
-
-| Alert | Metric | Threshold | Priority |
-|-------|--------|-----------|----------|
-| Rate Limit Triggered | `BlockedRequests` (rate-limit rule) | > 0 | **P2** |
-| WAF Blocked Spike | `BlockedRequests` (all rules) | > 100/min | **P2** |
-| SQL Injection Detected | `BlockedRequests` (SQLi rule) | > 0 | **P1** |
-
-### CloudFront (SPA)
-
-| Alert | Metric | Threshold | Priority |
-|-------|--------|-----------|----------|
-| 5XX Error Rate | `5xxErrorRate` | > 1% | **P1** |
-| Origin Latency High | `OriginLatency` p99 | > 5s | **P2** |
-| Cache Hit Rate Low | `CacheHitRate` | < 50% | **P3** |
-
-### Route53 Health Checks
-
-| Alert | Metric | Threshold | Priority |
-|-------|--------|-----------|----------|
-| Endpoint Health | `HealthCheckStatus` | unhealthy | **P1** |
-
-### Network Firewall
-
-| Alert | Metric | Threshold | Priority |
-|-------|--------|-----------|----------|
-| Dropped Packets | `DroppedPackets` | > 100/min | **P2** |
-
-### NAT Gateway
-
-| Alert | Metric | Threshold | Priority |
-|-------|--------|-----------|----------|
-| Error Port Allocation | `ErrorPortAllocation` | > 0 | **P2** |
-| Packets Drop Count | `PacketsDropCount` | > 0 for 5 min | **P2** |
-
----
-
-## Slack Notification Strategy
-
-### Recommended: AWS Chatbot + SNS
-
-The cleanest approach for this stack:
-
-```bash
-CloudWatch Alarm → SNS Topic → AWS Chatbot → Slack Channel
+```
+CloudWatch Alarms → SNS Topics (tiered) → Lambda → Slack Webhook → #hometest-ops-alerts
+                                        → Email subscriptions
+GitHub Actions    → Slack Webhook (secret) → #hometest-ops-alerts
 ```
 
-### Suggested Slack Channels & Routing
+All CloudWatch alarms publish to one of three tiered SNS topics in `shared_services`. A Lambda function subscribes to each topic and forwards formatted messages to Slack via an incoming webhook stored in AWS Secrets Manager.
 
-| Channel | What Gets Sent | Priority |
-|---------|---------------|----------|
-| `#hometest-alerts-critical` | P1 alerts (Lambda errors, DLQ messages, 5xx spikes, DB deadlocks, health check failures) | Immediate |
-| `#hometest-alerts-warning` | P2 alerts (high latency, capacity warnings, WAF blocks) | During hours |
-| `#hometest-deployments` | GitHub Actions deploy success/failure via workflow notification step | Informational |
-| `#hometest-security` | WAF SQL injection blocks, rate limiting triggers, unusual blocked request spikes | Review |
-
-### Implementation Approach
-
-1. **Create a Terraform module** `modules/slack-alerts/` using `aws_chatbot_slack_channel_configuration`
-2. **Create tiered SNS topics**: `alerts-critical`, `alerts-warning`, `alerts-security`
-3. **Route alarms** to the appropriate SNS topic by severity
-4. **Add a GitHub Actions step** to post deploy status to `#hometest-deployments` using a Slack webhook
-
-### What to Notify on Slack (not email)
-
-| Event | Channel |
-|-------|---------|
-| Any DLQ receives a message | critical |
-| Lambda error rate > 0 in prod | critical |
-| API Gateway 5XX in prod | critical |
-| Aurora DB connections > 80% | critical |
-| Deployment succeeded/failed | deployments |
-| WAF SQLi or rate-limit block | security |
-| High latency (API or Lambda) | warning |
-| SQS backlog growing | warning |
-| Certificate expiry < 30 days | warning |
+GitHub Actions deployment notifications use a separate webhook stored as a repository secret.
 
 ---
 
-## Quick Wins (highest value, lowest effort)
+## SNS Topics (Alert Tiers)
 
-1. **Lambda error alarms** — you have 10 Lambdas with zero error alerting
-2. **API Gateway 5xx alarm** — customer-facing, currently invisible
-3. **DLQ alerts to Slack** — DLQ alarms exist but only email; Slack gives faster response
-4. **Aurora connection/CPU alarms** — shared DB, single point of failure
-5. **GitHub Actions deploy notification** — one workflow step addition
+| Topic Suffix | Severity | Purpose | Examples |
+|---|---|---|---|
+| `alerts-critical` | P1 | Service-impacting issues requiring immediate attention | Lambda errors, DLQ messages, 5XX spikes, DB deadlocks, SQS age threshold |
+| `alerts-warning` | P2 | Capacity/performance degradation | High latency, NAT port allocation errors, Aurora capacity approaching limits |
+| `alerts-security` | P3 | Security events | WAF blocked request spikes, SQL injection attempts, rate limiting triggers |
 
-Want me to implement any of these as Terraform modules/resources?
-
-All changes are in place. Here's a complete summary of everything that was created and modified:
+All topics also send to the email subscriptions configured in `sns_alerts_email_subscriptions` (currently `england.HomeTestInfraAdmins@nhs.net`).
 
 ---
 
-## Summary of Changes
+## Slack Integration
 
-### New Modules Created (6)
+### Infrastructure Alerts (SNS → Lambda → Webhook)
 
-| Module | Location | Purpose |
-|--------|----------|---------|
-| **slack-alerts** | modules/slack-alerts/ | AWS Chatbot → Slack channel integration |
-| **api-gateway-alarms** | modules/api-gateway-alarms/ | 5XX, 4XX, latency, integration latency per API |
-| **aurora-alarms** | modules/aurora-alarms/ | CPU, memory, connections, deadlocks, capacity, storage |
-| **waf-alarms** | modules/waf-alarms/ | Blocked request spikes, rate limiting, SQLi detection |
-| **cloudfront-alarms** | modules/cloudfront-alarms/ | 5XX, 4XX, origin latency |
-| **network-alarms** | modules/network-alarms/ | NAT Gateway port allocation/packet drops, firewall dropped packets |
+- **Module**: `infrastructure/modules/slack-alerts`
+- **Deployed in**: `shared_services` layer
+- **Mechanism**: A Node.js Lambda function reads the webhook URL from Secrets Manager and posts formatted alarm messages to Slack
+- **Secrets Manager secret**: `nhs-hometest/slack/hometest-ops-alerts/incoming-webhook`
+- **Slack channel**: `#hometest-ops-alerts`
 
-### Enhanced Existing Module
+The Lambda colour-codes messages by severity:
 
-- **lambda module** (modules/lambda/main.tf) — Added **throttle**, **duration (p99 vs timeout)**, and **concurrent executions** alarms alongside existing error alarm
+| Colour | Severity | Trigger |
+|---|---|---|
+| 🔴 Red | CRITICAL | Topic name contains `critical` |
+| 🟠 Orange | SECURITY | Topic name contains `security` |
+| 🟡 Yellow | WARNING | Topic name contains `warning` |
+| 🟢 Green | INFO | Fallback |
 
-### Tiered SNS Topics (shared_services)
+#### Terragrunt Configuration
 
-| Topic | Routing | Slack Channel |
-|-------|---------|---------------|
-| `alerts-critical` | Lambda errors, DLQ, 5XX, deadlocks | `#hometest-alerts-critical` |
-| `alerts-warning` | High latency, capacity, NAT/firewall | `#hometest-alerts-warning` |
-| `alerts-security` | WAF SQLi, rate limiting, blocked spikes | `#hometest-alerts-security` |
+```hcl
+# infrastructure/environments/<account>/core/shared_services/terragrunt.hcl
+inputs = {
+  enable_slack_alerts        = true
+  slack_webhook_secret_name  = "nhs-hometest/slack/hometest-ops-alerts/incoming-webhook"
+  slack_channel_name         = "hometest-ops-alerts"
+}
+```
 
-### Wiring By Layer
+To disable Slack alerts for an environment, set `enable_slack_alerts = false`. Email alerts continue independently.
 
-| Layer | File | What's wired |
-|-------|------|-------------|
-| **shared_services** | sns.tf | 3 new SNS topics + Slack Chatbot |
-| **shared_services** | alarms_waf.tf | Regional + CloudFront WAF alarms → security topic |
-| **shared_services** | alarms_network.tf | NAT GW + firewall alarms → warning topic |
-| **aurora-postgres** | alarms.tf | All DB alarms → critical topic |
-| **hometest-app** | alarms.tf | API Gateway + CloudFront alarms → critical topic |
-| **hometest-app** | lambda.tf | Lambda error/throttle/duration alarms → critical topic |
-| **hometest-app** | sqs.tf | SQS DLQ/age/depth alarms → critical topic |
+#### Splitting Channels (Future)
 
-### GitHub Actions Slack Notifications
+The architecture supports routing different severity tiers to separate Slack channels by deploying multiple instances of the `slack-alerts` module with different `sns_topic_arns` and `slack_webhook_secret_name` / `slack_channel_name` values. Each channel would need its own incoming webhook stored in Secrets Manager.
 
-- Created .github/actions/notify-slack/action.yaml composite action
-- Added notification job to cicd-3-deploy.yaml
-- Added notification step to deploy-tf-hometest-app.yaml summary job
+### Deployment Notifications (GitHub Actions → Webhook)
 
-### Setup Required
+- **Action**: `.github/actions/notify-slack`
+- **Secret**: `SLACK_WEBHOOK_URL` (GitHub Actions repository secret)
+- **Triggers**: End of `cicd-3-deploy` and `deploy-tf-hometest-app` workflows
+- **Content**: Deployment status (success/failure/cancelled), environment, module, actor, and a link to the run
 
-To activate Slack integration:
+---
 
-1. Authorize Slack workspace in **AWS Chatbot console** (one-time)
-2. Set these Terragrunt variables for shared_services:
-   - `enable_slack_alerts = true`
-   - `slack_workspace_id = "T0XXXXXXX"`
-   - `slack_channel_id_critical`, `slack_channel_id_warning`, `slack_channel_id_security`
-3. Set **`SLACK_DEPLOYMENTS_WEBHOOK_URL`** as a GitHub Actions repository variable for deploy notifications
+## CloudWatch Alarms by Layer
+
+### shared_services
+
+#### WAF Alarms (`modules/waf-alarms`)
+
+| Alarm | Metric | Threshold | Severity |
+|---|---|---|---|
+| Blocked Request Spike | BlockedRequests | > 100 in 5 min | Security |
+| Rate Limit Triggered | RateLimitRule count | > 0 in 5 min | Security |
+| SQLi Detected | SQLiRule count | > 0 in 5 min | Security |
+
+Applied to both the regional WAF (API Gateway/ALB) and CloudFront WAF.
+
+#### Network Alarms (`modules/network-alarms`)
+
+| Alarm | Metric | Threshold | Severity |
+|---|---|---|---|
+| NAT GW Port Allocation Errors | ErrorPortAllocation | > 0 in 5 min | Warning |
+| NAT GW Packets Dropped | PacketsDropCount | > 100 in 5 min | Warning |
+| Network Firewall Dropped Packets | DroppedPackets | > 100 in 5 min | Warning |
+
+NAT Gateway alarms are created per gateway via `for_each`.
+
+### aurora-postgres
+
+#### Aurora Alarms (`modules/aurora-alarms`)
+
+| Alarm | Metric | Threshold | Severity |
+|---|---|---|---|
+| High CPU | CPUUtilization | > 80% avg over 5 min | Critical |
+| Low Freeable Memory | FreeableMemory | < 256 MB avg over 5 min | Critical |
+| High Connections | DatabaseConnections | > 100 avg over 5 min | Critical |
+| Deadlocks | Deadlocks | > 0 sum in 5 min | Critical |
+| Replica Lag | AuroraReplicaLag | > 100 ms avg over 5 min | Critical |
+| High Serverless Capacity | ServerlessDatabaseCapacity | > max ACU × 80% | Critical |
+| Low Free Storage | FreeLocalStorage | < 5 GB avg over 5 min | Critical |
+
+Thresholds are configurable via the module variables.
+
+### hometest-app
+
+#### Lambda Alarms (built into `modules/lambda`)
+
+Each Lambda function gets these alarms automatically:
+
+| Alarm | Metric | Threshold | Severity |
+|---|---|---|---|
+| Errors | Errors | ≥ 1 sum in 1 min | Critical |
+| Throttles | Throttles | ≥ 1 sum in 1 min | Critical |
+| Duration (p99) | Duration (p99) | ≥ timeout × 80% | Critical |
+| Concurrent Executions | ConcurrentExecutions | ≥ reserved × 80% | Critical |
+
+The concurrency alarm is only created when `reserved_concurrent_executions > 0`.
+
+#### SQS Alarms (built into `modules/sqs`)
+
+Each SQS queue gets an `ApproximateAgeOfOldestMessage` alarm. The following queues are monitored:
+
+- `order-placement`
+- `order-result`
+- `order-notification`
+- `order-eviction`
+- `supplier-notification`
+
+Each queue also has a dead-letter queue (DLQ) with its own age alarm.
+
+#### API Gateway Alarms (`modules/api-gateway-alarms`)
+
+| Alarm | Metric | Threshold | Severity |
+|---|---|---|---|
+| 5XX Error Rate | 5XXError / Count × 100 | > 1% in 5 min | Critical |
+| 4XX Error Rate | 4XXError / Count × 100 | > 10% in 5 min | Critical |
+| Latency (p99) | Latency (p99) | > 3000 ms in 5 min | Critical |
+| Integration Latency (p99) | IntegrationLatency (p99) | > 2000 ms in 5 min | Critical |
+
+#### CloudFront Alarms (`modules/cloudfront-alarms`)
+
+| Alarm | Metric | Threshold | Severity |
+|---|---|---|---|
+| 5XX Error Rate | 5xxErrorRate | > 1% in 5 min | Critical |
+| 4XX Error Rate | 4xxErrorRate | > 10% in 5 min | Critical |
+| Origin Latency (p99) | OriginLatency (p99) | > 5000 ms in 5 min | Critical |
+
+---
+
+## Threshold Tuning
+
+All alarm thresholds are configurable via module variables. Default values are chosen for a typical workload and should be reviewed per environment:
+
+- **POC/Dev**: Defaults are usually fine; consider relaxing to avoid noise during development.
+- **Production**: Review thresholds against actual traffic patterns. Tighten error rate thresholds and shorten evaluation periods.
+
+To override a threshold, set the corresponding variable in the terragrunt inputs for the relevant layer.
+
+---
+
+## Adding New Alarms
+
+1. **Determine the layer**: Which Terraform source deploys the resource? (`shared_services`, `hometest-app`, `aurora-postgres`)
+2. **Choose the severity**: Critical (P1), Warning (P2), or Security (P3)
+3. **Create or extend a module**: Add the CloudWatch alarm with `alarm_actions = [var.sns_alerts_<severity>_topic_arn]`
+4. **Wire in the source**: Reference the module in the appropriate `src/*/alarms.tf` file
+5. **Pass the SNS topic ARN**: Ensure the terragrunt config passes the topic ARN from `shared_services` outputs
+
+---
+
+## Troubleshooting
+
+### Slack messages not arriving
+
+1. Verify the Lambda is deployed: `aws lambda get-function --function-name <prefix>-slack-notifier`
+2. Check Lambda logs: CloudWatch log group `/aws/lambda/<prefix>-slack-notifier`
+3. Verify the Secrets Manager secret exists and contains a valid URL:
+   ```bash
+   aws secretsmanager get-secret-value --secret-id nhs-hometest/slack/hometest-ops-alerts/incoming-webhook
+   ```
+4. Check SNS subscriptions: `aws sns list-subscriptions-by-topic --topic-arn <topic-arn>` — the Lambda should appear as a subscriber
+5. Test with a manual publish:
+   ```bash
+   aws sns publish --topic-arn <topic-arn> --subject "Test Alert" \
+     --message '{"AlarmName":"test","NewStateValue":"ALARM","NewStateReason":"Manual test"}'
+   ```
+
+### GitHub Actions Slack notifications not arriving
+
+1. Verify the `SLACK_WEBHOOK_URL` repository secret is set in GitHub → Settings → Secrets and variables → Actions
+2. Check the workflow run logs for the `notify-slack` step output
+3. Test the webhook manually:
+   ```bash
+   curl -X POST -H 'Content-type: application/json' --data '{"text":"test"}' <webhook-url>
+   ```
+
+### Alarms stuck in INSUFFICIENT_DATA
+
+This typically means the metric has no data points yet. For Lambda metrics, trigger the function at least once. For API Gateway metrics, send a request. The alarm will transition to `OK` once data appears.

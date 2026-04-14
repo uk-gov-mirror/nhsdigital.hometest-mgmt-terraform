@@ -286,7 +286,7 @@ jobs:
   notify-slack:
     name: "Slack Deployment Notification"
     runs-on: ubuntu-latest
-    if: always() && vars.SLACK_DEPLOYMENTS_WEBHOOK_URL != ''
+    if: always() && secrets.SLACK_WEBHOOK_URL != ''
     needs: [deploy-bootstrap, deploy-network, deploy-shared-services, deploy-aurora, deploy-ecs]
     timeout-minutes: 2
     steps:
@@ -309,7 +309,7 @@ jobs:
       - name: "Notify Slack"
         uses: ./hometest-mgmt-terraform/.github/actions/notify-slack
         with:
-          slack_webhook_url: ${{ vars.SLACK_DEPLOYMENTS_WEBHOOK_URL }}
+          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
           status: ${{ steps.status.outputs.result }}
           environment: ${{ inputs.environment || 'poc' }}
           module: "hometest-mgmt-terraform"
