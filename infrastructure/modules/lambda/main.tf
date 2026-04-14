@@ -306,7 +306,7 @@ resource "aws_cloudwatch_log_metric_filter" "logged_errors" {
 
   name           = "${local.function_name}-logged-errors"
   log_group_name = aws_cloudwatch_log_group.lambda.name
-  pattern        = "?ERROR ?\"level\":\"error\" ?\"errorType\" ?Error ?Exception"
+  pattern        = "?ERROR ?Error ?Exception ?errorType"
 
   metric_transformation {
     name          = "LoggedErrors"
