@@ -225,6 +225,12 @@ variable "alarm_concurrency_threshold_pct" {
   }
 }
 
+variable "alarm_logged_error_threshold" {
+  description = "Threshold for logged errors alarm (number of log lines matching ERROR pattern per evaluation period)"
+  type        = number
+  default     = 5
+}
+
 # Tracing
 variable "tracing_mode" {
   description = "X-Ray tracing mode (Active or PassThrough)"

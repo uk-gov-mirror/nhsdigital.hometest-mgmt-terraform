@@ -71,3 +71,8 @@ output "concurrency_alarm_arn" {
   description = "ARN of the Lambda concurrency CloudWatch alarm (if created)"
   value       = try(aws_cloudwatch_metric_alarm.lambda_concurrent_executions[0].arn, null)
 }
+
+output "logged_errors_alarm_arn" {
+  description = "ARN of the Lambda logged errors CloudWatch alarm (if created)"
+  value       = try(aws_cloudwatch_metric_alarm.lambda_logged_errors[0].arn, null)
+}
