@@ -430,6 +430,7 @@ inputs = {
   # - /order-router-sh24/*  → API Gateway → order-router-lambda-sh24 (SQS-triggered)
   # - /login/*              → API Gateway → login-lambda
   # - /result/*             → API Gateway → order-result-lambda
+  # - /result/status*       → API Gateway → result-status-lambda
   #
   # To add extra lambdas (e.g., hello-world), define them in the child terragrunt.hcl:
   #   inputs = { lambdas = { "hello-world-lambda" = { ... } } }
@@ -550,6 +551,30 @@ inputs = {
       }
       authorization        = "COGNITO_USER_POOLS"
       authorization_scopes = ["results/write"]
+    }
+
+    # Result Status Lambda - Receives test results from originators
+    # CloudFront: /result/status/* → API Gateway → Lambda
+    "result-status-lambda" = {
+      description     = "Result Status Service - Receives test results from originators"
+      api_path_prefix = "result/status"
+      handler         = "index.handler"
+      http_method     = "POST"
+      timeout         = local.lambda_timeout
+      memory_size     = local.lambda_memory_size
+      environment = {
+        NODE_OPTIONS              = "--enable-source-maps"
+        ENVIRONMENT               = local.environment
+        ALLOW_ORIGIN              = local.spa_origin
+        ORDER_PLACEMENT_QUEUE_URL = local.order_placement_queue_url
+        DB_USERNAME               = local.db_app_user
+        DB_ADDRESS                = dependency.aurora_postgres.outputs.cluster_endpoint
+        DB_PORT                   = tostring(dependency.aurora_postgres.outputs.cluster_port)
+        DB_NAME                   = dependency.aurora_postgres.outputs.cluster_database_name
+        DB_SCHEMA                 = local.db_schema
+        USE_IAM_AUTH              = "true"
+        DB_REGION                 = local.aws_region
+      }
     }
 
     # Order Service Lambda - Creates test orders and persists to database
