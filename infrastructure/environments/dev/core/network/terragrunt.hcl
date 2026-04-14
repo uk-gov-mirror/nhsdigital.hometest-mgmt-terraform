@@ -10,6 +10,14 @@ include "root" {
   path = find_in_parent_folders("root.hcl")
 }
 
+# ---------------------------------------------------------------------------------------------------------------------
+# LOCALS - Load global configuration
+# ---------------------------------------------------------------------------------------------------------------------
+
+locals {
+  global_vars = read_terragrunt_config(find_in_parent_folders("_envcommon/all.hcl"))
+}
+
 terraform {
   source = "../../../..//src/network"
 }
@@ -78,16 +86,6 @@ inputs = {
 
   # Allow specific domains for egress (HTTPS/TLS traffic)
   # Note: AWS service domains (.amazonaws.com) are automatically allowed
-  allowed_egress_domains = [
-    ".nhs.uk",                # NHS domains
-    ".gov.uk",                # Government domains
-    ".os.uk",                 # Ordnance Survey API (postcode/address lookup)
-    ".github.com",            # GitHub
-    ".githubusercontent.com", # GitHub content
-    # Add more domains as needed for your application
-    ".prevx.io",          # Preventx staging/prod API
-    ".preventx.com",      # Preventx website
-    ".azurewebsites.net", # Preventx Azure functions
-    ".sh24.org.uk"        # SH24 all environments
-  ]
+  # Defined in _envcommon/all.hcl for consistency across environments
+  allowed_egress_domains = local.global_vars.locals.allowed_egress_domains
 }

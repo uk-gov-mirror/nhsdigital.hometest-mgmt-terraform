@@ -182,6 +182,9 @@ locals {
   # Security headers
   content_security_policy = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none';"
   permissions_policy      = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
+
+  # Reference allowed egress domains from global configuration
+  allowed_egress_domains = local.global_vars.locals.allowed_egress_domains
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

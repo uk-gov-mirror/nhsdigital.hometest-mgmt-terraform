@@ -10,6 +10,14 @@ include "root" {
   path = find_in_parent_folders("root.hcl")
 }
 
+# ---------------------------------------------------------------------------------------------------------------------
+# LOCALS - Load global configuration
+# ---------------------------------------------------------------------------------------------------------------------
+
+locals {
+  global_vars = read_terragrunt_config(find_in_parent_folders("_envcommon/all.hcl"))
+}
+
 terraform {
   source = "../../../..//src/network"
 }
