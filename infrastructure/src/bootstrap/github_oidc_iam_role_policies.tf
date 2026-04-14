@@ -112,6 +112,9 @@ data "aws_iam_policy_document" "infrastructure_policy" {
       # Auto Scaling (ECS, etc.)
       "application-autoscaling:*",
 
+      # Account management (region opt-in/out)
+      "account:*",
+
       # STS
       "sts:GetCallerIdentity",
       "sts:AssumeRole"
