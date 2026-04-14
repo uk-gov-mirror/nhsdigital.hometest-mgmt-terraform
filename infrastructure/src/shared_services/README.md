@@ -94,27 +94,27 @@ inputs = {
 ## Requirements
 
 | Name | Version |
-| ---- | ------- |
+|------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.14.0 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 6.37.0 |
 
 ## Providers
 
 | Name | Version |
-| ---- | ------- |
+|------|---------|
 | <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 6.37.0 |
 | <a name="provider_aws.us_east_1"></a> [aws.us\_east\_1](#provider\_aws.us\_east\_1) | ~> 6.37.0 |
 
 ## Modules
 
 | Name | Source | Version |
-| ---- | ------ | ------- |
+|------|--------|---------|
 | <a name="module_sns_alerts"></a> [sns\_alerts](#module\_sns\_alerts) | ../../modules/sns | n/a |
 
 ## Resources
 
 | Name | Type |
-| ---- | ---- |
+|------|------|
 | [aws_acm_certificate.cloudfront](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/acm_certificate) | resource |
 | [aws_acm_certificate.regional](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/acm_certificate) | resource |
 | [aws_acm_certificate_validation.cloudfront](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/acm_certificate_validation) | resource |
@@ -156,7 +156,7 @@ inputs = {
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-| ---- | ----------- | ---- | ------- | :------: |
+|------|-------------|------|---------|:--------:|
 | <a name="input_aws_account_id"></a> [aws\_account\_id](#input\_aws\_account\_id) | AWS account ID for resources | `string` | n/a | yes |
 | <a name="input_aws_account_shortname"></a> [aws\_account\_shortname](#input\_aws\_account\_shortname) | AWS account short name/alias for resource naming | `string` | n/a | yes |
 | <a name="input_aws_allowed_regions"></a> [aws\_allowed\_regions](#input\_aws\_allowed\_regions) | List of AWS regions allowed for resource deployment | `list(string)` | <pre>[<br/>  "eu-west-2",<br/>  "us-east-1"<br/>]</pre> | no |
@@ -232,7 +232,7 @@ inputs = {
 ## Outputs
 
 | Name | Description |
-| ---- | ----------- |
+|------|-------------|
 | <a name="output_acm_cloudfront_certificate_arn"></a> [acm\_cloudfront\_certificate\_arn](#output\_acm\_cloudfront\_certificate\_arn) | ARN of the CloudFront ACM certificate (us-east-1) |
 | <a name="output_acm_cloudfront_certificate_validated"></a> [acm\_cloudfront\_certificate\_validated](#output\_acm\_cloudfront\_certificate\_validated) | Whether the CloudFront certificate has been validated |
 | <a name="output_acm_regional_certificate_arn"></a> [acm\_regional\_certificate\_arn](#output\_acm\_regional\_certificate\_arn) | ARN of the regional ACM certificate (for API Gateway) |

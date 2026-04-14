@@ -45,32 +45,32 @@ module "aurora_postgres" {
 ## Requirements
 
 | Name | Version |
-| ---- | ------- |
+|------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.14.0 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 6.37.0 |
 
 ## Providers
 
 | Name | Version |
-| ---- | ------- |
+|------|---------|
 | <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 6.37.0 |
 
 ## Modules
 
 | Name | Source | Version |
-| ---- | ------ | ------- |
+|------|--------|---------|
 | <a name="module_aurora_postgres"></a> [aurora\_postgres](#module\_aurora\_postgres) | ../../modules/aurora-postgres | n/a |
 
 ## Resources
 
 | Name | Type |
-| ---- | ---- |
+|------|------|
 | [aws_resourcegroups_group.rg](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/resourcegroups_group) | resource |
 
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-| ---- | ----------- | ---- | ------- | :------: |
+|------|-------------|------|---------|:--------:|
 | <a name="input_allowed_cidr_blocks"></a> [allowed\_cidr\_blocks](#input\_allowed\_cidr\_blocks) | List of CIDR blocks allowed to connect to the database | `list(string)` | `[]` | no |
 | <a name="input_allowed_security_group_ids"></a> [allowed\_security\_group\_ids](#input\_allowed\_security\_group\_ids) | List of security group IDs allowed to connect to the database | `list(string)` | `[]` | no |
 | <a name="input_apply_immediately"></a> [apply\_immediately](#input\_apply\_immediately) | Specifies whether any database modifications are applied immediately | `bool` | `false` | no |
@@ -104,7 +104,7 @@ module "aurora_postgres" {
 ## Outputs
 
 | Name | Description |
-| ---- | ----------- |
+|------|-------------|
 | <a name="output_cluster_arn"></a> [cluster\_arn](#output\_cluster\_arn) | The Amazon RDS Aurora cluster ARN |
 | <a name="output_cluster_database_name"></a> [cluster\_database\_name](#output\_cluster\_database\_name) | The database name in the Aurora cluster |
 | <a name="output_cluster_endpoint"></a> [cluster\_endpoint](#output\_cluster\_endpoint) | The writer endpoint of the Aurora cluster |
