@@ -92,11 +92,8 @@ resource "tls_locally_signed_cert" "mtls_client" {
 # S3 Bucket — Truststore for API Gateway mTLS
 ################################################################################
 
-# NOSONAR - HTTPS-only access is enforced via DenyNonSSL + EnforceTLSVersion bucket policy statements below.
-# NOSONAR - Access logging not required: bucket holds a single public CA certificate (truststore.pem), not sensitive data.
-#           Access is restricted to the API Gateway service principal and bucket policy denies non-SSL/non-KMS requests.
 #checkov:skip=CKV_AWS_18:Access logging unnecessary for a truststore bucket containing only a public CA cert
-resource "aws_s3_bucket" "mtls_truststore" {
+resource "aws_s3_bucket" "mtls_truststore" { # NOSONAR - HTTPS enforced via DenyNonSSL+EnforceTLSVersion bucket policy; access logging not needed for public CA cert
   count = local.mtls_enabled ? 1 : 0
 
   bucket = "${local.resource_prefix}-mtls-truststore"
