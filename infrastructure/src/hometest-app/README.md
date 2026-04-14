@@ -215,21 +215,21 @@ After deployment, you'll have access to:
 ## Requirements
 
 | Name | Version |
-|------|---------|
+| ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.14.0 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 6.37.0 |
 
 ## Providers
 
 | Name | Version |
-|------|---------|
+| ---- | ------- |
 | <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 6.37.0 |
 | <a name="provider_aws.us_east_1"></a> [aws.us\_east\_1](#provider\_aws.us\_east\_1) | ~> 6.37.0 |
 
 ## Modules
 
 | Name | Source | Version |
-|------|--------|---------|
+| ---- | ------ | ------- |
 | <a name="module_cloudfront_spa"></a> [cloudfront\_spa](#module\_cloudfront\_spa) | ../../modules/cloudfront-spa | n/a |
 | <a name="module_lambda_iam"></a> [lambda\_iam](#module\_lambda\_iam) | ../../modules/lambda-iam | n/a |
 | <a name="module_lambdas"></a> [lambdas](#module\_lambdas) | ../../modules/lambda | n/a |
@@ -243,7 +243,7 @@ After deployment, you'll have access to:
 ## Resources
 
 | Name | Type |
-|------|------|
+| ---- | ---- |
 | [aws_acm_certificate.api_domain](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/acm_certificate) | resource |
 | [aws_acm_certificate.cloudfront](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/acm_certificate) | resource |
 | [aws_acm_certificate_validation.api_domain](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/acm_certificate_validation) | resource |
@@ -303,7 +303,7 @@ After deployment, you'll have access to:
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
+| ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_acm_certificate_arn"></a> [acm\_certificate\_arn](#input\_acm\_certificate\_arn) | ACM certificate ARN for CloudFront (us-east-1, from shared\_services) | `string` | `null` | no |
 | <a name="input_acm_regional_certificate_arn"></a> [acm\_regional\_certificate\_arn](#input\_acm\_regional\_certificate\_arn) | ARN of the shared regional ACM certificate (from shared\_services) for API Gateway custom domain. Used when create\_api\_certificate = false (default for POC wildcard cert pattern). | `string` | `null` | no |
 | <a name="input_api_custom_domain_name"></a> [api\_custom\_domain\_name](#input\_api\_custom\_domain\_name) | Custom domain name for API Gateway (e.g., api-dev.poc.hometest.service.nhs.uk). API traffic is served directly from this domain instead of through CloudFront. | `string` | `null` | no |
@@ -380,7 +380,7 @@ After deployment, you'll have access to:
 ## Outputs
 
 | Name | Description |
-|------|-------------|
+| ---- | ----------- |
 | <a name="output_api1_gateway_id"></a> [api1\_gateway\_id](#output\_api1\_gateway\_id) | ID of API Gateway 1 (legacy - use api\_gateways instead) |
 | <a name="output_api1_lambda_arn"></a> [api1\_lambda\_arn](#output\_api1\_lambda\_arn) | ARN of the API 1 Lambda (legacy - use lambda\_functions instead) |
 | <a name="output_api1_lambda_name"></a> [api1\_lambda\_name](#output\_api1\_lambda\_name) | Name of the API 1 Lambda (legacy - use lambda\_functions instead) |
