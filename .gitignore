@@ -144,6 +144,7 @@ dist
 # Ignore Go build outputs
 **/lambda-goose-migrator/src/bootstrap
 .lambda-build-cache
+.migrator-build-cache
 .terraform-plugin-cache/
 .spa-build-cache
 

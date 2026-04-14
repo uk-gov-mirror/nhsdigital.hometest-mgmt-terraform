@@ -115,3 +115,11 @@ variable "grant_rds_iam" {
   type        = bool
   default     = false
 }
+
+################################################################################
+# Lambda Configuration
+################################################################################
+variable "goose_migrator_zip_path" {
+  description = "Path to the pre-built goose-migrator zip file"
+  type        = string
+}

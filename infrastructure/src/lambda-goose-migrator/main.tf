@@ -41,23 +41,8 @@ module "goose_migrator_lambda" {
 
   architectures = ["arm64"]
 
-  recreate_missing_package = true
-
-  source_path = [
-    {
-      path = "${path.module}/src"
-      commands = [
-        "go mod tidy",
-        "GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -trimpath -ldflags='-s -w' -o bootstrap main.go",
-        ":zip",
-      ]
-      patterns = [
-        "!.*",
-        "bootstrap",
-        "migrations/.*",
-      ]
-    }
-  ]
+  create_package         = false
+  local_existing_package = var.goose_migrator_zip_path
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
