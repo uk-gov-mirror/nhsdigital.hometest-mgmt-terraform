@@ -24,7 +24,7 @@ locals {
 resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   for_each = var.api_names
 
-  alarm_name          = "${local.resource_prefix}-${each.value}-5xx-high"
+  alarm_name          = "${each.value}-5xx-high"
   alarm_description   = "API Gateway ${each.value} 5XX error rate exceeds ${var.alarm_5xx_threshold}%"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = var.alarm_evaluation_periods
@@ -68,7 +68,7 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   ok_actions    = var.alarm_actions
 
   tags = merge(local.common_tags, {
-    Name      = "${local.resource_prefix}-${each.value}-5xx-high"
+    Name      = "${each.value}-5xx-high"
     ApiPrefix = each.value
   })
 }
@@ -80,7 +80,7 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
 resource "aws_cloudwatch_metric_alarm" "api_4xx" {
   for_each = var.api_names
 
-  alarm_name          = "${local.resource_prefix}-${each.value}-4xx-high"
+  alarm_name          = "${each.value}-4xx-high"
   alarm_description   = "API Gateway ${each.value} 4XX error rate exceeds ${var.alarm_4xx_threshold}%"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = var.alarm_evaluation_periods
@@ -124,7 +124,7 @@ resource "aws_cloudwatch_metric_alarm" "api_4xx" {
   ok_actions    = var.alarm_actions
 
   tags = merge(local.common_tags, {
-    Name      = "${local.resource_prefix}-${each.value}-4xx-high"
+    Name      = "${each.value}-4xx-high"
     ApiPrefix = each.value
   })
 }
@@ -136,7 +136,7 @@ resource "aws_cloudwatch_metric_alarm" "api_4xx" {
 resource "aws_cloudwatch_metric_alarm" "api_latency" {
   for_each = var.api_names
 
-  alarm_name          = "${local.resource_prefix}-${each.value}-latency-high"
+  alarm_name          = "${each.value}-latency-high"
   alarm_description   = "API Gateway ${each.value} p99 latency exceeds ${var.alarm_latency_threshold_ms}ms"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = var.alarm_evaluation_periods
@@ -155,7 +155,7 @@ resource "aws_cloudwatch_metric_alarm" "api_latency" {
   ok_actions    = var.alarm_actions
 
   tags = merge(local.common_tags, {
-    Name      = "${local.resource_prefix}-${each.value}-latency-high"
+    Name      = "${each.value}-latency-high"
     ApiPrefix = each.value
   })
 }
@@ -167,7 +167,7 @@ resource "aws_cloudwatch_metric_alarm" "api_latency" {
 resource "aws_cloudwatch_metric_alarm" "api_integration_latency" {
   for_each = var.api_names
 
-  alarm_name          = "${local.resource_prefix}-${each.value}-integration-latency-high"
+  alarm_name          = "${each.value}-integration-latency-high"
   alarm_description   = "API Gateway ${each.value} p99 integration latency exceeds ${var.alarm_integration_latency_threshold_ms}ms"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = var.alarm_evaluation_periods
@@ -186,7 +186,7 @@ resource "aws_cloudwatch_metric_alarm" "api_integration_latency" {
   ok_actions    = var.alarm_actions
 
   tags = merge(local.common_tags, {
-    Name      = "${local.resource_prefix}-${each.value}-integration-latency-high"
+    Name      = "${each.value}-integration-latency-high"
     ApiPrefix = each.value
   })
 }
