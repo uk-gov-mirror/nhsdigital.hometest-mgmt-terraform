@@ -94,7 +94,7 @@ runs:
       run: |
         set -o pipefail
         mise exec -- terragrunt plan -out=tfplan $LOCK_FLAG $TARGET_FLAGS 2>&1 | tee /tmp/tg-plan-output.txt
-        PLAN_SUMMARY=$(grep -E 'Plan:|No changes\.' /tmp/tg-plan-output.txt | tail -1)
+        PLAN_SUMMARY=$(grep -E 'Plan:|No changes\.' /tmp/tg-plan-output.txt | tail -1 | sed -e 's/\x1b\[[0-9;]*m//g' -e 's/^[0-9:.]*[[:space:]]*STDOUT[[:space:]]*terraform:[[:space:]]*//')
         if [[ -n "$PLAN_SUMMARY" ]]; then
           echo "### Terragrunt Plan — \`${WORKING_DIR}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
@@ -112,7 +112,7 @@ runs:
       run: |
         set -o pipefail
         mise exec -- terragrunt plan -destroy -out=tfplan $TARGET_FLAGS 2>&1 | tee /tmp/tg-plan-output.txt
-        PLAN_SUMMARY=$(grep -E 'Plan:|No changes\.' /tmp/tg-plan-output.txt | tail -1)
+        PLAN_SUMMARY=$(grep -E 'Plan:|No changes\.' /tmp/tg-plan-output.txt | tail -1 | sed -e 's/\x1b\[[0-9;]*m//g' -e 's/^[0-9:.]*[[:space:]]*STDOUT[[:space:]]*terraform:[[:space:]]*//')
         if [[ -n "$PLAN_SUMMARY" ]]; then
           echo "### Terragrunt Destroy Plan — \`${WORKING_DIR}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
@@ -129,7 +129,7 @@ runs:
       run: |
         set -o pipefail
         mise exec -- terragrunt apply -auto-approve tfplan 2>&1 | tee /tmp/tg-apply-output.txt
-        APPLY_SUMMARY=$(grep -E 'Apply complete!|No changes\.' /tmp/tg-apply-output.txt | tail -1)
+        APPLY_SUMMARY=$(grep -E 'Apply complete!|No changes\.' /tmp/tg-apply-output.txt | tail -1 | sed -e 's/\x1b\[[0-9;]*m//g' -e 's/^[0-9:.]*[[:space:]]*STDOUT[[:space:]]*terraform:[[:space:]]*//')
         if [[ -n "$APPLY_SUMMARY" ]]; then
           echo "### Terragrunt Apply — \`${WORKING_DIR}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
@@ -147,7 +147,7 @@ runs:
       run: |
         set -o pipefail
         mise exec -- terragrunt destroy -auto-approve $TARGET_FLAGS 2>&1 | tee /tmp/tg-destroy-output.txt
-        DESTROY_SUMMARY=$(grep -E 'Destroy complete!|No changes\.' /tmp/tg-destroy-output.txt | tail -1)
+        DESTROY_SUMMARY=$(grep -E 'Destroy complete!|No changes\.' /tmp/tg-destroy-output.txt | tail -1 | sed -e 's/\x1b\[[0-9;]*m//g' -e 's/^[0-9:.]*[[:space:]]*STDOUT[[:space:]]*terraform:[[:space:]]*//')
         if [[ -n "$DESTROY_SUMMARY" ]]; then
           echo "### Terragrunt Destroy — \`${WORKING_DIR}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
