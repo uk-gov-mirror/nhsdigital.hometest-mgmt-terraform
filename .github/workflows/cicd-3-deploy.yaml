@@ -74,6 +74,14 @@ jobs:
           export VERSION
           make list-variables
 
+      - name: "Display deployment info"
+        uses: ./.github/actions/display-deployment-info
+        with:
+          mgmt_terraform_path: "."
+          extra_rows: |
+            | Environment | ${{ inputs.environment || 'poc' }} |
+            | Action | apply |
+
   deploy-bootstrap:
     name: "Deploy TF Core/Bootstrap"
     runs-on: ubuntu-latest

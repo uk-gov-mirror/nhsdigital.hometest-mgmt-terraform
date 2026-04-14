@@ -63,6 +63,11 @@ jobs:
           path: hometest-service
           ssh-key: ${{ secrets.NHS_HOMETEST_SERVICE_DEPLOY_KEY_SSH_PRIV }}
 
+      - name: "Display repo info"
+        uses: ./hometest-mgmt-terraform/.github/actions/display-deployment-info
+        with:
+          title: "Test Plan: ${{ matrix.module }}"
+
       - name: Install mise tools
         uses: ./hometest-mgmt-terraform/.github/actions/install-mise
         with:
