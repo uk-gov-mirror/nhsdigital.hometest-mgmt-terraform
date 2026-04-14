@@ -7,8 +7,23 @@ locals {
 }
 
 module "goose_migrator_lambda" {
-  source  = "terraform-aws-modules/lambda/aws"
-  version = "8.7.0"
+  source = "../../modules/lambda"
+
+  project_name          = var.project_name
+  aws_account_shortname = var.aws_account_shortname
+  function_name         = "lambda-goose-migrator"
+  environment           = var.environment
+  lambda_role_arn       = aws_iam_role.lambda_goose_migrator.arn
+
+  filename         = var.goose_migrator_zip_path
+  source_code_hash = filebase64sha256(var.goose_migrator_zip_path)
+
+  handler     = "bootstrap"
+  runtime     = "provided.al2023"
+  timeout     = 300
+  memory_size = 128
+
+  architectures = ["arm64"]
 
   function_name          = "${local.resource_prefix}-lambda-goose-migrator"
   description            = "Lambda function for running Goose DB migrations (Go, custom runtime)"
@@ -21,10 +36,6 @@ module "goose_migrator_lambda" {
   publish                = true
   vpc_subnet_ids         = var.subnet_ids
   vpc_security_group_ids = var.security_group_ids
-
-  tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-lambda-goose-migrator"
-  })
 
   environment_variables = {
     DB_USERNAME          = var.db_username
@@ -39,10 +50,7 @@ module "goose_migrator_lambda" {
     GRANT_RDS_IAM        = tostring(var.grant_rds_iam)
   }
 
-  architectures = ["arm64"]
-
-  create_package         = false
-  local_existing_package = var.goose_migrator_zip_path
+  tags = local.common_tags
 }
 
 # ---------------------------------------------------------------------------------------------------------------------

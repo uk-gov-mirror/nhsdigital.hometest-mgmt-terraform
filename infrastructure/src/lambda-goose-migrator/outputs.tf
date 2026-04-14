@@ -1,11 +1,11 @@
 output "function_name" {
   description = "Name of the Lambda function for invocation"
-  value       = module.goose_migrator_lambda.lambda_function_name
+  value       = module.goose_migrator_lambda.function_name
 }
 
 output "function_arn" {
   description = "ARN of the Lambda function"
-  value       = module.goose_migrator_lambda.lambda_function_arn
+  value       = module.goose_migrator_lambda.function_arn
 }
 
 output "app_user_secret_arn" {

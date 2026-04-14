@@ -149,7 +149,7 @@ The module uses the `terraform-aws-modules/lambda/aws` module with a custom buil
 
 | Name | Source | Version |
 | ---- | ------ | ------- |
-| <a name="module_goose_migrator_lambda"></a> [goose\_migrator\_lambda](#module\_goose\_migrator\_lambda) | terraform-aws-modules/lambda/aws | 8.7.0 |
+| <a name="module_goose_migrator_lambda"></a> [goose\_migrator\_lambda](#module\_goose\_migrator\_lambda) | ../../modules/lambda | n/a |
 
 ## Resources
 

@@ -178,7 +178,6 @@ inputs = {
 
   goose_migrator_zip_path = "${local.hometest_service_dir}/lambdas/goose-migrator/goose-migrator.zip"
 
-
   # Database connection info from Aurora cluster
   db_username   = dependency.aurora-postgres.outputs.cluster_master_username
   db_address    = dependency.aurora-postgres.outputs.cluster_endpoint
