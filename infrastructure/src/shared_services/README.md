@@ -119,6 +119,7 @@ inputs = {
 | [aws_acm_certificate.regional](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/acm_certificate) | resource |
 | [aws_acm_certificate_validation.cloudfront](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/acm_certificate_validation) | resource |
 | [aws_acm_certificate_validation.regional](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/acm_certificate_validation) | resource |
+| [aws_api_gateway_account.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/api_gateway_account) | resource |
 | [aws_cloudwatch_log_group.waf_regional](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group) | resource |
 | [aws_cognito_identity_pool.main](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cognito_identity_pool) | resource |
 | [aws_cognito_identity_pool_roles_attachment.main](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cognito_identity_pool_roles_attachment) | resource |
@@ -133,9 +134,11 @@ inputs = {
 | [aws_cognito_user_pool_domain.main](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cognito_user_pool_domain) | resource |
 | [aws_iam_policy.developer_deployment](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
 | [aws_iam_policy.tfstate_readonly](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
+| [aws_iam_role.api_gateway_cloudwatch](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
 | [aws_iam_role.cognito_authenticated](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
 | [aws_iam_role.cognito_unauthenticated](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
 | [aws_iam_role.developer](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
+| [aws_iam_role_policy.api_gateway_cloudwatch](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
 | [aws_iam_role_policy.cognito_authenticated](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
 | [aws_iam_role_policy.cognito_unauthenticated](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
 | [aws_iam_role_policy.developer_lambda](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
@@ -239,6 +242,7 @@ inputs = {
 | <a name="output_acm_regional_certificate_validated"></a> [acm\_regional\_certificate\_validated](#output\_acm\_regional\_certificate\_validated) | Whether the regional certificate has been validated |
 | <a name="output_api_config_secret_arn"></a> [api\_config\_secret\_arn](#output\_api\_config\_secret\_arn) | ARN of the API config secret |
 | <a name="output_api_config_secret_name"></a> [api\_config\_secret\_name](#output\_api\_config\_secret\_name) | Name of the API config secret |
+| <a name="output_api_gateway_cloudwatch_role_arn"></a> [api\_gateway\_cloudwatch\_role\_arn](#output\_api\_gateway\_cloudwatch\_role\_arn) | ARN of the IAM role used by API Gateway for CloudWatch logging (regional singleton) |
 | <a name="output_cognito_authenticated_role_arn"></a> [cognito\_authenticated\_role\_arn](#output\_cognito\_authenticated\_role\_arn) | The ARN of the IAM role for authenticated Cognito users |
 | <a name="output_cognito_hosted_ui_url"></a> [cognito\_hosted\_ui\_url](#output\_cognito\_hosted\_ui\_url) | The URL for the Cognito Hosted UI |
 | <a name="output_cognito_identity_pool_arn"></a> [cognito\_identity\_pool\_arn](#output\_cognito\_identity\_pool\_arn) | The ARN of the Cognito Identity Pool |

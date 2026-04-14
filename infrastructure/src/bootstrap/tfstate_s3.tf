@@ -36,7 +36,8 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "tfstate" {
       sse_algorithm     = "aws:kms"
       kms_master_key_id = aws_kms_key.tfstate.arn
     }
-    bucket_key_enabled = true # Reduces KMS costs
+    bucket_key_enabled       = true # Reduces KMS costs
+    blocked_encryption_types = ["NONE"]
   }
 }
 

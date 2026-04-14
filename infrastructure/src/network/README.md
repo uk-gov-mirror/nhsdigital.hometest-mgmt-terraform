@@ -603,7 +603,6 @@ No modules.
 | [aws_s3_bucket_versioning.dns_query_logs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_versioning) | resource |
 | [aws_security_group.lambda](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
 | [aws_security_group.lambda_rds](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
-| [aws_security_group.rds](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
 | [aws_security_group.vpc_endpoints](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group) | resource |
 | [aws_subnet.data](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/subnet) | resource |
 | [aws_subnet.firewall](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/subnet) | resource |
@@ -612,6 +611,10 @@ No modules.
 | [aws_vpc.main](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc) | resource |
 | [aws_vpc_endpoint.interface_endpoints](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_endpoint) | resource |
 | [aws_vpc_endpoint.s3](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_endpoint) | resource |
+| [aws_vpc_security_group_egress_rule.lambda_dns_tcp](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_egress_rule) | resource |
+| [aws_vpc_security_group_egress_rule.lambda_dns_udp](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_egress_rule) | resource |
+| [aws_vpc_security_group_egress_rule.lambda_https](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_egress_rule) | resource |
+| [aws_vpc_security_group_egress_rule.lambda_rds_postgres](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_egress_rule) | resource |
 | [aws_availability_zones.available](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/availability_zones) | data source |
 | [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
 | [aws_cloudwatch_log_group.vpc_flow_logs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/cloudwatch_log_group) | data source |
@@ -632,7 +635,6 @@ No modules.
 | <a name="input_create_health_check"></a> [create\_health\_check](#input\_create\_health\_check) | Create a Route 53 health check for the domain | `bool` | `false` | no |
 | <a name="input_create_lambda_rds_sg"></a> [create\_lambda\_rds\_sg](#input\_create\_lambda\_rds\_sg) | Create a dedicated security group for Lambda to RDS access | `bool` | `true` | no |
 | <a name="input_create_private_hosted_zone"></a> [create\_private\_hosted\_zone](#input\_create\_private\_hosted\_zone) | Create a private hosted zone associated with the VPC for internal DNS resolution | `bool` | `false` | no |
-| <a name="input_create_rds_sg"></a> [create\_rds\_sg](#input\_create\_rds\_sg) | Create a security group for RDS databases | `bool` | `true` | no |
 | <a name="input_dns_query_logs_buffer_interval"></a> [dns\_query\_logs\_buffer\_interval](#input\_dns\_query\_logs\_buffer\_interval) | Buffer interval in seconds for Kinesis Firehose (60-900 seconds). Smaller = more real-time | `number` | `60` | no |
 | <a name="input_dns_query_logs_buffer_size"></a> [dns\_query\_logs\_buffer\_size](#input\_dns\_query\_logs\_buffer\_size) | Buffer size in MB for Kinesis Firehose (1-128 MB). Smaller = more real-time | `number` | `5` | no |
 | <a name="input_dns_query_logs_cloudwatch_retention_days"></a> [dns\_query\_logs\_cloudwatch\_retention\_days](#input\_dns\_query\_logs\_cloudwatch\_retention\_days) | Number of days to retain DNS query logs in CloudWatch (before S3 delivery) | `number` | `7` | no |
@@ -710,7 +712,6 @@ No modules.
 | <a name="output_public_subnet_arns"></a> [public\_subnet\_arns](#output\_public\_subnet\_arns) | List of public subnet ARNs |
 | <a name="output_public_subnet_cidrs"></a> [public\_subnet\_cidrs](#output\_public\_subnet\_cidrs) | List of public subnet CIDR blocks |
 | <a name="output_public_subnet_ids"></a> [public\_subnet\_ids](#output\_public\_subnet\_ids) | List of public subnet IDs |
-| <a name="output_rds_security_group_id"></a> [rds\_security\_group\_id](#output\_rds\_security\_group\_id) | Security group ID for RDS databases |
 | <a name="output_route53_health_check_id"></a> [route53\_health\_check\_id](#output\_route53\_health\_check\_id) | The ID of the Route 53 health check |
 | <a name="output_route53_name_servers"></a> [route53\_name\_servers](#output\_route53\_name\_servers) | The name servers for the Route 53 hosted zone (delegate to these from parent domain) |
 | <a name="output_route53_private_zone_arn"></a> [route53\_private\_zone\_arn](#output\_route53\_private\_zone\_arn) | The ARN of the private Route 53 hosted zone |

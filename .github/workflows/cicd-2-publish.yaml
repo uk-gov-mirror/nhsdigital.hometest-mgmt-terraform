@@ -39,14 +39,22 @@ jobs:
             echo "version=$(head -n 1 .version 2> /dev/null || echo unknown)"
           } >> "$GITHUB_OUTPUT"
       - name: "List variables"
+        env:
+          BUILD_DATETIME: ${{ steps.variables.outputs.build_datetime }}
+          BUILD_TIMESTAMP: ${{ steps.variables.outputs.build_timestamp }}
+          BUILD_EPOCH: ${{ steps.variables.outputs.build_epoch }}
+          NODEJS_VERSION: ${{ steps.variables.outputs.nodejs_version }}
+          PYTHON_VERSION: ${{ steps.variables.outputs.python_version }}
+          TERRAFORM_VERSION: ${{ steps.variables.outputs.terraform_version }}
+          VERSION: ${{ steps.variables.outputs.version }}
         run: |
-          export BUILD_DATETIME="${{ steps.variables.outputs.build_datetime }}"
-          export BUILD_TIMESTAMP="${{ steps.variables.outputs.build_timestamp }}"
-          export BUILD_EPOCH="${{ steps.variables.outputs.build_epoch }}"
-          export NODEJS_VERSION="${{ steps.variables.outputs.nodejs_version }}"
-          export PYTHON_VERSION="${{ steps.variables.outputs.python_version }}"
-          export TERRAFORM_VERSION="${{ steps.variables.outputs.terraform_version }}"
-          export VERSION="${{ steps.variables.outputs.version }}"
+          export BUILD_DATETIME
+          export BUILD_TIMESTAMP
+          export BUILD_EPOCH
+          export NODEJS_VERSION
+          export PYTHON_VERSION
+          export TERRAFORM_VERSION
+          export VERSION
           make list-variables
   publish:
     name: "Publish packages"
@@ -89,7 +97,9 @@ jobs:
     steps:
       - name: "Check prerequisites for notification"
         id: check
-        run: echo "secret_exist=${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL != '' }}" >> "$GITHUB_OUTPUT"
+        env:
+          SECRET_EXISTS: ${{ secrets.TEAMS_NOTIFICATION_WEBHOOK_URL != '' }}
+        run: echo "secret_exist=$SECRET_EXISTS" >> "$GITHUB_OUTPUT"
       - name: "Notify on publishing packages"
         if: steps.check.outputs.secret_exist == 'true'
         uses: nhs-england-tools/notify-msteams-action@v1.0.5

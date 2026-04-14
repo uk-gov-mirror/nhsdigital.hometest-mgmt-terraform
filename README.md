@@ -1,6 +1,6 @@
 # NHS HomeTest Management Terraform
 
-Infrastructure as Code (IaC) for the NHS HomeTest Service using Terraform and Terragrunt for multi-environment AWS deployments.
+Infrastructure as Code (IaC) for the NHS HomeTest Service using Terraform and Terragrunt for multi-environment, multi-account AWS deployments.
 
 ## Table of Contents
 
@@ -17,8 +17,10 @@ Infrastructure as Code (IaC) for the NHS HomeTest Service using Terraform and Te
   - [Deployment](#deployment)
     - [Quick Deploy](#quick-deploy)
     - [Deploy All](#deploy-all)
+  - [Environments](#environments)
   - [Development Tools](#development-tools)
     - [Pre-commit Hooks](#pre-commit-hooks)
+    - [Mise Tasks](#mise-tasks)
     - [Testing](#testing)
   - [Documentation](#documentation)
     - [External Resources](#external-resources)
@@ -29,10 +31,11 @@ Infrastructure as Code (IaC) for the NHS HomeTest Service using Terraform and Te
 This repository manages the AWS infrastructure for the NHS HomeTest Service, including:
 
 - **Bootstrap** — Terraform state backend (S3 + KMS) and GitHub OIDC for CI/CD
-- **Networking** — VPC, subnets, NAT gateways, Network Firewall, VPC endpoints, Route53
-- **Shared Services** — WAF, ACM certificates, KMS, Cognito, IAM roles
+- **Networking** — VPC, subnets, NAT gateways, Network Firewall, VPC endpoints, Route53 with DNSSEC
+- **Shared Services** — WAF, ACM certificates, KMS, Cognito, IAM roles, SNS alerts, Secrets Manager
 - **Aurora PostgreSQL** — Serverless v2 database with Goose migrations
-- **HomeTest Application** — Lambda functions, API Gateway, CloudFront + S3 SPA, SQS queues
+- **ECS Cluster** — Fargate cluster with shared ALB for WireMock and container workloads
+- **HomeTest Application** — Lambda functions, API Gateway, CloudFront + S3 SPA, SQS queues, WireMock
 
 ## Architecture
 
@@ -50,10 +53,11 @@ graph TB
     classDef messaging fill:#E7157B,stroke:#232F3E,color:#fff
     classDef identity fill:#DD344C,stroke:#232F3E,color:#fff
     classDef mgmt fill:#E7157B,stroke:#232F3E,color:#fff
+    classDef container fill:#ED7100,stroke:#232F3E,color:#fff
 
-    USER["👤 User<br/>dev.hometest.service.nhs.uk"]
+    USER["👤 User<br/>{env}.poc.hometest.service.nhs.uk"]
 
-    subgraph AWS["☁️ AWS Account 781863586270 — eu-west-2"]
+    subgraph AWS["☁️ AWS Account (poc: 781863586270 / dev: 781195019563) — eu-west-2"]
         subgraph BOOTSTRAP["🔧 Bootstrap (deployed once)"]
             S3STATE["📦 S3<br/>Terraform State"]:::storage
             KMSSTATE["🔐 KMS<br/>State Encryption"]:::security
@@ -63,46 +67,58 @@ graph TB
         subgraph EDGE["🌐 Edge Services"]
             R53["🌍 Route53<br/>hometest.service.nhs.uk<br/>DNSSEC + DNS Query Logging"]:::network
             WAFCF["🛡️ WAF<br/>CloudFront"]:::security
-            WAFAPIGW["🛡️ WAF<br/>API Gateway"]:::security
-            ACM["📜 ACM<br/>*.hometest.service.nhs.uk"]:::security
+            WAFAPIGW["🛡️ WAF<br/>API Gateway / ALB"]:::security
+            ACM["📜 ACM<br/>*.poc.hometest.service.nhs.uk"]:::security
         end
 
         subgraph VPC["🔒 VPC 10.0.0.0/16"]
             subgraph PUBSUB["Public Subnets"]
                 NAT["🔀 NAT Gateway"]:::network
                 NFW["🧱 Network Firewall<br/>Domain + IP Filtering"]:::security
+                ALB["🔀 ALB<br/>Shared (ECS)"]:::network
             end
 
             subgraph PRIVSUB["Private Subnets"]
-                subgraph ENV_DEV["📦 Per-Environment: dev"]
+                subgraph ENV_DEV["📦 Per-Environment (dev, uat, demo, prod)"]
                     CF["☁️ CloudFront<br/>+ S3 SPA (Next.js)"]:::cdn
                     APIGW["🔌 API Gateway<br/>REST API v1"]:::compute
-                    L1["λ hello-world"]:::compute
-                    L2["λ eligibility-test-info"]:::compute
-                    L3["λ order-router<br/>(Preventex)"]:::compute
-                    L4["λ order-router-sh24<br/>(SH24)"]:::compute
-                    SQS1["📨 SQS<br/>Order Queue"]:::messaging
-                    SQS2["📨 SQS<br/>Order Queue SH24"]:::messaging
+                    L1["λ eligibility-lookup"]:::compute
+                    L2["λ login"]:::compute
+                    L3["λ session"]:::compute
+                    L4["λ order-service"]:::compute
+                    L5["λ get-order"]:::compute
+                    L6["λ order-router<br/>(SQS-triggered)"]:::compute
+                    L7["λ order-result"]:::compute
+                    L8["λ get-results"]:::compute
+                    L9["λ order-status"]:::compute
+                    L10["λ postcode-lookup"]:::compute
+                    SQS1["📨 SQS<br/>order-placement"]:::messaging
+                    SQS2["📨 SQS<br/>notify-messages"]:::messaging
+                    SQS3["📨 SQS<br/>order-results"]:::messaging
+                    SQS4["📨 SQS FIFO<br/>notifications"]:::messaging
+                    WM["🐳 WireMock<br/>ECS Fargate<br/>(optional)"]:::container
                 end
 
                 VPCE["🔗 VPC Endpoints<br/>S3, Lambda, SecretsManager,<br/>SQS, KMS, CloudWatch, ECR"]:::network
             end
 
             subgraph DATASUB["Data Subnets (isolated)"]
-                RDS["🐘 Aurora PostgreSQL<br/>Serverless v2<br/>hometest_poc"]:::database
+                RDS["🐘 Aurora PostgreSQL<br/>Serverless v2"]:::database
             end
         end
 
         subgraph SHARED["🔐 Shared Services"]
-            KMS["🔑 KMS<br/>Shared Encryption Key"]:::security
+            KMS["🔑 KMS<br/>main + pii_data keys"]:::security
             COGNITO["👥 Cognito<br/>User Pool + Identity Pool"]:::identity
             IAM["👤 Developer IAM<br/>Deploy Role"]:::identity
             SM["🗝️ Secrets Manager<br/>Supplier Credentials"]:::security
+            SNS["📢 SNS<br/>Alerts Topic"]:::messaging
         end
 
-        subgraph EXTERNAL["🌐 External Suppliers"]
-            PREVENTEX["Preventex API<br/>func-nhshometest-dev.azurewebsites.net"]
-            SH24["SH24 API<br/>admin.qa3.sh24.org.uk"]
+        subgraph EXTERNAL["🌐 External Services"]
+            NHSLOGIN["NHS Login<br/>(sandpit / prod)"]
+            OSPLACES["OS Places API<br/>(postcode lookup)"]
+            SUPPLIERS["Supplier APIs<br/>(Preventex, etc.)"]
         end
     end
 
@@ -112,24 +128,35 @@ graph TB
     CF -.->|WAF| WAFCF
     CF -.->|TLS| ACM
 
-    APIGW -->|"/hello-world/*"| L1
-    APIGW -->|"/test-order/*"| L2
+    APIGW -->|"/eligibility-lookup/*"| L1
+    APIGW -->|"/login/*"| L2
+    APIGW -->|"/session/*"| L3
+    APIGW -->|"/order/* (POST)"| L4
+    APIGW -->|"/get-order/* (GET)"| L5
+    APIGW -->|"/result/*"| L7
+    APIGW -->|"/results/* (GET)"| L8
+    APIGW -->|"/test-order-status/*"| L9
+    APIGW -->|"/postcode-lookup/*"| L10
     APIGW -.->|WAF| WAFAPIGW
 
-    SQS1 -->|trigger| L3
-    SQS2 -->|trigger| L4
+    SQS1 -->|trigger| L6
 
-    L2 -->|query| RDS
-    L2 -.->|secrets| SM
-    L3 -->|HTTP| PREVENTEX
-    L3 -.->|secrets| SM
-    L4 -->|HTTP| SH24
-    L4 -.->|secrets| SM
+    L1 & L5 & L7 & L8 & L9 -->|query| RDS
+    L4 -->|enqueue| SQS1
+    L7 & L9 -->|enqueue| SQS2
+    L2 -.->|auth| NHSLOGIN
+    L10 -.->|lookup| OSPLACES
+    L6 -->|HTTP| SUPPLIERS
+    L6 -.->|secrets| SM
 
-    L1 & L2 & L3 & L4 -->|egress| NAT
+    L1 & L2 & L3 & L4 & L5 & L6 & L7 & L8 & L9 & L10 -->|egress| NAT
     NAT -->|filtered| NFW
-    L1 & L2 & L3 & L4 -.->|encrypt| KMS
-    L1 & L2 & L3 & L4 -.->|private access| VPCE
+    L1 & L2 & L3 & L4 & L5 & L6 & L7 & L8 & L9 & L10 -.->|encrypt| KMS
+    L1 & L2 & L3 & L4 & L5 & L6 & L7 & L8 & L9 & L10 -.->|private access| VPCE
+
+    ALB -->|host routing| WM
+
+    SNS -.->|alarms| SQS1 & SQS2 & SQS3 & SQS4
 
     OIDC -.->|"CI/CD"| S3STATE
 ```
@@ -140,23 +167,24 @@ The following tools are managed via [mise](https://github.com/jdx/mise) (see [.m
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| **Terraform** | 1.14.4 | Infrastructure provisioning |
-| **Terragrunt** | 0.99.1 | DRY Terraform configuration |
-| **AWS CLI** | 2.33.13 | AWS interaction |
-| **TFLint** | latest | Terraform linting |
-| **terraform-docs** | latest | Auto-generated documentation |
-| **Trivy** | latest | Security scanning |
-| **Checkov** | latest | Policy-as-code scanning |
-| **Gitleaks** | 8.18.4 | Secret scanning |
-| **pre-commit** | latest | Git hooks |
-| **Go** | 1.26.0 | Lambda goose migrator builds |
-| **goose** | latest | Database migrations |
+| **Terraform** | 1.14.8 | Infrastructure provisioning |
+| **Terragrunt** | 1.0.0 | DRY Terraform configuration |
+| **AWS CLI** | 2.34.26 | AWS interaction |
+| **Python** | 3.14.2 | Git hooks, scripting |
+| **TFLint** | 0.61.0 | Terraform linting |
+| **terraform-docs** | 0.22.0 | Auto-generated documentation |
+| **Trivy** | 0.69.3 | Security scanning |
+| **Checkov** | 3.2.517 | Policy-as-code scanning |
+| **Gitleaks** | 8.30.1 | Secret scanning |
+| **pre-commit** | 4.5.1 | Git hooks |
+| **Go** | 1.26.2 | Lambda goose migrator builds |
+| **goose** | 3.27.0 | Database migrations |
+| **Vale** | 3.14.1 | Prose linting |
 
 Additional requirements:
 
 - [Docker](https://www.docker.com/) or compatible container runtime
 - [GNU Make](https://www.gnu.org/software/make/) 3.82+
-- [Python](https://www.python.org/) (for Git hooks)
 - [jq](https://jqlang.github.io/jq/) (JSON processing)
 - Firefox with [AWS SSO Containers](https://addons.mozilla.org/en-US/firefox/addon/aws-sso-containers/) (optional, for multi-account browser management)
 
@@ -214,9 +242,9 @@ See [infrastructure/README.md](./infrastructure/README.md) for the full infrastr
 
 | Directory | Purpose |
 |-----------|---------|
-| `infrastructure/src/` | Terraform root modules (bootstrap, network, shared_services, aurora-postgres, hometest-app) |
-| `infrastructure/modules/` | Reusable Terraform modules (api-gateway, cloudfront-spa, lambda, lambda-iam, aurora-postgres, lambda-goose-migrator, waf, etc.) |
-| `infrastructure/environments/` | Terragrunt environment configurations (poc/core, poc/dev) |
+| `infrastructure/src/` | Terraform root modules (bootstrap, network, shared_services, aurora-postgres, ecs-cluster, hometest-app, lambda-goose-migrator, mock-service, rds-postgres) |
+| `infrastructure/modules/` | Reusable Terraform modules (api-gateway, cloudfront-spa, lambda, lambda-iam, aurora-postgres, sqs, sns, waf, developer-iam, deployment-artifacts) |
+| `infrastructure/environments/` | Terragrunt environment configurations (poc, dev accounts with core + per-env app stacks) |
 | `scripts/` | Build, test, and deployment helper scripts |
 | `docs/` | ADRs, developer guides, diagrams, user guides |
 | `.github/workflows/` | CI/CD pipelines |
@@ -230,7 +258,7 @@ See [infrastructure/README.md](./infrastructure/README.md) for the full infrastr
 cd infrastructure/src/bootstrap
 terraform init && terraform apply
 
-# 2. Deploy core (network → shared_services → aurora-postgres → lambda-goose-migrator)
+# 2. Deploy core (network → shared_services → aurora-postgres → ecs)
 cd infrastructure/environments/poc/core/network
 terragrunt apply
 
@@ -240,11 +268,14 @@ terragrunt apply
 cd ../aurora-postgres
 terragrunt apply
 
-cd ../lambda-goose-migrator
+cd ../ecs
 terragrunt apply
 
-# 3. Deploy application environment
-cd ../../dev/hometest-app
+# 3. Deploy application environment (app + lambda-goose-migrator)
+cd ../../hometest-app/dev/lambda-goose-migrator
+terragrunt apply
+
+cd ../app
 terragrunt apply
 ```
 
@@ -255,6 +286,23 @@ cd infrastructure/environments/poc
 terragrunt run-all apply
 ```
 
+## Environments
+
+The infrastructure supports multiple AWS accounts and environments:
+
+| Account | Account ID | Environments |
+|---------|-----------|--------------|
+| **poc** | 781863586270 | dev, uat, demo, prod, dev-example |
+| **dev** | 781195019563 | staging |
+
+Each environment under `poc/hometest-app/{env}/` or `dev/hometest-app/{env}/` contains:
+
+- `env.hcl` — environment name, domain overrides, feature flags (e.g., WireMock)
+- `app/terragrunt.hcl` — hometest application stack
+- `lambda-goose-migrator/terragrunt.hcl` — database migrations
+
+Domain pattern: `{env}.{account}.hometest.service.nhs.uk` (e.g., `dev.poc.hometest.service.nhs.uk`)
+
 ## Development Tools
 
 ### Pre-commit Hooks
@@ -263,11 +311,15 @@ Configured in [.pre-commit-config.yaml](.pre-commit-config.yaml):
 
 - `terraform_fmt` / `terragrunt_fmt` — formatting
 - `terraform_tflint` — linting
-- `terraform_trivy` — security scanning
+- `terragrunt_validate_inputs` — input validation per stack
 - `terraform_checkov` — policy-as-code
 - `terraform_docs` — auto-generate module docs
 - `gitleaks` — secret detection
 - `markdownlint` — Markdown linting
+- `sqlfluff-lint` / `sqlfluff-fix` — SQL linting
+- `actionlint` — GitHub Actions linting
+- `shellcheck` — shell script analysis
+- `yamllint` — YAML linting
 
 ```bash
 # Run all checks
@@ -275,6 +327,15 @@ pre-commit run --all-files
 
 # Or via mise task
 mise run pre-commit
+```
+
+### Mise Tasks
+
+```bash
+mise run pre-commit            # Run all pre-commit hooks
+mise run test-migrations       # Test Goose DB migrations against local PostgreSQL
+mise run test-migrations-keep  # Same, but keep the PostgreSQL container running
+mise run tf-clean-cache        # Remove .external_modules, .terragrunt-cache, .terraform.lock.hcl
 ```
 
 ### Testing
@@ -295,6 +356,7 @@ make test
 
 - [Terragrunt Live Stacks Example](https://github.com/gruntwork-io/terragrunt-infrastructure-live-stacks-example/blob/main/root.hcl)
 - [Terragrunt Catalog Example](https://github.com/gruntwork-io/terragrunt-infrastructure-catalog-example/blob/main/stacks/ec2-asg-stateful-service/terragrunt.stack.hcl)
+- [Terragrunt Documentation](https://terragrunt.gruntwork.io/)
 - [mise Version Manager](https://github.com/jdx/mise)
 - [NHS AWS SSO User Access](https://nhsd-confluence.digital.nhs.uk/spaces/AWS/pages/592551759/AWS+Single+Sign+on+SSO+User+Access)
 

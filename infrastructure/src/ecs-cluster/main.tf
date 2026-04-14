@@ -98,6 +98,9 @@ module "ecs_alb" {
   enable_deletion_protection = false
   drop_invalid_header_fields = true
 
+  # Security group
+  security_group_name = "${local.resource_prefix}-ecs-alb"
+
   # Security group — HTTPS + HTTP from internet (WAF provides L7 protection)
   security_group_ingress_rules = {
     https_all = {

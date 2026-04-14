@@ -78,22 +78,35 @@ jobs:
 
       - name: "Set subenvs to deploy"
         id: set-subenvs
+        env:
+          INPUT_ENVIRONMENT: ${{ inputs.environment || 'poc' }}
+          INPUT_SUBENV: ${{ inputs.subenv || 'dev' }}
         run: |
-          WORKING_DIR_BASE="hometest-mgmt-terraform/infrastructure/environments/${{ inputs.environment || 'poc' }}/hometest-app"
+          WORKING_DIR_BASE="hometest-mgmt-terraform/infrastructure/environments/${INPUT_ENVIRONMENT}/hometest-app"
           echo "working_dir_base=${WORKING_DIR_BASE}" >> "$GITHUB_OUTPUT"
-          echo "subenvs=[\"${{ inputs.subenv || 'dev' }}\"]" >> "$GITHUB_OUTPUT"
+          echo "subenvs=[\"${INPUT_SUBENV}\"]" >> "$GITHUB_OUTPUT"
 
       - name: "Validate subenv path exists"
+        env:
+          INPUT_ENVIRONMENT: ${{ inputs.environment || 'poc' }}
+          INPUT_SUBENV: ${{ inputs.subenv || 'dev' }}
         run: |
-          BASE_PATH="hometest-mgmt-terraform/infrastructure/environments/${{ inputs.environment || 'poc' }}/hometest-app"
-          if [ "${{ inputs.subenv || 'dev' }}" != "all" ]; then
-            if [ ! -d "${BASE_PATH}/${{ inputs.subenv || 'dev' }}" ]; then
-              echo "::error::subenv path '${BASE_PATH}/${{ inputs.subenv || 'dev' }}' does not exist"
+          BASE_PATH="hometest-mgmt-terraform/infrastructure/environments/${INPUT_ENVIRONMENT}/hometest-app"
+          if [ "${INPUT_SUBENV}" != "all" ]; then
+            if [ ! -d "${BASE_PATH}/${INPUT_SUBENV}" ]; then
+              echo "::error::subenv path '${BASE_PATH}/${INPUT_SUBENV}' does not exist"
               exit 1
             fi
           fi
 
       - name: "Display deployment info"
+        env:
+          INPUT_ENVIRONMENT: ${{ inputs.environment || 'poc' }}
+          INPUT_SUBENV: ${{ inputs.subenv || 'dev' }}
+          INPUT_ACTION: ${{ inputs.action || 'plan' }}
+          INPUT_TARGETS: ${{ inputs.targets || 'all resources' }}
+          INPUT_SKIP_MIGRATOR: ${{ inputs.skip_migrator || 'false' }}
+          INPUT_HS_REF: ${{ inputs.hometest_service_ref || 'main' }}
         run: |
           HS_COMMIT=$(git -C hometest-service rev-parse HEAD)
           HS_COMMIT_SHORT=$(git -C hometest-service rev-parse --short HEAD)
@@ -101,14 +114,14 @@ jobs:
             echo "## Deployment Configuration"
             echo "| Parameter | Value |"
             echo "|-----------|---------|"
-            echo "| Environment | ${{ inputs.environment || 'poc' }} |"
+            echo "| Environment | ${INPUT_ENVIRONMENT} |"
             echo "| Stack | hometest-app |"
-            echo "| Subenv(s) | ${{ inputs.subenv || 'dev' }} |"
-            echo "| Action | ${{ inputs.action || 'plan' }} |"
-            echo "| Targets | ${{ inputs.targets || 'all resources' }} |"
-            echo "| Skip Migrator | ${{ inputs.skip_migrator || 'false' }} |"
-            echo "| Triggered by | ${{ github.actor }} |"
-            echo "| hometest-service ref | \`${{ inputs.hometest_service_ref || 'main' }}\` |"
+            echo "| Subenv(s) | ${INPUT_SUBENV} |"
+            echo "| Action | ${INPUT_ACTION} |"
+            echo "| Targets | ${INPUT_TARGETS} |"
+            echo "| Skip Migrator | ${INPUT_SKIP_MIGRATOR} |"
+            echo "| Triggered by | ${GITHUB_ACTOR} |"
+            echo "| hometest-service ref | \`${INPUT_HS_REF}\` |"
             echo "| hometest-service commit | \`${HS_COMMIT_SHORT}\` (${HS_COMMIT}) |"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -154,11 +167,14 @@ jobs:
 
       - name: "Post migration summary"
         if: always()
+        env:
+          SUBENV: ${{ matrix.subenv }}
+          INPUT_ACTION: ${{ inputs.action || 'plan' }}
         run: |
           {
-            echo "## Migrate DB: ${{ matrix.subenv }}"
+            echo "## Migrate DB: ${SUBENV}"
             echo "- **Status**: ${{ job.status }}"
-            echo "- **Action**: ${{ inputs.action || 'plan' }}"
+            echo "- **Action**: ${INPUT_ACTION}"
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy-app:
@@ -250,12 +266,16 @@ jobs:
 
       - name: "Post deployment summary"
         if: always()
+        env:
+          SUBENV: ${{ matrix.subenv }}
+          INPUT_ACTION: ${{ inputs.action || 'plan' }}
+          WORKING_DIR_BASE: ${{ needs.validate-inputs.outputs.working_dir_base }}
         run: |
           {
-            echo "## Deploy App: ${{ matrix.subenv }}"
+            echo "## Deploy App: ${SUBENV}"
             echo "- **Status**: ${{ job.status }}"
-            echo "- **Action**: ${{ inputs.action || 'plan' }}"
-            echo "- **Path**: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.subenv }}"
+            echo "- **Action**: ${INPUT_ACTION}"
+            echo "- **Path**: ${WORKING_DIR_BASE}/${SUBENV}"
           } >> "$GITHUB_STEP_SUMMARY"
 
   # ---------------------------------------------------------------------------
@@ -309,9 +329,11 @@ jobs:
 
       - name: "Post destroy summary"
         if: always()
+        env:
+          SUBENV: ${{ matrix.subenv }}
         run: |
           {
-            echo "## Destroy App: ${{ matrix.subenv }}"
+            echo "## Destroy App: ${SUBENV}"
             echo "- **Status**: ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -351,9 +373,11 @@ jobs:
 
       - name: "Post destroy migrator summary"
         if: always()
+        env:
+          SUBENV: ${{ matrix.subenv }}
         run: |
           {
-            echo "## Destroy Migrator: ${{ matrix.subenv }}"
+            echo "## Destroy Migrator: ${SUBENV}"
             echo "- **Status**: ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -368,19 +392,25 @@ jobs:
     if: always()
     steps:
       - name: "Generate summary"
+        env:
+          INPUT_ENVIRONMENT: ${{ inputs.environment || 'poc' }}
+          INPUT_SUBENV: ${{ inputs.subenv || 'dev' }}
+          INPUT_ACTION: ${{ inputs.action || 'plan' }}
+          INPUT_TARGETS: ${{ inputs.targets || 'all resources' }}
+          INPUT_SKIP_MIGRATOR: ${{ inputs.skip_migrator || 'false' }}
         run: |
           {
             echo "## Deployment Complete"
             echo ""
             echo "| Detail | Value |"
             echo "|--------|-------|"
-            echo "| Environment | ${{ inputs.environment || 'poc' }} |"
+            echo "| Environment | ${INPUT_ENVIRONMENT} |"
             echo "| Stack | hometest-app |"
-            echo "| Subenv(s) | ${{ inputs.subenv || 'dev' }} |"
-            echo "| Action | ${{ inputs.action || 'plan' }} |"
-            echo "| Targets | ${{ inputs.targets || 'all resources' }} |"
-            echo "| Skip Migrator | ${{ inputs.skip_migrator || 'false' }} |"
+            echo "| Subenv(s) | ${INPUT_SUBENV} |"
+            echo "| Action | ${INPUT_ACTION} |"
+            echo "| Targets | ${INPUT_TARGETS} |"
+            echo "| Skip Migrator | ${INPUT_SKIP_MIGRATOR} |"
             echo "| Overall Status | see individual jobs |"
-            echo "| Run ID | ${{ github.run_id }} |"
-            echo "| Triggered by | ${{ github.actor }} |"
+            echo "| Run ID | ${GITHUB_RUN_ID} |"
+            echo "| Triggered by | ${GITHUB_ACTOR} |"
           } >> "$GITHUB_STEP_SUMMARY"

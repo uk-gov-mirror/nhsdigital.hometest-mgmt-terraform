@@ -142,7 +142,8 @@ locals {
   # as the NHS Login stub and sets NEXT_PUBLIC_USE_WIREMOCK_AUTH=true.
   # When false, the real NHS Login sandpit is used.
   # ---------------------------------------------------------------------------
-  wiremock_base_url_for_spa   = "https://wiremock-${local.environment}.${local.base_domain}"
+  wiremock_domain             = "wiremock-${local.environment}.${local.base_domain}"
+  wiremock_base_url_for_spa   = "https://${local.wiremock_domain}"
   spa_nhs_login_authorize_url = local.enable_wiremock ? "${local.wiremock_base_url_for_spa}/authorize" : local.nhs_login_authorize_url
   use_wiremock_auth           = local.enable_wiremock
 
@@ -245,13 +246,34 @@ terraform {
           if [[ -n "$CLOUDFRONT_ID" ]]; then
             CF_FLAG="--cloudfront-id $CLOUDFRONT_ID"
           fi
-          "${local.scripts_dir}/upload-spa.sh" "${local.spa_dist_dir}" "$SPA_BUCKET" \
-            --spa-type "${local.spa_type}" \
-            --region "${local.aws_region}" \
-            --spa-source-dir "${local.spa_source_dir}" \
+          cd '${local.hometest_service_dir}' && \
+          mise exec -- '${local.scripts_dir}/upload-spa.sh' '${local.spa_dist_dir}' "$SPA_BUCKET" \
+            --spa-type '${local.spa_type}' \
+            --region '${local.aws_region}' \
+            --spa-source-dir '${local.spa_source_dir}' \
             $CF_FLAG
         else
           echo "Could not determine SPA bucket from terraform outputs, skipping upload..."
+        fi
+      EOF
+    ]
+  }
+
+  # Push WireMock stubs after apply when WireMock is enabled for the environment.
+  # Runs `npm run wiremock:push` from hometest-service/tests with the correct base URL.
+  after_hook "push_wiremock_stubs" {
+    commands     = ["apply"]
+    run_on_error = false
+    execute = [
+      "bash", "-c",
+      <<-EOF
+        if [[ "${local.enable_wiremock}" == "true" ]]; then
+          echo "Pushing WireMock stubs to ${local.wiremock_base_url_for_spa} ..."
+          cd '${local.hometest_service_dir}/tests' && \
+          WIREMOCK_BASE_URL='${local.wiremock_base_url_for_spa}' \
+          mise exec -- npm run wiremock:push
+        else
+          echo "WireMock not enabled for this environment, skipping stub push."
         fi
       EOF
     ]
@@ -693,7 +715,7 @@ inputs = {
   wiremock_alb_dns_name                   = dependency.ecs.outputs.alb_dns_name
   wiremock_alb_zone_id                    = dependency.ecs.outputs.alb_zone_id
   wiremock_service_discovery_namespace_id = dependency.ecs.outputs.service_discovery_namespace_id
-  wiremock_domain_name                    = "wiremock-${local.environment}.${local.base_domain}"
+  wiremock_domain_name                    = local.wiremock_domain
   wiremock_scheduled_scaling              = local.wiremock_scheduled_scaling
   wiremock_ecs_cluster_name               = local.wiremock_scheduled_scaling ? dependency.ecs.outputs.cluster_name : null
   wiremock_use_spot                       = local.wiremock_use_spot

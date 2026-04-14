@@ -71,6 +71,7 @@ module "aurora_postgres" {
 
   vpc_id                 = var.vpc_id
   db_subnet_group_name   = var.db_subnet_group_name
+  create_security_group  = false
   vpc_security_group_ids = [module.security_group.security_group_id]
 
   apply_immediately   = var.apply_immediately

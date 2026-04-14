@@ -297,3 +297,12 @@ output "developer_deployment_policy_name" {
   description = "Name of the developer deployment policy"
   value       = aws_iam_policy.developer_deployment.name
 }
+
+#------------------------------------------------------------------------------
+# API Gateway Account (regional singleton)
+#------------------------------------------------------------------------------
+
+output "api_gateway_cloudwatch_role_arn" {
+  description = "ARN of the IAM role used by API Gateway for CloudWatch logging (regional singleton)"
+  value       = aws_iam_role.api_gateway_cloudwatch.arn
+}

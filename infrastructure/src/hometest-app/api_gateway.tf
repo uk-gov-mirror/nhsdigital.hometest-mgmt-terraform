@@ -305,62 +305,6 @@ resource "aws_api_gateway_gateway_response" "default_5xx" {
 }
 
 ################################################################################
-# API Gateway Account Settings (for CloudWatch logging)
-# This is a regional setting - only one needed per AWS account/region
-################################################################################
-
-resource "aws_api_gateway_account" "this" {
-  cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch.arn
-
-  depends_on = [aws_iam_role_policy.api_gateway_cloudwatch]
-}
-
-resource "aws_iam_role" "api_gateway_cloudwatch" {
-  name = "${local.resource_prefix}-apigw-cloudwatch"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "apigateway.amazonaws.com"
-        }
-      }
-    ]
-  })
-
-  tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-apigw-cloudwatch-role"
-  })
-}
-
-resource "aws_iam_role_policy" "api_gateway_cloudwatch" {
-  name = "${local.resource_prefix}-apigw-cloudwatch-policy"
-  role = aws_iam_role.api_gateway_cloudwatch.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = [
-          "logs:CreateLogGroup",
-          "logs:CreateLogStream",
-          "logs:DescribeLogGroups",
-          "logs:DescribeLogStreams",
-          "logs:PutLogEvents",
-          "logs:GetLogEvents",
-          "logs:FilterLogEvents"
-        ]
-        Resource = "*"
-      }
-    ]
-  })
-}
-
-################################################################################
 # API Gateway Stages
 ################################################################################
 
@@ -394,8 +338,6 @@ resource "aws_api_gateway_stage" "apis" {
     Name      = "${local.resource_prefix}-${each.key}-${var.api_stage_name}"
     ApiPrefix = each.key
   })
-
-  depends_on = [aws_api_gateway_account.this]
 }
 
 ################################################################################

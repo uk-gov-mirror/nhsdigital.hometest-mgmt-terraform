@@ -57,38 +57,48 @@ jobs:
 
       - name: "Set modules to deploy"
         id: set-modules
+        env:
+          INPUT_ENVIRONMENT: ${{ inputs.environment || 'poc' }}
+          INPUT_MODULE: ${{ inputs.module || 'all' }}
         run: |
-          WORKING_DIR_BASE="hometest-mgmt-terraform/infrastructure/environments/${{ inputs.environment || 'poc' }}/core"
+          WORKING_DIR_BASE="hometest-mgmt-terraform/infrastructure/environments/${INPUT_ENVIRONMENT}/core"
           echo "working_dir_base=${WORKING_DIR_BASE}" >> "$GITHUB_OUTPUT"
 
-          if [ "${{ inputs.module || 'all' }}" == "all" ]; then
+          if [ "${INPUT_MODULE}" == "all" ]; then
             # Deploy in dependency order
             echo 'modules=["bootstrap", "network", "aurora-postgres", "shared_services", "ecs", "lambda-goose-migrator"]' >> "$GITHUB_OUTPUT"
           else
-            echo 'modules=["${{ inputs.module || 'all' }}"]' >> "$GITHUB_OUTPUT"
+            echo "modules=[\"${INPUT_MODULE}\"]" >> "$GITHUB_OUTPUT"
           fi
 
       - name: "Validate module path exists"
+        env:
+          INPUT_ENVIRONMENT: ${{ inputs.environment || 'poc' }}
+          INPUT_MODULE: ${{ inputs.module || 'all' }}
         run: |
-          BASE_PATH="hometest-mgmt-terraform/infrastructure/environments/${{ inputs.environment || 'poc' }}/core"
-          if [ "${{ inputs.module || 'all' }}" != "all" ]; then
-            if [ ! -d "${BASE_PATH}/${{ inputs.module || 'all' }}" ]; then
-              echo "::error::Module path '${BASE_PATH}/${{ inputs.module || 'all' }}' does not exist"
+          BASE_PATH="hometest-mgmt-terraform/infrastructure/environments/${INPUT_ENVIRONMENT}/core"
+          if [ "${INPUT_MODULE}" != "all" ]; then
+            if [ ! -d "${BASE_PATH}/${INPUT_MODULE}" ]; then
+              echo "::error::Module path '${BASE_PATH}/${INPUT_MODULE}' does not exist"
               exit 1
             fi
           fi
 
       - name: "Display deployment info"
+        env:
+          INPUT_ENVIRONMENT: ${{ inputs.environment || 'poc' }}
+          INPUT_MODULE: ${{ inputs.module || 'all' }}
+          INPUT_ACTION: ${{ inputs.action || 'plan' }}
         run: |
           {
             echo "## Deployment Configuration"
             echo "| Parameter | Value |"
             echo "|-----------|---------|"
-            echo "| Environment | ${{ inputs.environment || 'poc' }} |"
+            echo "| Environment | ${INPUT_ENVIRONMENT} |"
             echo "| Stack | core |"
-            echo "| Module(s) | ${{ inputs.module || 'all' }} |"
-            echo "| Action | ${{ inputs.action || 'plan' }} |"
-            echo "| Triggered by | ${{ github.actor }} |"
+            echo "| Module(s) | ${INPUT_MODULE} |"
+            echo "| Action | ${INPUT_ACTION} |"
+            echo "| Triggered by | ${GITHUB_ACTOR} |"
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy:
@@ -126,12 +136,16 @@ jobs:
 
       - name: "Post deployment summary"
         if: always()
+        env:
+          MODULE: ${{ matrix.module }}
+          INPUT_ACTION: ${{ inputs.action || 'plan' }}
+          WORKING_DIR_BASE: ${{ needs.validate-inputs.outputs.working_dir_base }}
         run: |
           {
-            echo "## Module: ${{ matrix.module }}"
+            echo "## Module: ${MODULE}"
             echo "- **Status**: ${{ job.status }}"
-            echo "- **Action**: ${{ inputs.action || 'plan' }}"
-            echo "- **Path**: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.module }}"
+            echo "- **Action**: ${INPUT_ACTION}"
+            echo "- **Path**: ${WORKING_DIR_BASE}/${MODULE}"
           } >> "$GITHUB_STEP_SUMMARY"
 
   summary:
@@ -141,17 +155,22 @@ jobs:
     if: always()
     steps:
       - name: "Generate summary"
+        env:
+          INPUT_ENVIRONMENT: ${{ inputs.environment || 'poc' }}
+          INPUT_MODULE: ${{ inputs.module || 'all' }}
+          INPUT_ACTION: ${{ inputs.action || 'plan' }}
+          DEPLOY_RESULT: ${{ needs.deploy.result }}
         run: |
           {
             echo "## Deployment Complete"
             echo ""
             echo "| Detail | Value |"
             echo "|--------|-------|"
-            echo "| Environment | ${{ inputs.environment || 'poc' }} |"
+            echo "| Environment | ${INPUT_ENVIRONMENT} |"
             echo "| Stack | core |"
-            echo "| Module(s) | ${{ inputs.module || 'all' }} |"
-            echo "| Action | ${{ inputs.action || 'plan' }} |"
-            echo "| Overall Status | ${{ needs.deploy.result }} |"
-            echo "| Run ID | ${{ github.run_id }} |"
-            echo "| Triggered by | ${{ github.actor }} |"
+            echo "| Module(s) | ${INPUT_MODULE} |"
+            echo "| Action | ${INPUT_ACTION} |"
+            echo "| Overall Status | ${DEPLOY_RESULT} |"
+            echo "| Run ID | ${GITHUB_RUN_ID} |"
+            echo "| Triggered by | ${GITHUB_ACTOR} |"
           } >> "$GITHUB_STEP_SUMMARY"

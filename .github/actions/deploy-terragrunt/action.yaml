@@ -30,7 +30,7 @@ runs:
   using: "composite"
   steps:
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v4
+      uses: aws-actions/configure-aws-credentials@v6
       with:
         role-to-assume: ${{ inputs.aws_role_arn }}
         aws-region: ${{ inputs.aws_region }}
@@ -87,13 +87,18 @@ runs:
       if: inputs.action == 'plan' || inputs.action == 'apply'
       working-directory: ${{ inputs.working_directory }}
       shell: bash
-      run: mise exec -- terragrunt plan -out=tfplan ${{ inputs.lock_enabled == 'false' && '-lock=false' || '' }} ${{ steps.target-flags.outputs.flags }}
+      env:
+        LOCK_FLAG: ${{ inputs.lock_enabled == 'false' && '-lock=false' || '' }}
+        TARGET_FLAGS: ${{ steps.target-flags.outputs.flags }}
+      run: mise exec -- terragrunt plan -out=tfplan $LOCK_FLAG $TARGET_FLAGS
 
     - name: Terragrunt Destroy Plan
       if: inputs.action == 'destroy-plan'
       working-directory: ${{ inputs.working_directory }}
       shell: bash
-      run: mise exec -- terragrunt plan -destroy -out=tfplan ${{ steps.target-flags.outputs.flags }}
+      env:
+        TARGET_FLAGS: ${{ steps.target-flags.outputs.flags }}
+      run: mise exec -- terragrunt plan -destroy -out=tfplan $TARGET_FLAGS
 
     - name: Terragrunt Apply
       if: inputs.action == 'apply'
@@ -105,4 +110,6 @@ runs:
       if: inputs.action == 'destroy'
       working-directory: ${{ inputs.working_directory }}
       shell: bash
-      run: mise exec -- terragrunt destroy -auto-approve ${{ steps.target-flags.outputs.flags }}
+      env:
+        TARGET_FLAGS: ${{ steps.target-flags.outputs.flags }}
+      run: mise exec -- terragrunt destroy -auto-approve $TARGET_FLAGS
