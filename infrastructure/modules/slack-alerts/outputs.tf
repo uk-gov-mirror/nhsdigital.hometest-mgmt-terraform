@@ -2,17 +2,14 @@
 # Slack Alerts Module Outputs
 ################################################################################
 
-output "lambda_function_arn" {
-  description = "ARN of the Slack notifier Lambda function"
-  value       = aws_lambda_function.notifier.arn
+output "chatbot_role_arn" {
+  description = "ARN of the IAM role used by AWS Chatbot"
+  value       = aws_iam_role.chatbot.arn
 }
 
-output "lambda_function_name" {
-  description = "Name of the Slack notifier Lambda function"
-  value       = aws_lambda_function.notifier.function_name
-}
-
-output "lambda_role_arn" {
-  description = "ARN of the IAM role used by the Slack notifier Lambda"
-  value       = aws_iam_role.notifier.arn
+output "channel_configurations" {
+  description = "Map of Chatbot Slack channel configuration ARNs"
+  value = {
+    for k, v in aws_chatbot_slack_channel_configuration.channels : k => v.chat_configuration_arn
+  }
 }

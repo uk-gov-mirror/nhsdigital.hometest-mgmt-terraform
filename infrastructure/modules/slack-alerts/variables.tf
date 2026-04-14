@@ -17,27 +17,33 @@ variable "environment" {
   type        = string
 }
 
-variable "slack_webhook_secret_name" {
-  description = "Name of the AWS Secrets Manager secret containing the Slack incoming webhook URL"
+variable "slack_workspace_id" {
+  description = "Slack workspace (team) ID. Found in AWS Chatbot console after authorizing the workspace."
   type        = string
 }
 
-variable "slack_channel_name" {
-  description = "Slack channel name for tagging and log context (e.g. hometest-ops-alerts)"
-  type        = string
-  default     = "hometest-ops-alerts"
+variable "slack_channels" {
+  description = <<-EOT
+    Map of Slack channel configurations. Each key is a logical name for the channel.
+    channel_id     = Slack channel ID (right-click channel → View channel details → copy ID)
+    sns_topic_arns = List of SNS topic ARNs to subscribe this channel to
+  EOT
+  type = map(object({
+    channel_id     = string
+    sns_topic_arns = list(string)
+  }))
+  default = {}
 }
 
-variable "sns_topic_arns" {
-  description = "List of SNS topic ARNs to subscribe the Slack notifier Lambda to"
-  type        = list(string)
-  default     = []
-}
-
-variable "kms_key_arn" {
-  description = "ARN of the KMS key used to encrypt the Secrets Manager secret (null if using default key)"
+variable "logging_level" {
+  description = "Logging level for AWS Chatbot (ERROR, INFO, NONE)"
   type        = string
-  default     = null
+  default     = "ERROR"
+
+  validation {
+    condition     = contains(["ERROR", "INFO", "NONE"], var.logging_level)
+    error_message = "Logging level must be ERROR, INFO, or NONE."
+  }
 }
 
 variable "tags" {
