@@ -66,7 +66,7 @@ jobs:
 
           if [ "${INPUT_MODULE}" == "all" ]; then
             # Deploy in dependency order
-            echo 'modules=["bootstrap", "network", "aurora-postgres", "shared_services", "ecs", "lambda-goose-migrator"]' >> "$GITHUB_OUTPUT"
+            echo 'modules=["bootstrap", "network", "aurora-postgres", "shared_services", "ecs"]' >> "$GITHUB_OUTPUT"
           else
             echo "modules=[\"${INPUT_MODULE}\"]" >> "$GITHUB_OUTPUT"
           fi
