@@ -68,6 +68,9 @@ locals {
   wiremock_cpu               = lookup(local._env_flags, "wiremock_cpu", 256)
   wiremock_memory            = lookup(local._env_flags, "wiremock_memory", 512)
 
+  # Alerts — opt-in per environment via env.hcl (default: false)
+  enable_alerts = lookup(local._env_flags, "enable_alerts", false)
+
   # mTLS on the API Gateway custom domain — opt-in per environment.
   # WARNING: enabling mTLS on the browser-facing API domain will break SPA CORS
   # because browsers never send client certificates on preflight OPTIONS requests.
@@ -387,8 +390,8 @@ inputs = {
   # Dependencies from shared_services
   kms_key_arn                   = dependency.shared_services.outputs.kms_key_arn
   pii_data_kms_key_arn          = dependency.shared_services.outputs.pii_data_kms_key_arn
-  sns_alerts_topic_arn          = dependency.shared_services.outputs.sns_alerts_topic_arn
-  sns_alerts_critical_topic_arn = dependency.shared_services.outputs.sns_alerts_critical_topic_arn
+  sns_alerts_topic_arn          = local.enable_alerts ? dependency.shared_services.outputs.sns_alerts_topic_arn : null
+  sns_alerts_critical_topic_arn = local.enable_alerts ? dependency.shared_services.outputs.sns_alerts_critical_topic_arn : null
 
   # OK actions — set to true for prod to get notified when alarms recover
   enable_ok_actions = false

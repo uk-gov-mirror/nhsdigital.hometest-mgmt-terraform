@@ -109,7 +109,7 @@ runs:
         TARGET_FLAGS: ${{ steps.target-flags.outputs.flags }}
         WORKING_DIR: ${{ inputs.working_directory }}
       run: |
-        set -uo pipefail
+        set -euo pipefail
         mise exec -- terragrunt plan -out=tfplan $LOCK_FLAG $TARGET_FLAGS 2>&1 | tee /tmp/tg-plan-output.txt
         TG_EXIT=${PIPESTATUS[0]}
         source /tmp/write-tg-summary.sh "Terragrunt Plan" 'Plan:|No changes\.' /tmp/tg-plan-output.txt "$WORKING_DIR"
@@ -123,7 +123,7 @@ runs:
         TARGET_FLAGS: ${{ steps.target-flags.outputs.flags }}
         WORKING_DIR: ${{ inputs.working_directory }}
       run: |
-        set -uo pipefail
+        set -euo pipefail
         mise exec -- terragrunt plan -destroy -out=tfplan $TARGET_FLAGS 2>&1 | tee /tmp/tg-plan-output.txt
         TG_EXIT=${PIPESTATUS[0]}
         source /tmp/write-tg-summary.sh "Terragrunt Destroy Plan" 'Plan:|No changes\.' /tmp/tg-plan-output.txt "$WORKING_DIR"
@@ -136,7 +136,7 @@ runs:
       env:
         WORKING_DIR: ${{ inputs.working_directory }}
       run: |
-        set -uo pipefail
+        set -euo pipefail
         mise exec -- terragrunt apply -auto-approve tfplan 2>&1 | tee /tmp/tg-apply-output.txt
         TG_EXIT=${PIPESTATUS[0]}
         source /tmp/write-tg-summary.sh "Terragrunt Apply" 'Apply complete!|No changes\.' /tmp/tg-apply-output.txt "$WORKING_DIR"
@@ -150,7 +150,7 @@ runs:
         TARGET_FLAGS: ${{ steps.target-flags.outputs.flags }}
         WORKING_DIR: ${{ inputs.working_directory }}
       run: |
-        set -uo pipefail
+        set -euo pipefail
         mise exec -- terragrunt destroy -auto-approve $TARGET_FLAGS 2>&1 | tee /tmp/tg-destroy-output.txt
         TG_EXIT=${PIPESTATUS[0]}
         source /tmp/write-tg-summary.sh "Terragrunt Destroy" 'Destroy complete!|No changes\.' /tmp/tg-destroy-output.txt "$WORKING_DIR"

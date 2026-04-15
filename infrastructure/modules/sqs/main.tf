@@ -137,8 +137,8 @@ module "queue" {
     sourceQueueArns   = [module.dlq[0].queue_arn]
   } : null
 
-  # Access policy — always enabled to enforce HTTPS-only access
-  create_queue_policy     = true
+  # Access policy — SSL enforcement is always merged; caller controls overall toggle
+  create_queue_policy     = var.create_queue_policy
   queue_policy_statements = local.merged_queue_policy_statements
 
   tags = local.common_tags

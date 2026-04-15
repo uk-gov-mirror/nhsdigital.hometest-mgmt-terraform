@@ -2,4 +2,7 @@
 # feed forward to the child modules.
 locals {
   environment = "dev-example"
+
+  # Alerts disabled — only demo has alerts enabled
+  enable_alerts = false
 }

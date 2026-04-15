@@ -109,6 +109,11 @@ resource "aws_kms_key" "main" {
           "kms:GenerateDataKey*"
         ]
         Resource = "*"
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = var.aws_account_id
+          }
+        }
       },
       {
         Sid    = "Allow SSO Roles to Decrypt State"
