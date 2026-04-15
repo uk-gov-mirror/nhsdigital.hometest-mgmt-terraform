@@ -295,6 +295,14 @@ The infrastructure supports multiple AWS accounts and environments:
 | **poc** | 781863586270 | dev, uat, demo, prod, dev-example |
 | **dev** | 781195019563 | staging |
 
+| Environment | Integration | Deployment Trigger | Source | Stability |
+|---|---|---|---|---|
+| `dev` | Live | Auto on merge to `main` | `main` HEAD | Latest |
+| `uat` | Stubbed (WireMock) | Auto on merge to `main` | `main` HEAD | Latest |
+| `demo` | Live | Manual (on demand) | Tagged release | High |
+| `dev-{name}` | Configurable | Manual (on demand) | Any ref | Varies |
+
+See [Environment Strategy](./docs/environment-strategy.md) for full details on deployment triggers, intended use, and how to create on-demand environments.
 Each environment under `poc/hometest-app/{env}/` or `dev/hometest-app/{env}/` contains:
 
 - `env.hcl` — environment name, domain overrides, feature flags (e.g., WireMock)
@@ -348,6 +356,8 @@ make test
 
 - [Infrastructure Guide](./infrastructure/README.md) — full infrastructure documentation
 - [Creating a New Environment](./docs/developer-guides/Creating_New_Environment.md) — step-by-step guide
+- [Environment Strategy](./docs/environment-strategy.md) — environment types, deployment triggers, and lifecycle
+- [Monitoring & Alerting](./docs/monitoring.md) — CloudWatch alarms, SNS topics, Slack integration
 - [Developer Guides](./docs/developer-guides/) — Bash/Make, Docker, Terraform scripting
 - [User Guides](./docs/user-guides/) — static analysis, Git hooks, secrets scanning
 - [ADRs](./docs/adr/) — architecture decision records
