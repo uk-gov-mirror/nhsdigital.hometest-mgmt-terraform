@@ -95,55 +95,34 @@ resource "aws_iam_policy" "deny_regions" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid      = "DenyNonAllowedRegions"
-        Effect   = "Deny"
-        Action   = "*"
+        Sid    = "DenyNonAllowedRegions"
+        Effect = "Deny"
+        NotAction = [
+          # Global services — exempt from region restrictions
+          "iam:*",
+          "organizations:*",
+          "sts:GetCallerIdentity",
+          "route53:*",
+          "route53domains:*",
+          "cloudfront:*",
+          "waf:*",
+          "wafv2:*",
+          "shield:*",
+          "globalaccelerator:*",
+          "support:*",
+          "aws-portal:*",
+          "budgets:*",
+          "ce:*",
+          "cur:*",
+          "account:*",
+          "chatbot:*" # Global service — API endpoint is us-east-1 only, region condition would block all Chatbot operations
+        ]
         Resource = "*"
         Condition = {
           StringNotEquals = {
             "aws:RequestedRegion" = var.aws_allowed_regions
           }
-          # Exclude global services that don't have a region
-          "ForAnyValue:StringNotLike" = {
-            "aws:PrincipalArn" = [
-              "arn:aws:iam::*:root"
-            ]
-          }
         }
-      },
-      {
-        Sid    = "AllowGlobalServices"
-        Effect = "Allow"
-        Action = [
-          # IAM is global
-          "iam:*",
-          # Organizations is global
-          "organizations:*",
-          # STS is global (but also regional)
-          "sts:GetCallerIdentity",
-          # Route53 is global
-          "route53:*",
-          "route53domains:*",
-          # CloudFront is global
-          "cloudfront:*",
-          # WAF Global
-          "waf:*",
-          "wafv2:*",
-          # Shield is global
-          "shield:*",
-          # Global Accelerator
-          "globalaccelerator:*",
-          # Support is global
-          "support:*",
-          # Billing/Cost
-          "aws-portal:*",
-          "budgets:*",
-          "ce:*",
-          "cur:*",
-          # Account management
-          "account:*"
-        ]
-        Resource = "*"
       }
     ]
   })

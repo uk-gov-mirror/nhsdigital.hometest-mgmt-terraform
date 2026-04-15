@@ -109,6 +109,21 @@ output "sns_alerts_topic_arn" {
   value       = module.sns_alerts.topic_arn
 }
 
+output "sns_alerts_critical_topic_arn" {
+  description = "ARN of the critical alerts SNS topic (P1 — Lambda errors, DLQ, 5XX, deadlocks)"
+  value       = module.sns_alerts_critical.topic_arn
+}
+
+output "sns_alerts_warning_topic_arn" {
+  description = "ARN of the warning alerts SNS topic (P2 — latency, capacity, WAF blocks)"
+  value       = module.sns_alerts_warning.topic_arn
+}
+
+output "sns_alerts_security_topic_arn" {
+  description = "ARN of the security alerts SNS topic (WAF SQLi, rate limiting)"
+  value       = module.sns_alerts_security.topic_arn
+}
+
 output "developer_role_name" {
   description = "Name of the developer deployment role"
   value       = aws_iam_role.developer.name
@@ -127,6 +142,9 @@ output "shared_config" {
     acm_regional_certificate_arn   = var.create_acm_certificates ? aws_acm_certificate.regional[0].arn : null
     acm_cloudfront_certificate_arn = var.create_acm_certificates ? aws_acm_certificate.cloudfront[0].arn : null
     sns_alerts_topic_arn           = module.sns_alerts.topic_arn
+    sns_alerts_critical_topic_arn  = module.sns_alerts_critical.topic_arn
+    sns_alerts_warning_topic_arn   = module.sns_alerts_warning.topic_arn
+    sns_alerts_security_topic_arn  = module.sns_alerts_security.topic_arn
     # deployment_bucket_id           = aws_s3_bucket.deployment_artifacts.id
     # deployment_bucket_arn          = aws_s3_bucket.deployment_artifacts.arn
     developer_role_arn = aws_iam_role.developer.arn
@@ -181,6 +199,25 @@ output "cognito_resource_server_identifier" {
 output "cognito_resource_server_scopes" {
   description = "The scopes of the Cognito Resource Server"
   value       = var.enable_cognito && length(var.cognito_resource_server_scopes) > 0 ? aws_cognito_resource_server.main[0].scope_identifiers : null
+}
+
+################################################################################
+# mTLS Outputs
+################################################################################
+
+output "mtls_truststore_uri" {
+  description = "S3 URI of the mTLS truststore PEM file for API Gateway mutual_tls_authentication"
+  value       = var.enable_mtls ? "s3://${aws_s3_bucket.mtls_truststore[0].id}/${aws_s3_object.mtls_truststore[0].key}" : null
+}
+
+output "mtls_truststore_version" {
+  description = "Version ID of the mTLS truststore object in S3"
+  value       = var.enable_mtls && aws_s3_object.mtls_truststore[0].version_id != "null" ? aws_s3_object.mtls_truststore[0].version_id : null
+}
+
+output "mtls_client_credentials_secret_arn" {
+  description = "ARN of the Secrets Manager secret containing the mTLS client key and certificate"
+  value       = var.enable_mtls ? aws_secretsmanager_secret.mtls_client_credentials[0].arn : null
 }
 
 output "cognito_identity_pool_id" {

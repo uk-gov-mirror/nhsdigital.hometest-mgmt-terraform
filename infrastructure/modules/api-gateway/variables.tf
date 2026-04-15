@@ -162,6 +162,16 @@ variable "deployment_triggers" {
   default     = {}
 }
 
+# Mutual TLS (mTLS) Configuration
+variable "mutual_tls_authentication" {
+  description = "Mutual TLS authentication configuration for the custom domain. Requires a truststore in S3 containing client CA certificates."
+  type = object({
+    truststore_uri     = string
+    truststore_version = optional(string)
+  })
+  default = null
+}
+
 # Tags
 variable "tags" {
   description = "Tags to apply to resources"

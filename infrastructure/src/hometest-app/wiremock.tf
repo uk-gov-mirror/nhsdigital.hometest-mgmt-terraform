@@ -25,9 +25,19 @@
 #   wiremock-<env>.ecs.<prefix>.local:8080
 ################################################################################
 
+resource "random_id" "wiremock" {
+  count       = var.enable_wiremock ? 1 : 0
+  byte_length = 3
+
+  keepers = {
+    # Tie the ID to the deployment so it stays stable unless the prefix changes
+    resource_prefix = local.resource_prefix
+  }
+}
+
 locals {
   wiremock_name           = "${local.resource_prefix}-wiremock"
-  wiremock_short_name     = "${local.resource_prefix}-wm"
+  wiremock_short_uid      = var.enable_wiremock ? "${var.project_name}-${var.aws_account_shortname}-wm-${random_id.wiremock[0].hex}" : "" # ALB/TG names (32 char limit)
   wiremock_container_port = 8080
   wiremock_domain         = var.enable_wiremock && var.wiremock_domain_name != null ? var.wiremock_domain_name : null
 
@@ -121,7 +131,7 @@ resource "aws_vpc_security_group_egress_rule" "wiremock_alb_to_vpc" {
 resource "aws_lb" "wiremock" { # NOSONAR - WireMock ALB is a test stub, access logs not required #checkov:skip=CKV_AWS_91
   count = local.wiremock_use_dedicated_alb ? 1 : 0
 
-  name               = "${local.wiremock_short_name}-alb"
+  name               = "${local.wiremock_short_uid}-alb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.wiremock_alb[0].id]
@@ -182,7 +192,7 @@ resource "aws_lb_listener" "wiremock_http_redirect" {
 resource "aws_lb_target_group" "wiremock" {
   count = var.enable_wiremock ? 1 : 0
 
-  name        = "${local.wiremock_name}-tg"
+  name        = "${local.wiremock_short_uid}-tg"
   port        = local.wiremock_container_port
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
@@ -373,7 +383,7 @@ module "wiremock_service" {
   # ---------------------------------------------------------------------------
   # IAM — Task Execution Role (pulls image, writes logs)
   # ---------------------------------------------------------------------------
-  task_exec_iam_role_name        = "${local.wiremock_name}-exec"
+  task_exec_iam_role_name        = "${local.wiremock_short_uid}-exec"
   task_exec_iam_role_description = "ECS task execution role for WireMock - pulls images and writes logs"
 
   task_exec_iam_statements = [
@@ -387,7 +397,7 @@ module "wiremock_service" {
   # ---------------------------------------------------------------------------
   # IAM — Task Role (container runtime permissions — minimal for WireMock)
   # ---------------------------------------------------------------------------
-  tasks_iam_role_name        = "${local.wiremock_name}-task"
+  tasks_iam_role_name        = "${local.wiremock_short_uid}-task"
   tasks_iam_role_description = "ECS task role for WireMock - no extra permissions needed"
 
   tasks_iam_role_statements = null

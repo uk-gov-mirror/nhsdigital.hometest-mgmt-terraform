@@ -67,7 +67,12 @@ locals {
   wiremock_use_spot          = lookup(local._env_flags, "wiremock_use_spot", true)
   wiremock_cpu               = lookup(local._env_flags, "wiremock_cpu", 256)
   wiremock_memory            = lookup(local._env_flags, "wiremock_memory", 512)
-  # enable_wiremock = false
+
+  # mTLS on the API Gateway custom domain — opt-in per environment.
+  # WARNING: enabling mTLS on the browser-facing API domain will break SPA CORS
+  # because browsers never send client certificates on preflight OPTIONS requests.
+  # Only enable for domains used exclusively by machine-to-machine traffic.
+  enable_api_mtls = lookup(local._env_flags, "enable_api_mtls", false)
 
   base_domain = "${local.account_vars.locals.aws_account_shortname}.hometest.service.nhs.uk"
   env_domain  = lookup(local._domain_overrides, "env_domain", "${local.environment}.${local.base_domain}")
@@ -307,6 +312,7 @@ dependency "shared_services" {
     kms_key_arn                     = "arn:aws:kms:eu-west-2:123456789012:key/mock-key-id"
     pii_data_kms_key_arn            = "arn:aws:kms:eu-west-2:123456789012:key/mock-pii-key-id"
     sns_alerts_topic_arn            = "arn:aws:sns:eu-west-2:123456789012:mock-alerts-topic"
+    sns_alerts_critical_topic_arn   = "arn:aws:sns:eu-west-2:123456789012:mock-alerts-critical-topic"
     waf_regional_arn                = "arn:aws:wafv2:eu-west-2:123456789012:regional/webacl/mock/mock-id"
     waf_cloudfront_arn              = "arn:aws:wafv2:us-east-1:123456789012:global/webacl/mock/mock-id"
     acm_regional_certificate_arn    = "arn:aws:acm:eu-west-2:123456789012:certificate/mock-cert"
@@ -316,7 +322,10 @@ dependency "shared_services" {
     api_config_secret_arn           = "arn:aws:secretsmanager:eu-west-2:123456789012:secret:mock-secret"
     api_config_secret_name          = "mock/secret/name"
     cognito_user_pool_arn           = "arn:aws:cognito-idp:eu-west-2:123456789012:userpool/eu-west-2_mockpool"
+    mtls_truststore_uri             = null
+    mtls_truststore_version         = null
   }
+  mock_outputs_merge_with_state           = true
   mock_outputs_allowed_terraform_commands = ["validate", "plan"]
 }
 
@@ -376,11 +385,16 @@ inputs = {
   route53_zone_id = dependency.network.outputs.route53_zone_id
 
   # Dependencies from shared_services
-  kms_key_arn          = dependency.shared_services.outputs.kms_key_arn
-  pii_data_kms_key_arn = dependency.shared_services.outputs.pii_data_kms_key_arn
-  sns_alerts_topic_arn = dependency.shared_services.outputs.sns_alerts_topic_arn
-  waf_cloudfront_arn   = dependency.shared_services.outputs.waf_cloudfront_arn
-  waf_regional_arn     = dependency.shared_services.outputs.waf_regional_arn
+  kms_key_arn                   = dependency.shared_services.outputs.kms_key_arn
+  pii_data_kms_key_arn          = dependency.shared_services.outputs.pii_data_kms_key_arn
+  sns_alerts_topic_arn          = dependency.shared_services.outputs.sns_alerts_topic_arn
+  sns_alerts_critical_topic_arn = dependency.shared_services.outputs.sns_alerts_critical_topic_arn
+
+  # OK actions — set to true for prod to get notified when alarms recover
+  enable_ok_actions = false
+
+  waf_cloudfront_arn = dependency.shared_services.outputs.waf_cloudfront_arn
+  waf_regional_arn   = dependency.shared_services.outputs.waf_regional_arn
 
   # Lambda Configuration
   enable_vpc_access  = true
@@ -688,6 +702,13 @@ inputs = {
 
   api_custom_domain_name       = local.api_domain
   acm_regional_certificate_arn = dependency.shared_services.outputs.acm_regional_certificate_arn
+
+  # Mutual TLS (mTLS) — only wired when enable_api_mtls = true in env.hcl.
+  # Disabled by default: the SPA makes browser requests to this API domain,
+  # and browsers cannot satisfy mTLS client-certificate requirements on CORS
+  # preflight (OPTIONS) requests, causing "CORS request did not succeed".
+  api_mutual_tls_truststore_uri     = local.enable_api_mtls ? dependency.shared_services.outputs.mtls_truststore_uri : null
+  api_mutual_tls_truststore_version = local.enable_api_mtls ? dependency.shared_services.outputs.mtls_truststore_version : null
 
   # CORS — API Gateway OPTIONS responses and gateway error responses use this origin.
   # Must match the SPA domain exactly (credentials require a specific origin, not '*').

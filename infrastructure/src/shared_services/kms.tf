@@ -64,6 +64,24 @@ resource "aws_kms_key" "main" {
         Resource = "*"
       },
       {
+        Sid    = "AllowAPIGatewayDecrypt"
+        Effect = "Allow"
+        Principal = {
+          Service = "apigateway.amazonaws.com"
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:DescribeKey"
+        ]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = var.aws_account_id
+            "kms:ViaService"    = "s3.${var.aws_region}.amazonaws.com"
+          }
+        }
+      },
+      {
         Sid    = "AllowCloudFrontService"
         Effect = "Allow"
         Principal = {
@@ -79,6 +97,18 @@ resource "aws_kms_key" "main" {
             "aws:SourceAccount" = var.aws_account_id
           }
         }
+      },
+      {
+        Sid    = "AllowCloudWatchAlarms"
+        Effect = "Allow"
+        Principal = {
+          Service = "cloudwatch.amazonaws.com"
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:GenerateDataKey*"
+        ]
+        Resource = "*"
       },
       {
         Sid    = "Allow SSO Roles to Decrypt State"

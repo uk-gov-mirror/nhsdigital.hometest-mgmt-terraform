@@ -515,6 +515,14 @@ resource "aws_api_gateway_domain_name" "api" {
     types = ["REGIONAL"]
   }
 
+  dynamic "mutual_tls_authentication" {
+    for_each = var.api_mutual_tls_truststore_uri != null ? [1] : []
+    content {
+      truststore_uri     = var.api_mutual_tls_truststore_uri
+      truststore_version = var.api_mutual_tls_truststore_version
+    }
+  }
+
   tags = merge(local.common_tags, {
     Name = "${var.project_name}-${var.environment}-api-custom-domain"
   })

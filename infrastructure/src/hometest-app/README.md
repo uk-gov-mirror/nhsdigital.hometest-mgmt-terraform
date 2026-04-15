@@ -218,6 +218,7 @@ After deployment, you'll have access to:
 | ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.14.0 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 6.37.0 |
+| <a name="requirement_random"></a> [random](#requirement\_random) | ~> 3.8.1 |
 
 ## Providers
 
@@ -225,11 +226,14 @@ After deployment, you'll have access to:
 | ---- | ------- |
 | <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 6.37.0 |
 | <a name="provider_aws.us_east_1"></a> [aws.us\_east\_1](#provider\_aws.us\_east\_1) | ~> 6.37.0 |
+| <a name="provider_random"></a> [random](#provider\_random) | ~> 3.8.1 |
 
 ## Modules
 
 | Name | Source | Version |
 | ---- | ------ | ------- |
+| <a name="module_api_gateway_alarms"></a> [api\_gateway\_alarms](#module\_api\_gateway\_alarms) | ../../modules/api-gateway-alarms | n/a |
+| <a name="module_cloudfront_alarms"></a> [cloudfront\_alarms](#module\_cloudfront\_alarms) | ../../modules/cloudfront-alarms | n/a |
 | <a name="module_cloudfront_spa"></a> [cloudfront\_spa](#module\_cloudfront\_spa) | ../../modules/cloudfront-spa | n/a |
 | <a name="module_lambda_iam"></a> [lambda\_iam](#module\_lambda\_iam) | ../../modules/lambda-iam | n/a |
 | <a name="module_lambdas"></a> [lambdas](#module\_lambdas) | ../../modules/lambda | n/a |
@@ -295,6 +299,7 @@ After deployment, you'll have access to:
 | [aws_vpc_security_group_ingress_rule.wiremock_alb_http](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_ingress_rule) | resource |
 | [aws_vpc_security_group_ingress_rule.wiremock_alb_https](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpc_security_group_ingress_rule) | resource |
 | [aws_wafv2_web_acl_association.apis](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/wafv2_web_acl_association) | resource |
+| [random_id.wiremock](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/id) | resource |
 | [aws_vpc.selected](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/vpc) | data source |
 
 ## Inputs
@@ -305,6 +310,8 @@ After deployment, you'll have access to:
 | <a name="input_acm_regional_certificate_arn"></a> [acm\_regional\_certificate\_arn](#input\_acm\_regional\_certificate\_arn) | ARN of the shared regional ACM certificate (from shared\_services) for API Gateway custom domain. Used when create\_api\_certificate = false (default for POC wildcard cert pattern). | `string` | `null` | no |
 | <a name="input_api_custom_domain_name"></a> [api\_custom\_domain\_name](#input\_api\_custom\_domain\_name) | Custom domain name for API Gateway (e.g., api-dev.poc.hometest.service.nhs.uk). API traffic is served directly from this domain instead of through CloudFront. | `string` | `null` | no |
 | <a name="input_api_endpoint_type"></a> [api\_endpoint\_type](#input\_api\_endpoint\_type) | API Gateway endpoint type | `string` | `"REGIONAL"` | no |
+| <a name="input_api_mutual_tls_truststore_uri"></a> [api\_mutual\_tls\_truststore\_uri](#input\_api\_mutual\_tls\_truststore\_uri) | S3 URI of the truststore file containing client CA certificates for API Gateway mTLS (e.g., s3://bucket/truststore.pem). When set, API Gateway verifies client certificates. | `string` | `null` | no |
+| <a name="input_api_mutual_tls_truststore_version"></a> [api\_mutual\_tls\_truststore\_version](#input\_api\_mutual\_tls\_truststore\_version) | Version ID of the truststore object in S3. When set, pins mTLS to a specific truststore version. | `string` | `null` | no |
 | <a name="input_api_stage_name"></a> [api\_stage\_name](#input\_api\_stage\_name) | API Gateway stage name | `string` | `"v1"` | no |
 | <a name="input_api_throttling_burst_limit"></a> [api\_throttling\_burst\_limit](#input\_api\_throttling\_burst\_limit) | API Gateway throttling burst limit | `number` | `1000` | no |
 | <a name="input_api_throttling_rate_limit"></a> [api\_throttling\_rate\_limit](#input\_api\_throttling\_rate\_limit) | API Gateway throttling rate limit | `number` | `2000` | no |
@@ -322,6 +329,7 @@ After deployment, you'll have access to:
 | <a name="input_create_cloudfront_certificate"></a> [create\_cloudfront\_certificate](#input\_create\_cloudfront\_certificate) | When true, create a dedicated us-east-1 ACM certificate for var.custom\_domain\_name.<br/>Use for environments where the SPA domain is not covered by the shared wildcard cert.<br/><br/>POC pattern  (create\_cloudfront\_certificate = false):<br/>  Shared cert: *.poc.hometest.service.nhs.uk  (from shared\_services, us-east-1)<br/>  SPA:         dev.poc.hometest.service.nhs.uk  ← covered<br/><br/>Custom pattern (create\_cloudfront\_certificate = true):<br/>  Shared cert: *.poc.hometest.service.nhs.uk  does NOT cover dev.hometest.service.nhs.uk<br/>  SPA:         dev.hometest.service.nhs.uk     ← dedicated cert created here in us-east-1 | `bool` | `false` | no |
 | <a name="input_custom_domain_name"></a> [custom\_domain\_name](#input\_custom\_domain\_name) | Custom domain name for the environment (e.g., dev1.hometest.service.nhs.uk) | `string` | `null` | no |
 | <a name="input_enable_cloudfront_logging"></a> [enable\_cloudfront\_logging](#input\_enable\_cloudfront\_logging) | Enable CloudFront access logging | `bool` | `false` | no |
+| <a name="input_enable_ok_actions"></a> [enable\_ok\_actions](#input\_enable\_ok\_actions) | Send notifications when alarms return to OK state (enable for prod, disable for dev to reduce noise) | `bool` | `false` | no |
 | <a name="input_enable_vpc_access"></a> [enable\_vpc\_access](#input\_enable\_vpc\_access) | Enable VPC access for Lambda functions | `bool` | `false` | no |
 | <a name="input_enable_wiremock"></a> [enable\_wiremock](#input\_enable\_wiremock) | Enable WireMock ECS Fargate service for API stubbing and Playwright tests | `bool` | `false` | no |
 | <a name="input_environment"></a> [environment](#input\_environment) | Environment name (dev, dev1, dev2, staging, prod) | `string` | n/a | yes |
@@ -348,6 +356,7 @@ After deployment, you'll have access to:
 | <a name="input_pii_data_kms_key_arn"></a> [pii\_data\_kms\_key\_arn](#input\_pii\_data\_kms\_key\_arn) | ARN of PII data KMS key for SQS and database encryption (from shared\_services) | `string` | n/a | yes |
 | <a name="input_project_name"></a> [project\_name](#input\_project\_name) | Name of the project | `string` | n/a | yes |
 | <a name="input_route53_zone_id"></a> [route53\_zone\_id](#input\_route53\_zone\_id) | Route53 hosted zone ID (from network) | `string` | n/a | yes |
+| <a name="input_sns_alerts_critical_topic_arn"></a> [sns\_alerts\_critical\_topic\_arn](#input\_sns\_alerts\_critical\_topic\_arn) | ARN of critical alerts SNS topic for P1 alerts (from shared\_services) | `string` | `null` | no |
 | <a name="input_sns_alerts_topic_arn"></a> [sns\_alerts\_topic\_arn](#input\_sns\_alerts\_topic\_arn) | ARN of shared alerts SNS topic (from shared\_services) | `string` | `null` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | Tags to apply to all resources | `map(string)` | `{}` | no |
 | <a name="input_use_placeholder_lambda"></a> [use\_placeholder\_lambda](#input\_use\_placeholder\_lambda) | Use placeholder Lambda code for initial deployment (when S3 code doesn't exist yet) | `bool` | `false` | no |

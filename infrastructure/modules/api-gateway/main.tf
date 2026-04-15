@@ -232,6 +232,14 @@ resource "aws_api_gateway_domain_name" "this" {
     types = [var.endpoint_type]
   }
 
+  dynamic "mutual_tls_authentication" {
+    for_each = var.mutual_tls_authentication != null ? [var.mutual_tls_authentication] : []
+    content {
+      truststore_uri     = mutual_tls_authentication.value.truststore_uri
+      truststore_version = mutual_tls_authentication.value.truststore_version
+    }
+  }
+
   tags = merge(local.common_tags, {
     ResourceType = "custom-domain"
   })

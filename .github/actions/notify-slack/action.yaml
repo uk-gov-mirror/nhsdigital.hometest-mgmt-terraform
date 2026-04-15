@@ -1,0 +1,90 @@
+---
+name: "Notify Slack"
+description: "Send a deployment status notification to Slack via webhook"
+
+inputs:
+  slack_webhook_url:
+    description: "Slack Incoming Webhook URL"
+    required: true
+  status:
+    description: "Deployment status (success, failure, cancelled)"
+    required: true
+  environment:
+    description: "Target environment name"
+    required: true
+  module:
+    description: "Module or component being deployed"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Send Slack notification
+      if: inputs.slack_webhook_url != ''
+      shell: bash
+      env:
+        SLACK_WEBHOOK_URL: ${{ inputs.slack_webhook_url }}
+        STATUS: ${{ inputs.status }}
+        ENVIRONMENT: ${{ inputs.environment }}
+        MODULE: ${{ inputs.module }}
+        REPO: ${{ github.repository }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        ACTOR: ${{ github.actor }}
+        REF: ${{ github.ref_name }}
+      run: |
+        if [[ "$STATUS" == "success" ]]; then
+          EMOJI=":white_check_mark:"
+          COLOR="#36a64f"
+          TEXT="succeeded"
+        elif [[ "$STATUS" == "failure" ]]; then
+          EMOJI=":x:"
+          COLOR="#ff0000"
+          TEXT="failed"
+        else
+          EMOJI=":warning:"
+          COLOR="#ffcc00"
+          TEXT="cancelled"
+        fi
+
+        MODULE_TEXT=""
+        if [[ -n "$MODULE" ]]; then
+          MODULE_TEXT=" — ${MODULE}"
+        fi
+
+        PAYLOAD=$(cat <<EOF
+        {
+          "attachments": [
+            {
+              "color": "${COLOR}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "${EMOJI} *Deployment ${TEXT}*${MODULE_TEXT}\n*Env:* \`${ENVIRONMENT}\` | *Ref:* \`${REF}\` | *By:* ${ACTOR}"
+                  }
+                },
+                {
+                  "type": "actions",
+                  "elements": [
+                    {
+                      "type": "button",
+                      "text": {
+                        "type": "plain_text",
+                        "text": "View Run"
+                      },
+                      "url": "${RUN_URL}"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        EOF
+        )
+
+        curl -s -X POST -H 'Content-type: application/json' \
+          --data "$PAYLOAD" \
+          "$SLACK_WEBHOOK_URL"

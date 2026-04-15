@@ -701,6 +701,7 @@ No modules.
 | <a name="output_network_firewall_id"></a> [network\_firewall\_id](#output\_network\_firewall\_id) | ID of the Network Firewall |
 | <a name="output_network_firewall_kms_key_arn"></a> [network\_firewall\_kms\_key\_arn](#output\_network\_firewall\_kms\_key\_arn) | ARN of the KMS key used to encrypt Network Firewall logs |
 | <a name="output_network_firewall_log_group_arn"></a> [network\_firewall\_log\_group\_arn](#output\_network\_firewall\_log\_group\_arn) | ARN of the CloudWatch Log Group for Network Firewall logs |
+| <a name="output_network_firewall_name"></a> [network\_firewall\_name](#output\_network\_firewall\_name) | Name of the Network Firewall |
 | <a name="output_network_firewall_policy_arn"></a> [network\_firewall\_policy\_arn](#output\_network\_firewall\_policy\_arn) | ARN of the Network Firewall Policy |
 | <a name="output_private_dns_query_log_config_id"></a> [private\_dns\_query\_log\_config\_id](#output\_private\_dns\_query\_log\_config\_id) | The ID of the Route 53 Resolver query log configuration for private zones |
 | <a name="output_private_nacl_id"></a> [private\_nacl\_id](#output\_private\_nacl\_id) | ID of the private subnet Network ACL |

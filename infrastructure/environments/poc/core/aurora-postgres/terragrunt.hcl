@@ -39,8 +39,9 @@ dependency "shared_services" {
   config_path = "../shared_services"
 
   mock_outputs = {
-    kms_key_arn          = "arn:aws:kms:eu-west-2:123456789012:key/mock-key-id"
-    pii_data_kms_key_arn = "arn:aws:kms:eu-west-2:123456789012:key/mock-pii-key-id"
+    kms_key_arn                   = "arn:aws:kms:eu-west-2:123456789012:key/mock-key-id"
+    pii_data_kms_key_arn          = "arn:aws:kms:eu-west-2:123456789012:key/mock-pii-key-id"
+    sns_alerts_critical_topic_arn = "arn:aws:sns:eu-west-2:123456789012:mock-alerts-critical-topic"
   }
   mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "destroy"]
 }
@@ -87,4 +88,10 @@ inputs = {
 
   # Enable Data API for querying from AWS Console
   enable_http_endpoint = true
+
+  # Alerting — creates CloudWatch alarms for CPU, memory, connections, deadlocks, capacity
+  sns_alerts_critical_topic_arn = dependency.shared_services.outputs.sns_alerts_critical_topic_arn
+
+  # OK actions — set to true for prod to get notified when alarms recover
+  enable_ok_actions = false
 }

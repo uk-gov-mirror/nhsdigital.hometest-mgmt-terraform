@@ -78,6 +78,23 @@ runs:
           terraform-${{ runner.os }}-mgmt-
           terraform-${{ runner.os }}-
 
+    - name: "Create summary helper"
+      shell: bash
+      run: |
+        cat > /tmp/write-tg-summary.sh << 'HELPER'
+        #!/usr/bin/env bash
+        # Usage: source write-tg-summary.sh <heading> <grep_pattern> <output_file> <working_dir>
+        _heading="$1"; _pattern="$2"; _file="$3"; _wdir="$4"
+        _summary=$(grep -E "$_pattern" "$_file" 2>/dev/null | tail -1 | sed -e 's/\x1b\[[0-9;]*m//g' -e 's/^[0-9:.]*[[:space:]]*STDOUT[[:space:]]*terraform:[[:space:]]*//' || true)
+        if [[ -n "$_summary" ]]; then
+        echo "### ${_heading} — \`${_wdir}\`" >> "$GITHUB_STEP_SUMMARY"
+        echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+        echo "$_summary" >> "$GITHUB_STEP_SUMMARY"
+        echo "\`\`\`" >> "$GITHUB_STEP_SUMMARY"
+        fi
+        HELPER
+        sed -i 's/^        //' /tmp/write-tg-summary.sh
+
     - name: Terragrunt Init
       working-directory: ${{ inputs.working_directory }}
       shell: bash
@@ -90,7 +107,13 @@ runs:
       env:
         LOCK_FLAG: ${{ inputs.lock_enabled == 'false' && '-lock=false' || '' }}
         TARGET_FLAGS: ${{ steps.target-flags.outputs.flags }}
-      run: mise exec -- terragrunt plan -out=tfplan $LOCK_FLAG $TARGET_FLAGS
+        WORKING_DIR: ${{ inputs.working_directory }}
+      run: |
+        set -uo pipefail
+        mise exec -- terragrunt plan -out=tfplan $LOCK_FLAG $TARGET_FLAGS 2>&1 | tee /tmp/tg-plan-output.txt
+        TG_EXIT=${PIPESTATUS[0]}
+        source /tmp/write-tg-summary.sh "Terragrunt Plan" 'Plan:|No changes\.' /tmp/tg-plan-output.txt "$WORKING_DIR"
+        exit "$TG_EXIT"
 
     - name: Terragrunt Destroy Plan
       if: inputs.action == 'destroy-plan'
@@ -98,13 +121,26 @@ runs:
       shell: bash
       env:
         TARGET_FLAGS: ${{ steps.target-flags.outputs.flags }}
-      run: mise exec -- terragrunt plan -destroy -out=tfplan $TARGET_FLAGS
+        WORKING_DIR: ${{ inputs.working_directory }}
+      run: |
+        set -uo pipefail
+        mise exec -- terragrunt plan -destroy -out=tfplan $TARGET_FLAGS 2>&1 | tee /tmp/tg-plan-output.txt
+        TG_EXIT=${PIPESTATUS[0]}
+        source /tmp/write-tg-summary.sh "Terragrunt Destroy Plan" 'Plan:|No changes\.' /tmp/tg-plan-output.txt "$WORKING_DIR"
+        exit "$TG_EXIT"
 
     - name: Terragrunt Apply
       if: inputs.action == 'apply'
       working-directory: ${{ inputs.working_directory }}
       shell: bash
-      run: mise exec -- terragrunt apply -auto-approve tfplan
+      env:
+        WORKING_DIR: ${{ inputs.working_directory }}
+      run: |
+        set -uo pipefail
+        mise exec -- terragrunt apply -auto-approve tfplan 2>&1 | tee /tmp/tg-apply-output.txt
+        TG_EXIT=${PIPESTATUS[0]}
+        source /tmp/write-tg-summary.sh "Terragrunt Apply" 'Apply complete!|No changes\.' /tmp/tg-apply-output.txt "$WORKING_DIR"
+        exit "$TG_EXIT"
 
     - name: Terragrunt Destroy
       if: inputs.action == 'destroy'
@@ -112,4 +148,10 @@ runs:
       shell: bash
       env:
         TARGET_FLAGS: ${{ steps.target-flags.outputs.flags }}
-      run: mise exec -- terragrunt destroy -auto-approve $TARGET_FLAGS
+        WORKING_DIR: ${{ inputs.working_directory }}
+      run: |
+        set -uo pipefail
+        mise exec -- terragrunt destroy -auto-approve $TARGET_FLAGS 2>&1 | tee /tmp/tg-destroy-output.txt
+        TG_EXIT=${PIPESTATUS[0]}
+        source /tmp/write-tg-summary.sh "Terragrunt Destroy" 'Destroy complete!|No changes\.' /tmp/tg-destroy-output.txt "$WORKING_DIR"
+        exit "$TG_EXIT"

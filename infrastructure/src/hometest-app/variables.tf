@@ -57,6 +57,18 @@ variable "sns_alerts_topic_arn" {
   default     = null
 }
 
+variable "sns_alerts_critical_topic_arn" {
+  description = "ARN of critical alerts SNS topic for P1 alerts (from shared_services)"
+  type        = string
+  default     = null
+}
+
+variable "enable_ok_actions" {
+  description = "Send notifications when alarms return to OK state (enable for prod, disable for dev to reduce noise)"
+  type        = bool
+  default     = false
+}
+
 variable "waf_cloudfront_arn" {
   description = "ARN of CloudFront WAF Web ACL (from shared_services)"
   type        = string
@@ -323,6 +335,18 @@ variable "cors_allowed_origin" {
     When credentials (cookies) are used, Access-Control-Allow-Origin cannot be '*'.
     If null, defaults to '*' (only safe when credentials are not used).
   EOT
+  type        = string
+  default     = null
+}
+
+variable "api_mutual_tls_truststore_uri" {
+  description = "S3 URI of the truststore file containing client CA certificates for API Gateway mTLS (e.g., s3://bucket/truststore.pem). When set, API Gateway verifies client certificates."
+  type        = string
+  default     = null
+}
+
+variable "api_mutual_tls_truststore_version" {
+  description = "Version ID of the truststore object in S3. When set, pins mTLS to a specific truststore version."
   type        = string
   default     = null
 }

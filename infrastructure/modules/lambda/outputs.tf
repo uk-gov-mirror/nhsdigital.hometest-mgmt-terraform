@@ -56,3 +56,23 @@ output "error_alarm_arn" {
   description = "ARN of the Lambda errors CloudWatch alarm (if created)"
   value       = try(aws_cloudwatch_metric_alarm.lambda_errors[0].arn, null)
 }
+
+output "throttle_alarm_arn" {
+  description = "ARN of the Lambda throttles CloudWatch alarm (if created)"
+  value       = try(aws_cloudwatch_metric_alarm.lambda_throttles[0].arn, null)
+}
+
+output "duration_alarm_arn" {
+  description = "ARN of the Lambda duration CloudWatch alarm (if created)"
+  value       = try(aws_cloudwatch_metric_alarm.lambda_duration[0].arn, null)
+}
+
+output "concurrency_alarm_arn" {
+  description = "ARN of the Lambda concurrency CloudWatch alarm (if created)"
+  value       = try(aws_cloudwatch_metric_alarm.lambda_concurrent_executions[0].arn, null)
+}
+
+output "logged_errors_alarm_arn" {
+  description = "ARN of the Lambda logged errors CloudWatch alarm (if created)"
+  value       = try(aws_cloudwatch_metric_alarm.lambda_logged_errors[0].arn, null)
+}

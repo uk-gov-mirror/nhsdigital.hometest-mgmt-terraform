@@ -59,6 +59,7 @@ module "aurora_postgres" {
 
 | Name | Source | Version |
 | ---- | ------ | ------- |
+| <a name="module_aurora_alarms"></a> [aurora\_alarms](#module\_aurora\_alarms) | ../../modules/aurora-alarms | n/a |
 | <a name="module_aurora_postgres"></a> [aurora\_postgres](#module\_aurora\_postgres) | ../../modules/aurora-postgres | n/a |
 
 ## Resources
@@ -85,6 +86,7 @@ module "aurora_postgres" {
 | <a name="input_deletion_protection"></a> [deletion\_protection](#input\_deletion\_protection) | If the DB instance should have deletion protection enabled | `bool` | `false` | no |
 | <a name="input_enable_http_endpoint"></a> [enable\_http\_endpoint](#input\_enable\_http\_endpoint) | Enable the Data API for Aurora Serverless v2. Allows querying the database from AWS Console without managing connections. | `bool` | `false` | no |
 | <a name="input_enable_iam_auth"></a> [enable\_iam\_auth](#input\_enable\_iam\_auth) | Enable IAM database authentication for the Aurora cluster | `bool` | `false` | no |
+| <a name="input_enable_ok_actions"></a> [enable\_ok\_actions](#input\_enable\_ok\_actions) | Send notifications when alarms return to OK state (enable for prod, disable for dev to reduce noise) | `bool` | `false` | no |
 | <a name="input_engine_version"></a> [engine\_version](#input\_engine\_version) | PostgreSQL engine version | `string` | `"17.9"` | no |
 | <a name="input_environment"></a> [environment](#input\_environment) | Environment name (e.g., dev, staging, prod) | `string` | n/a | yes |
 | <a name="input_kms_key_id"></a> [kms\_key\_id](#input\_kms\_key\_id) | The ARN for the KMS encryption key | `string` | `""` | no |
@@ -96,6 +98,7 @@ module "aurora_postgres" {
 | <a name="input_serverlessv2_max_capacity"></a> [serverlessv2\_max\_capacity](#input\_serverlessv2\_max\_capacity) | Maximum Aurora capacity units (ACUs) for Aurora Serverless v2 | `number` | `4` | no |
 | <a name="input_serverlessv2_min_capacity"></a> [serverlessv2\_min\_capacity](#input\_serverlessv2\_min\_capacity) | Minimum Aurora capacity units (ACUs) for Aurora Serverless v2 | `number` | `0.5` | no |
 | <a name="input_skip_final_snapshot"></a> [skip\_final\_snapshot](#input\_skip\_final\_snapshot) | Determines whether a final DB snapshot is created before the DB instance is deleted | `bool` | `false` | no |
+| <a name="input_sns_alerts_critical_topic_arn"></a> [sns\_alerts\_critical\_topic\_arn](#input\_sns\_alerts\_critical\_topic\_arn) | ARN of the critical alerts SNS topic (from shared\_services). When set, creates CloudWatch alarms. | `string` | `null` | no |
 | <a name="input_storage_encrypted"></a> [storage\_encrypted](#input\_storage\_encrypted) | Specifies whether the DB instance is encrypted | `bool` | `true` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | Additional tags for all resources | `map(string)` | `{}` | no |
 | <a name="input_username"></a> [username](#input\_username) | Username for the master DB user | `string` | `"postgres"` | no |

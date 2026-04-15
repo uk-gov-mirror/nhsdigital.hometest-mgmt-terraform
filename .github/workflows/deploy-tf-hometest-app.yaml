@@ -100,30 +100,17 @@ jobs:
           fi
 
       - name: "Display deployment info"
-        env:
-          INPUT_ENVIRONMENT: ${{ inputs.environment || 'poc' }}
-          INPUT_SUBENV: ${{ inputs.subenv || 'dev' }}
-          INPUT_ACTION: ${{ inputs.action || 'plan' }}
-          INPUT_TARGETS: ${{ inputs.targets || 'all resources' }}
-          INPUT_SKIP_MIGRATOR: ${{ inputs.skip_migrator || 'false' }}
-          INPUT_HS_REF: ${{ inputs.hometest_service_ref || 'main' }}
-        run: |
-          HS_COMMIT=$(git -C hometest-service rev-parse HEAD)
-          HS_COMMIT_SHORT=$(git -C hometest-service rev-parse --short HEAD)
-          {
-            echo "## Deployment Configuration"
-            echo "| Parameter | Value |"
-            echo "|-----------|---------|"
-            echo "| Environment | ${INPUT_ENVIRONMENT} |"
-            echo "| Stack | hometest-app |"
-            echo "| Subenv(s) | ${INPUT_SUBENV} |"
-            echo "| Action | ${INPUT_ACTION} |"
-            echo "| Targets | ${INPUT_TARGETS} |"
-            echo "| Skip Migrator | ${INPUT_SKIP_MIGRATOR} |"
-            echo "| Triggered by | ${GITHUB_ACTOR} |"
-            echo "| hometest-service ref | \`${INPUT_HS_REF}\` |"
-            echo "| hometest-service commit | \`${HS_COMMIT_SHORT}\` (${HS_COMMIT}) |"
-          } >> "$GITHUB_STEP_SUMMARY"
+        uses: ./hometest-mgmt-terraform/.github/actions/display-deployment-info
+        with:
+          hometest_service_path: hometest-service
+          hometest_service_ref: ${{ inputs.hometest_service_ref || 'main' }}
+          extra_rows: |
+            | Environment | ${{ inputs.environment || 'poc' }} |
+            | Stack | hometest-app |
+            | Subenv(s) | ${{ inputs.subenv || 'dev' }} |
+            | Action | ${{ inputs.action || 'plan' }} |
+            | Targets | ${{ inputs.targets || 'all resources' }} |
+            | Skip Migrator | ${{ inputs.skip_migrator || 'false' }} |
 
   # ---------------------------------------------------------------------------
   # DEPLOY PATH (plan / apply): deploy migrator (hooks auto-invoke) → deploy app
@@ -414,3 +401,28 @@ jobs:
             echo "| Run ID | ${GITHUB_RUN_ID} |"
             echo "| Triggered by | ${GITHUB_ACTOR} |"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: "Checkout code"
+        uses: actions/checkout@v6
+        with:
+          path: hometest-mgmt-terraform
+
+      - name: "Determine overall status"
+        id: status
+        run: |
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "result=failure" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ contains(needs.*.result, 'cancelled') }}" == "true" ]]; then
+            echo "result=cancelled" >> "$GITHUB_OUTPUT"
+          else
+            echo "result=success" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: "Notify Slack on failure"
+        if: inputs.action != 'plan' && steps.status.outputs.result == 'failure'
+        uses: ./hometest-mgmt-terraform/.github/actions/notify-slack
+        with:
+          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: failure
+          environment: "${{ inputs.environment || 'poc' }}/${{ inputs.subenv || 'dev' }}"
+          module: "hometest-app (${{ inputs.action || 'plan' }})"

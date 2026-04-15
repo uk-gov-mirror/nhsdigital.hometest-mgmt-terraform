@@ -1,0 +1,81 @@
+---
+name: "Display Deployment Info"
+description: "Write repo branch/commit info and optional extra parameters to GitHub Step Summary"
+
+inputs:
+  title:
+    description: "Summary section heading"
+    required: false
+    default: "Deployment Configuration"
+  mgmt_terraform_path:
+    description: "Path to the hometest-mgmt-terraform checkout (e.g. 'hometest-mgmt-terraform' or '.')"
+    required: false
+    default: "hometest-mgmt-terraform"
+  hometest_service_path:
+    description: "Path to the hometest-service checkout. Leave empty to skip."
+    required: false
+    default: ""
+  hometest_service_ref:
+    description: "The ref (branch/tag/SHA) used to checkout hometest-service. Leave empty to skip."
+    required: false
+    default: ""
+  extra_rows:
+    description: "Additional markdown table rows to insert before the repo info (one '| Col | Val |' per line)"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: "Write deployment info to summary"
+      shell: bash
+      env:
+        INPUT_TITLE: ${{ inputs.title }}
+        INPUT_MGT_PATH: ${{ inputs.mgmt_terraform_path }}
+        INPUT_HS_PATH: ${{ inputs.hometest_service_path }}
+        INPUT_HS_REF: ${{ inputs.hometest_service_ref }}
+        INPUT_EXTRA_ROWS: ${{ inputs.extra_rows }}
+      run: |
+        # --- Resolve git checkout path ---
+        # Fall back to current workspace if the given path is not a git repo
+        GIT_PATH="$INPUT_MGT_PATH"
+        if [[ ! -d "$GIT_PATH/.git" ]] && ! git -C "$GIT_PATH" rev-parse --git-dir >/dev/null 2>&1; then
+          GIT_PATH="${GITHUB_WORKSPACE:-.}"
+        fi
+
+        # --- Resolve hometest-mgmt-terraform info ---
+        MGT_BRANCH=$(git -C "$GIT_PATH" rev-parse --abbrev-ref HEAD 2>/dev/null)
+        if [[ "$MGT_BRANCH" == "HEAD" || -z "$MGT_BRANCH" ]]; then
+          MGT_BRANCH="${GITHUB_REF_NAME:-unknown}"
+        fi
+        MGT_COMMIT=$(git -C "$GIT_PATH" rev-parse HEAD 2>/dev/null || echo "unknown")
+        MGT_COMMIT_SHORT=$(git -C "$GIT_PATH" rev-parse --short HEAD 2>/dev/null || echo "unknown")
+
+        REPO_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+
+        {
+          echo "## ${INPUT_TITLE}"
+          echo "| Parameter | Value |"
+          echo "|-----------|---------|"
+
+          # Extra workflow-specific rows first
+          if [[ -n "$INPUT_EXTRA_ROWS" ]]; then
+            printf '%s\n' "$INPUT_EXTRA_ROWS" | sed '/^$/d'
+          fi
+
+          echo "| Triggered by | [@${GITHUB_ACTOR}](${GITHUB_SERVER_URL}/${GITHUB_ACTOR}) |"
+          echo "| Run | [#${GITHUB_RUN_NUMBER}](${REPO_URL}/actions/runs/${GITHUB_RUN_ID}) |"
+          echo "| hometest-mgmt-terraform branch | [\`${MGT_BRANCH}\`](${REPO_URL}/tree/${MGT_BRANCH}) |"
+          echo "| hometest-mgmt-terraform commit | [\`${MGT_COMMIT_SHORT}\`](${REPO_URL}/commit/${MGT_COMMIT}) |"
+
+          # Optionally display hometest-service info
+          if [[ -n "$INPUT_HS_PATH" && -d "$INPUT_HS_PATH/.git" ]]; then
+            HS_COMMIT=$(git -C "$INPUT_HS_PATH" rev-parse HEAD)
+            HS_COMMIT_SHORT=$(git -C "$INPUT_HS_PATH" rev-parse --short HEAD)
+            HS_REPO_URL="${GITHUB_SERVER_URL}/NHSDigital/hometest-service"
+            if [[ -n "$INPUT_HS_REF" ]]; then
+              echo "| hometest-service ref | [\`${INPUT_HS_REF}\`](${HS_REPO_URL}/tree/${INPUT_HS_REF}) |"
+            fi
+            echo "| hometest-service commit | [\`${HS_COMMIT_SHORT}\`](${HS_REPO_URL}/commit/${HS_COMMIT}) |"
+          fi
+        } >> "$GITHUB_STEP_SUMMARY"

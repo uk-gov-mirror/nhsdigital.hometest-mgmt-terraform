@@ -122,6 +122,85 @@ variable "require_mfa" {
   default     = true
 }
 
+################################################################################
+# Slack Alerts Configuration
+################################################################################
+
+variable "enable_slack_alerts" {
+  description = "Enable AWS Chatbot Slack integration for alert notifications"
+  type        = bool
+  default     = false
+}
+
+variable "enable_ok_actions" {
+  description = "Send notifications when alarms return to OK state (enable for prod, disable for dev to reduce noise)"
+  type        = bool
+  default     = false
+}
+
+variable "slack_workspace_id" {
+  description = "Slack workspace (team) ID. Authorize workspace in AWS Chatbot console first."
+  type        = string
+  default     = ""
+}
+
+variable "slack_channel_id_critical" {
+  description = "Slack channel ID for critical (P1) alerts"
+  type        = string
+  default     = ""
+}
+
+variable "slack_channel_id_warning" {
+  description = "Slack channel ID for warning (P2) alerts"
+  type        = string
+  default     = ""
+}
+
+variable "slack_channel_id_security" {
+  description = "Slack channel ID for security alerts (WAF blocks, SQLi, rate limiting)"
+  type        = string
+  default     = ""
+}
+
+################################################################################
+# Network Alarm Inputs
+# Passed from network dependency to create alarms for NAT Gateways and Firewall
+################################################################################
+
+variable "nat_gateway_ids" {
+  description = "List of NAT Gateway IDs from the network module"
+  type        = list(string)
+  default     = []
+}
+
+variable "network_firewall_name" {
+  description = "Name of the Network Firewall (null if not enabled)"
+  type        = string
+  default     = null
+}
+
+################################################################################
+# mTLS Configuration
+################################################################################
+
+variable "enable_mtls" {
+  description = "Enable mutual TLS infrastructure — creates CA, client cert, S3 truststore, and Secrets Manager entries"
+  type        = bool
+  default     = false
+}
+
+variable "mtls_ca_validity_hours" {
+  description = "Validity period for the mTLS CA certificate in hours (default: 10 years)"
+  type        = number
+  default     = 87600
+}
+
+variable "mtls_client_validity_hours" {
+  description = "Validity period for the mTLS client certificate in hours (default: 1 year)"
+  type        = number
+  default     = 8760
+}
+
 #------------------------------------------------------------------------------
 # Cognito User Pool Configuration
 #------------------------------------------------------------------------------

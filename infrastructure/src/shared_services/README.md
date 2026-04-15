@@ -97,6 +97,7 @@ inputs = {
 | ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.14.0 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 6.37.0 |
+| <a name="requirement_tls"></a> [tls](#requirement\_tls) | ~> 4.2.1 |
 
 ## Providers
 
@@ -104,12 +105,20 @@ inputs = {
 | ---- | ------- |
 | <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 6.37.0 |
 | <a name="provider_aws.us_east_1"></a> [aws.us\_east\_1](#provider\_aws.us\_east\_1) | ~> 6.37.0 |
+| <a name="provider_tls"></a> [tls](#provider\_tls) | ~> 4.2.1 |
 
 ## Modules
 
 | Name | Source | Version |
 | ---- | ------ | ------- |
+| <a name="module_network_alarms"></a> [network\_alarms](#module\_network\_alarms) | ../../modules/network-alarms | n/a |
+| <a name="module_slack_alerts"></a> [slack\_alerts](#module\_slack\_alerts) | ../../modules/slack-alerts | n/a |
 | <a name="module_sns_alerts"></a> [sns\_alerts](#module\_sns\_alerts) | ../../modules/sns | n/a |
+| <a name="module_sns_alerts_critical"></a> [sns\_alerts\_critical](#module\_sns\_alerts\_critical) | ../../modules/sns | n/a |
+| <a name="module_sns_alerts_security"></a> [sns\_alerts\_security](#module\_sns\_alerts\_security) | ../../modules/sns | n/a |
+| <a name="module_sns_alerts_warning"></a> [sns\_alerts\_warning](#module\_sns\_alerts\_warning) | ../../modules/sns | n/a |
+| <a name="module_waf_alarms_cloudfront"></a> [waf\_alarms\_cloudfront](#module\_waf\_alarms\_cloudfront) | ../../modules/waf-alarms | n/a |
+| <a name="module_waf_alarms_regional"></a> [waf\_alarms\_regional](#module\_waf\_alarms\_regional) | ../../modules/waf-alarms | n/a |
 
 ## Resources
 
@@ -148,11 +157,26 @@ inputs = {
 | [aws_kms_key.pii_data](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/kms_key) | resource |
 | [aws_resourcegroups_group.rg](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/resourcegroups_group) | resource |
 | [aws_route53_record.regional_cert_validation](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_record) | resource |
+| [aws_s3_bucket.mtls_truststore](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket) | resource |
+| [aws_s3_bucket_policy.mtls_truststore](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_policy) | resource |
+| [aws_s3_bucket_public_access_block.mtls_truststore](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_public_access_block) | resource |
+| [aws_s3_bucket_server_side_encryption_configuration.mtls_truststore](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_server_side_encryption_configuration) | resource |
+| [aws_s3_bucket_versioning.mtls_truststore](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_bucket_versioning) | resource |
+| [aws_s3_object.mtls_truststore](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/s3_object) | resource |
 | [aws_secretsmanager_secret.api_config](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret) | resource |
+| [aws_secretsmanager_secret.mtls_ca_private_key](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret) | resource |
+| [aws_secretsmanager_secret.mtls_client_credentials](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret) | resource |
 | [aws_secretsmanager_secret_version.api_config](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version) | resource |
+| [aws_secretsmanager_secret_version.mtls_ca_private_key](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version) | resource |
+| [aws_secretsmanager_secret_version.mtls_client_credentials](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version) | resource |
 | [aws_wafv2_web_acl.cloudfront](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/wafv2_web_acl) | resource |
 | [aws_wafv2_web_acl.regional](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/wafv2_web_acl) | resource |
 | [aws_wafv2_web_acl_logging_configuration.regional](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/wafv2_web_acl_logging_configuration) | resource |
+| [tls_cert_request.mtls_client](https://registry.terraform.io/providers/hashicorp/tls/latest/docs/resources/cert_request) | resource |
+| [tls_locally_signed_cert.mtls_client](https://registry.terraform.io/providers/hashicorp/tls/latest/docs/resources/locally_signed_cert) | resource |
+| [tls_private_key.mtls_ca](https://registry.terraform.io/providers/hashicorp/tls/latest/docs/resources/private_key) | resource |
+| [tls_private_key.mtls_client](https://registry.terraform.io/providers/hashicorp/tls/latest/docs/resources/private_key) | resource |
+| [tls_self_signed_cert.mtls_ca](https://registry.terraform.io/providers/hashicorp/tls/latest/docs/resources/self_signed_cert) | resource |
 | [aws_iam_policy_document.cognito_identity_assume_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 | [aws_iam_policy_document.cognito_identity_unauthenticated_assume_role](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document) | data source |
 
@@ -221,11 +245,22 @@ inputs = {
 | <a name="input_domain_name"></a> [domain\_name](#input\_domain\_name) | Base domain name for certificates (e.g., hometest.service.nhs.uk) | `string` | n/a | yes |
 | <a name="input_enable_cognito"></a> [enable\_cognito](#input\_enable\_cognito) | Enable AWS Cognito User Pool for authentication | `bool` | `false` | no |
 | <a name="input_enable_cognito_identity_pool"></a> [enable\_cognito\_identity\_pool](#input\_enable\_cognito\_identity\_pool) | Enable Cognito Identity Pool for federated identities | `bool` | `false` | no |
+| <a name="input_enable_mtls"></a> [enable\_mtls](#input\_enable\_mtls) | Enable mutual TLS infrastructure — creates CA, client cert, S3 truststore, and Secrets Manager entries | `bool` | `false` | no |
+| <a name="input_enable_ok_actions"></a> [enable\_ok\_actions](#input\_enable\_ok\_actions) | Send notifications when alarms return to OK state (enable for prod, disable for dev to reduce noise) | `bool` | `false` | no |
+| <a name="input_enable_slack_alerts"></a> [enable\_slack\_alerts](#input\_enable\_slack\_alerts) | Enable AWS Chatbot Slack integration for alert notifications | `bool` | `false` | no |
 | <a name="input_environment"></a> [environment](#input\_environment) | Environment name (core for shared services) | `string` | `"core"` | no |
 | <a name="input_kms_deletion_window_days"></a> [kms\_deletion\_window\_days](#input\_kms\_deletion\_window\_days) | Number of days before KMS key is deleted | `number` | `30` | no |
+| <a name="input_mtls_ca_validity_hours"></a> [mtls\_ca\_validity\_hours](#input\_mtls\_ca\_validity\_hours) | Validity period for the mTLS CA certificate in hours (default: 10 years) | `number` | `87600` | no |
+| <a name="input_mtls_client_validity_hours"></a> [mtls\_client\_validity\_hours](#input\_mtls\_client\_validity\_hours) | Validity period for the mTLS client certificate in hours (default: 1 year) | `number` | `8760` | no |
+| <a name="input_nat_gateway_ids"></a> [nat\_gateway\_ids](#input\_nat\_gateway\_ids) | List of NAT Gateway IDs from the network module | `list(string)` | `[]` | no |
+| <a name="input_network_firewall_name"></a> [network\_firewall\_name](#input\_network\_firewall\_name) | Name of the Network Firewall (null if not enabled) | `string` | `null` | no |
 | <a name="input_project_name"></a> [project\_name](#input\_project\_name) | Name of the project | `string` | n/a | yes |
 | <a name="input_require_mfa"></a> [require\_mfa](#input\_require\_mfa) | Require MFA for developer role assumption | `bool` | `true` | no |
 | <a name="input_route53_zone_id"></a> [route53\_zone\_id](#input\_route53\_zone\_id) | Route53 zone ID for DNS validation | `string` | n/a | yes |
+| <a name="input_slack_channel_id_critical"></a> [slack\_channel\_id\_critical](#input\_slack\_channel\_id\_critical) | Slack channel ID for critical (P1) alerts | `string` | `""` | no |
+| <a name="input_slack_channel_id_security"></a> [slack\_channel\_id\_security](#input\_slack\_channel\_id\_security) | Slack channel ID for security alerts (WAF blocks, SQLi, rate limiting) | `string` | `""` | no |
+| <a name="input_slack_channel_id_warning"></a> [slack\_channel\_id\_warning](#input\_slack\_channel\_id\_warning) | Slack channel ID for warning (P2) alerts | `string` | `""` | no |
+| <a name="input_slack_workspace_id"></a> [slack\_workspace\_id](#input\_slack\_workspace\_id) | Slack workspace (team) ID. Authorize workspace in AWS Chatbot console first. | `string` | `""` | no |
 | <a name="input_sns_alerts_email_subscriptions"></a> [sns\_alerts\_email\_subscriptions](#input\_sns\_alerts\_email\_subscriptions) | List of email addresses to subscribe to the shared alerts SNS topic (requires subscription confirmation) | `list(string)` | `[]` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | Tags to apply to all resources | `map(string)` | `{}` | no |
 | <a name="input_waf_log_retention_days"></a> [waf\_log\_retention\_days](#input\_waf\_log\_retention\_days) | Days to retain WAF logs | `number` | `30` | no |
@@ -275,10 +310,16 @@ inputs = {
 | <a name="output_kms_key_alias_arn"></a> [kms\_key\_alias\_arn](#output\_kms\_key\_alias\_arn) | ARN of the KMS key alias |
 | <a name="output_kms_key_arn"></a> [kms\_key\_arn](#output\_kms\_key\_arn) | ARN of the shared KMS key |
 | <a name="output_kms_key_id"></a> [kms\_key\_id](#output\_kms\_key\_id) | ID of the shared KMS key |
+| <a name="output_mtls_client_credentials_secret_arn"></a> [mtls\_client\_credentials\_secret\_arn](#output\_mtls\_client\_credentials\_secret\_arn) | ARN of the Secrets Manager secret containing the mTLS client key and certificate |
+| <a name="output_mtls_truststore_uri"></a> [mtls\_truststore\_uri](#output\_mtls\_truststore\_uri) | S3 URI of the mTLS truststore PEM file for API Gateway mutual\_tls\_authentication |
+| <a name="output_mtls_truststore_version"></a> [mtls\_truststore\_version](#output\_mtls\_truststore\_version) | Version ID of the mTLS truststore object in S3 |
 | <a name="output_pii_data_kms_key_arn"></a> [pii\_data\_kms\_key\_arn](#output\_pii\_data\_kms\_key\_arn) | ARN of the PII data KMS key (for RDS, SQS, Secrets Manager) |
 | <a name="output_pii_data_kms_key_id"></a> [pii\_data\_kms\_key\_id](#output\_pii\_data\_kms\_key\_id) | ID of the PII data KMS key |
 | <a name="output_shared_config"></a> [shared\_config](#output\_shared\_config) | All shared service configuration for app deployments |
+| <a name="output_sns_alerts_critical_topic_arn"></a> [sns\_alerts\_critical\_topic\_arn](#output\_sns\_alerts\_critical\_topic\_arn) | ARN of the critical alerts SNS topic (P1 — Lambda errors, DLQ, 5XX, deadlocks) |
+| <a name="output_sns_alerts_security_topic_arn"></a> [sns\_alerts\_security\_topic\_arn](#output\_sns\_alerts\_security\_topic\_arn) | ARN of the security alerts SNS topic (WAF SQLi, rate limiting) |
 | <a name="output_sns_alerts_topic_arn"></a> [sns\_alerts\_topic\_arn](#output\_sns\_alerts\_topic\_arn) | ARN of the shared alerts SNS topic |
+| <a name="output_sns_alerts_warning_topic_arn"></a> [sns\_alerts\_warning\_topic\_arn](#output\_sns\_alerts\_warning\_topic\_arn) | ARN of the warning alerts SNS topic (P2 — latency, capacity, WAF blocks) |
 | <a name="output_tfstate_readonly_policy_arn"></a> [tfstate\_readonly\_policy\_arn](#output\_tfstate\_readonly\_policy\_arn) | ARN of the Terraform state read-only IAM policy |
 | <a name="output_waf_cloudfront_arn"></a> [waf\_cloudfront\_arn](#output\_waf\_cloudfront\_arn) | ARN of the CloudFront WAF Web ACL (for CloudFront distributions) |
 | <a name="output_waf_cloudfront_id"></a> [waf\_cloudfront\_id](#output\_waf\_cloudfront\_id) | ID of the CloudFront WAF Web ACL |

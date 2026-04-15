@@ -85,21 +85,13 @@ jobs:
           fi
 
       - name: "Display deployment info"
-        env:
-          INPUT_ENVIRONMENT: ${{ inputs.environment || 'poc' }}
-          INPUT_MODULE: ${{ inputs.module || 'all' }}
-          INPUT_ACTION: ${{ inputs.action || 'plan' }}
-        run: |
-          {
-            echo "## Deployment Configuration"
-            echo "| Parameter | Value |"
-            echo "|-----------|---------|"
-            echo "| Environment | ${INPUT_ENVIRONMENT} |"
-            echo "| Stack | core |"
-            echo "| Module(s) | ${INPUT_MODULE} |"
-            echo "| Action | ${INPUT_ACTION} |"
-            echo "| Triggered by | ${GITHUB_ACTOR} |"
-          } >> "$GITHUB_STEP_SUMMARY"
+        uses: ./hometest-mgmt-terraform/.github/actions/display-deployment-info
+        with:
+          extra_rows: |
+            | Environment | ${{ inputs.environment || 'poc' }} |
+            | Stack | core |
+            | Module(s) | ${{ inputs.module || 'all' }} |
+            | Action | ${{ inputs.action || 'plan' }} |
 
   deploy:
     name: "Deploy ${{ matrix.module }}"
@@ -174,3 +166,18 @@ jobs:
             echo "| Run ID | ${GITHUB_RUN_ID} |"
             echo "| Triggered by | ${GITHUB_ACTOR} |"
           } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: "Checkout code"
+        if: contains(needs.*.result, 'failure')
+        uses: actions/checkout@v6
+        with:
+          path: hometest-mgmt-terraform
+
+      - name: "Notify Slack on failure"
+        if: contains(needs.*.result, 'failure')
+        uses: ./hometest-mgmt-terraform/.github/actions/notify-slack
+        with:
+          slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
+          status: failure
+          environment: ${{ inputs.environment || 'poc' }}
+          module: "core/${{ inputs.module || 'all' }} (${{ inputs.action || 'plan' }})"

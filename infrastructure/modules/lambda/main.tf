@@ -197,7 +197,141 @@ resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
   }
 
   alarm_actions = var.alarm_actions
-  ok_actions    = var.alarm_actions
+  ok_actions    = var.enable_ok_actions ? var.alarm_actions : []
+
+  tags = merge(local.common_tags, {
+    ResourceType = "cloudwatch-alarm"
+  })
+}
+
+################################################################################
+# CloudWatch Alarm - Lambda Throttles
+################################################################################
+
+resource "aws_cloudwatch_metric_alarm" "lambda_throttles" {
+  count = var.create_cloudwatch_alarms ? 1 : 0
+
+  alarm_name          = "${local.function_name}-throttles-high"
+  alarm_description   = "Alert when Lambda function is being throttled"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = var.alarm_evaluation_periods
+  metric_name         = "Throttles"
+  namespace           = "AWS/Lambda"
+  period              = var.alarm_period
+  statistic           = "Sum"
+  threshold           = var.alarm_throttle_threshold
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = aws_lambda_function.this.function_name
+  }
+
+  alarm_actions = var.alarm_actions
+  ok_actions    = var.enable_ok_actions ? var.alarm_actions : []
+
+  tags = merge(local.common_tags, {
+    ResourceType = "cloudwatch-alarm"
+  })
+}
+
+################################################################################
+# CloudWatch Alarm - Lambda Duration (approaching timeout)
+################################################################################
+
+resource "aws_cloudwatch_metric_alarm" "lambda_duration" {
+  count = var.create_cloudwatch_alarms ? 1 : 0
+
+  alarm_name          = "${local.function_name}-duration-high"
+  alarm_description   = "Alert when Lambda p99 duration exceeds ${var.alarm_duration_threshold_pct}% of timeout (${var.timeout}s)"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = var.alarm_evaluation_periods
+  metric_name         = "Duration"
+  namespace           = "AWS/Lambda"
+  period              = var.alarm_period
+  extended_statistic  = "p99"
+  threshold           = var.timeout * 1000 * var.alarm_duration_threshold_pct / 100
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = aws_lambda_function.this.function_name
+  }
+
+  alarm_actions = var.alarm_actions
+  ok_actions    = var.enable_ok_actions ? var.alarm_actions : []
+
+  tags = merge(local.common_tags, {
+    ResourceType = "cloudwatch-alarm"
+  })
+}
+
+################################################################################
+# CloudWatch Alarm - Lambda Concurrent Executions
+################################################################################
+
+resource "aws_cloudwatch_metric_alarm" "lambda_concurrent_executions" {
+  count = var.create_cloudwatch_alarms && var.reserved_concurrent_executions > 0 ? 1 : 0
+
+  alarm_name          = "${local.function_name}-concurrency-high"
+  alarm_description   = "Alert when Lambda concurrent executions exceed ${var.alarm_concurrency_threshold_pct}% of reserved capacity"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = var.alarm_evaluation_periods
+  metric_name         = "ConcurrentExecutions"
+  namespace           = "AWS/Lambda"
+  period              = var.alarm_period
+  statistic           = "Maximum"
+  threshold           = var.reserved_concurrent_executions * var.alarm_concurrency_threshold_pct / 100
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = aws_lambda_function.this.function_name
+  }
+
+  alarm_actions = var.alarm_actions
+  ok_actions    = var.enable_ok_actions ? var.alarm_actions : []
+
+  tags = merge(local.common_tags, {
+    ResourceType = "cloudwatch-alarm"
+  })
+}
+
+################################################################################
+# CloudWatch Logs Metric Filter — Logged Errors
+# Catches errors that are logged but don't fail the invocation (e.g. caught
+# exceptions, console.error). Matches Node.js ERROR level, stack traces, and
+# common error patterns in structured and unstructured logs.
+################################################################################
+
+resource "aws_cloudwatch_log_metric_filter" "logged_errors" {
+  count = var.create_cloudwatch_alarms ? 1 : 0
+
+  name           = "${local.function_name}-logged-errors"
+  log_group_name = aws_cloudwatch_log_group.lambda.name
+  pattern        = "?ERROR ?Error ?Exception ?errorType"
+
+  metric_transformation {
+    name          = "${local.function_name}-LoggedErrors"
+    namespace     = "HomeTest/Lambda"
+    value         = "1"
+    default_value = "0"
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "lambda_logged_errors" {
+  count = var.create_cloudwatch_alarms ? 1 : 0
+
+  alarm_name          = "${local.function_name}-logged-errors-high"
+  alarm_description   = "Alert when Lambda function logs errors (caught exceptions, console.error)"
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = var.alarm_evaluation_periods
+  metric_name         = "${local.function_name}-LoggedErrors"
+  namespace           = "HomeTest/Lambda"
+  period              = var.alarm_period
+  statistic           = "Sum"
+  threshold           = var.alarm_logged_error_threshold
+  treat_missing_data  = "notBreaching"
+
+  alarm_actions = var.alarm_actions
+  ok_actions    = var.enable_ok_actions ? var.alarm_actions : []
 
   tags = merge(local.common_tags, {
     ResourceType = "cloudwatch-alarm"
