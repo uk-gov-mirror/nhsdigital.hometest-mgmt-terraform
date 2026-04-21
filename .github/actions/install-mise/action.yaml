@@ -58,4 +58,4 @@ runs:
         GITHUB_TOKEN: ${{ inputs.github_token || github.token }}
         MISE_GITHUB_TOKEN: ${{ inputs.github_token || github.token }}
       run: |
-        mise install
+        mise install --verbose
