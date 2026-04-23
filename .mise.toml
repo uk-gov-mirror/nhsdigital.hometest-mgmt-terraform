@@ -1,5 +1,5 @@
 [settings]
-locked = false
+locked = true
 lockfile = true
 install_before = "7d"
 
@@ -8,6 +8,7 @@ compile = false
 
 # Disable to avoid calling Github API
 [settings.aqua]
+
 cosign = false
 
 [tools]

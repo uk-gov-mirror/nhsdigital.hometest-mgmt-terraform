@@ -145,3 +145,17 @@ url = "https://github.com/vale-cli/vale/releases/download/v3.14.1/vale_3.14.1_Li
 [tools.vale."platforms.macos-arm64"]
 checksum = "sha256:1a4a0923f59b293d691bd901300cc4da50a6bbfd962503239b5efe9563e0bd8e"
 url = "https://github.com/vale-cli/vale/releases/download/v3.14.1/vale_3.14.1_macOS_arm64.tar.gz"
+
+[[tools.python]]
+version = "3.14.2"
+backend = "core:python"
+
+[tools.python."platforms.linux-arm64"]
+checksum = "sha256:1d243bfab134c9fd3e099780a811079d8c6158283bddde65de2bc5f6eda74f7c"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260127/cpython-3.14.2+20260127-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz"
+provenance = "github-attestations"
+
+[tools.python."platforms.macos-arm64"]
+checksum = "sha256:2f82ed0cf902c8a2863a3fc5864909645c761e4e0a96525850c9ef8f7e3b79e7"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260127/cpython-3.14.2+20260127-aarch64-apple-darwin-install_only_stripped.tar.gz"
+provenance = "github-attestations"
