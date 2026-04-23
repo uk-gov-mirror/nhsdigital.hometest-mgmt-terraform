@@ -341,8 +341,6 @@ mise run pre-commit
 
 ```bash
 mise run pre-commit            # Run all pre-commit hooks
-mise run test-migrations       # Test Goose DB migrations against local PostgreSQL
-mise run test-migrations-keep  # Same, but keep the PostgreSQL container running
 mise run tf-clean-cache        # Remove .external_modules, .terragrunt-cache, .terraform.lock.hcl
 ```
 

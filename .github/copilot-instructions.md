@@ -40,7 +40,7 @@ This repository contains Terraform/Terragrunt infrastructure code for the NHS Ho
    terragrunt plan
    ```
 
-4. **Test DB migrations** (if SQL changes): `mise run test-migrations`
+4. **Test DB migrations** (if SQL changes): Run `mise run test-migrations` in the hometest-service repo
 
 ### What Pre-commit Checks (via `mise run pre-commit`)
 
@@ -185,12 +185,6 @@ mise install
 
 # Run all pre-commit checks (equivalent to CI Stage 1)
 mise run pre-commit
-
-# Test DB migrations against local PostgreSQL in Docker
-mise run test-migrations
-
-# Test DB migrations and keep the PostgreSQL container running for inspection
-mise run test-migrations-keep
 
 # Clean Terraform/Terragrunt cache directories
 mise run tf-clean-cache

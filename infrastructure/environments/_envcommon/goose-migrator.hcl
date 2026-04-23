@@ -58,9 +58,8 @@ terraform {
       "bash", "-c",
       <<-EOF
         cd '${local.hometest_service_dir}' && \
-        LAMBDAS_SOURCE_DIR='${local.hometest_service_dir}/lambdas' \
         MIGRATOR_CACHE_DIR='${local.migrator_build_cache}' \
-        mise exec -- '${local.scripts_dir}/build-goose-migrator.sh'
+        mise exec -- '${local.hometest_service_dir}/lambdas/goose-migrator-lambda/scripts/build.sh'
       EOF
     ]
   }
@@ -176,7 +175,7 @@ dependency "shared_services" {
 inputs = {
   environment = local.environment
 
-  goose_migrator_zip_path = "${local.hometest_service_dir}/lambdas/goose-migrator/goose-migrator.zip"
+  goose_migrator_zip_path = "${local.hometest_service_dir}/lambdas/goose-migrator-lambda/goose-migrator-lambda.zip"
 
   # Database connection info from Aurora cluster
   db_username   = dependency.aurora-postgres.outputs.cluster_master_username

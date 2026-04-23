@@ -43,12 +43,20 @@ jobs:
     name: "Check Terraform code"
     runs-on: ubuntu-latest
     permissions:
-      id-token: write    # REQUIRED for OIDC token
-      contents: read     # For checkout
+      id-token: write # REQUIRED for OIDC token
+      contents: read # For checkout
     strategy:
       matrix:
-        module: [core/bootstrap, core/network, core/aurora-postgres, core/shared_services, hometest-app/dev/app, hometest-app/dev/lambda-goose-migrator]
-      fail-fast: false  # Continue other modules if one fails
+        module:
+          [
+            core/bootstrap,
+            core/network,
+            core/aurora-postgres,
+            core/shared_services,
+            hometest-app/dev/app,
+            hometest-app/dev/lambda-goose-migrator
+          ]
+      fail-fast: false # Continue other modules if one fails
     steps:
       - name: "Checkout hometest-mgmt-terraform"
         uses: actions/checkout@v6
@@ -79,21 +87,7 @@ jobs:
           working_directory: ./hometest-mgmt-terraform/infrastructure/environments/poc/${{ matrix.module }}
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           action: "plan"
-          lock_enabled: "false"  # Disable locking for plan to avoid conflicts in PRs, since these are not actually applied
-
-  test-goose-migrations:
-    name: "Test Goose DB Migrations"
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: "Checkout code"
-        uses: actions/checkout@v6
-
-      - name: "Install mise"
-        uses: ./.github/actions/install-mise
-
-      - name: "Run Goose Migration Tests"
-        run: mise run test-migrations
+          lock_enabled: "false" # Disable locking for plan to avoid conflicts in PRs, since these are not actually applied
 
   # test-unit:
   #   name: "Unit tests"
@@ -137,7 +131,7 @@ jobs:
   #         echo "Nothing to save"
   perform-static-analysis:
     name: "Perform static analysis"
-    needs: [test-tf, test-goose-migrations]
+    needs: [test-tf]
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -147,7 +141,7 @@ jobs:
       - name: "Checkout code"
         uses: actions/checkout@v6
         with:
-          fetch-depth: 0  # Full history is needed to improving relevancy of reporting
+          fetch-depth: 0 # Full history is needed to improving relevancy of reporting
       # TODO: revert when SonarCloud credentials will be provided
       # - name: "Perform static analysis"
       #   uses: ./.github/actions/perform-static-analysis

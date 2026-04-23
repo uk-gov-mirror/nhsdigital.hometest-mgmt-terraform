@@ -374,7 +374,7 @@ jobs:
         deploy-migrator,
         deploy-app,
         destroy-app,
-        destroy-migrator,
+        destroy-migrator
       ]
     if: always()
     steps:

@@ -77,14 +77,6 @@ vale = "3.14.1"
 description = "Run pre-commit checks on all files"
 run = "pre-commit run --all-files --show-diff-on-failure --color=always"
 
-[tasks.test-migrations]
-description = "Test Goose DB migrations against local PostgreSQL in Docker"
-run = "./scripts/tests/goose-migrations.sh"
-
-[tasks.test-migrations-keep]
-description = "Test migrations and keep PostgreSQL container running"
-run = "KEEP_CONTAINER=true ./scripts/tests/goose-migrations.sh"
-
 [tasks.tf-clean-cache]
 description = "Find and remove .external_modules, .terragrunt-cache directories and .terraform.lock.hcl files"
 run = '''
