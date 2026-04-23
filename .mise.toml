@@ -8,6 +8,7 @@ compile = false
 
 # Disable to avoid calling Github API
 [settings.aqua]
+
 cosign = false
 
 [tools]
@@ -36,7 +37,7 @@ terraform-docs = "0.22.0"
 awscli = "2.34.26"
 
 # https://devguide.python.org/versions/
-python = "3.14.2"
+"core:python" = "3.14.2"
 
 # https://go.dev/dl/
 go = "1.26.2"
@@ -53,7 +54,7 @@ go = "1.26.2"
 pipx = "1.11.0"
 
 # https://github.com/bridgecrewio/checkov/releases
-"pipx:checkov" = "3.2.517"
+"aqua:bridgecrewio/checkov" = "3.2.524"
 
 # https://github.com/gitleaks/gitleaks/releases
 gitleaks = "8.30.1"
