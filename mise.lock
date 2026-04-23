@@ -4,10 +4,6 @@
 version = "v0.69.3"
 backend = "aqua:aquasecurity/trivy"
 
-[tools."aqua:aquasecurity/trivy"."platforms.linux-arm64"]
-checksum = "sha256:7e3924a974e912e57b4a99f65ece7931f8079584dae12eb7845024f97087bdfd"
-url = "https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_Linux-ARM64.tar.gz"
-
 [tools."aqua:aquasecurity/trivy"."platforms.linux-x64"]
 checksum = "sha256:1816b632dfe529869c740c0913e36bd1629cb7688bd5634f4a858c1d57c88b75"
 url = "https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_Linux-64bit.tar.gz"
@@ -24,12 +20,29 @@ url = "https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.6
 checksum = "sha256:74362dc711383255308230ecbeb587eb1e4e83a8d332be5b0259afac6e0c2224"
 url = "https://github.com/aquasecurity/trivy/releases/download/v0.69.3/trivy_0.69.3_windows-64bit.zip"
 
+[[tools."aqua:bridgecrewio/checkov"]]
+version = "3.2.524"
+backend = "aqua:bridgecrewio/checkov"
+
+[tools."aqua:bridgecrewio/checkov"."platforms.linux-x64"]
+checksum = "sha256:075ee47b0220033dd05d8bc7b1f0548b76aa1e89a407f0e70ee0f45d714e7c0f"
+url = "https://github.com/bridgecrewio/checkov/releases/download/3.2.524/checkov_linux_X86_64.zip"
+
+[tools."aqua:bridgecrewio/checkov"."platforms.macos-arm64"]
+checksum = "sha256:9e0b5554b14cc74eb1857863029789e8dcb5e9ee1e09053f4af4cebe3d2ec917"
+url = "https://github.com/bridgecrewio/checkov/releases/download/3.2.524/checkov_darwin_X86_64.zip"
+
+[tools."aqua:bridgecrewio/checkov"."platforms.macos-x64"]
+checksum = "sha256:9e0b5554b14cc74eb1857863029789e8dcb5e9ee1e09053f4af4cebe3d2ec917"
+url = "https://github.com/bridgecrewio/checkov/releases/download/3.2.524/checkov_darwin_X86_64.zip"
+
+[tools."aqua:bridgecrewio/checkov"."platforms.windows-x64"]
+checksum = "sha256:cf6e5ae84e883de29b6468bb103174d1cec212419b4d790078ace05ed1837859"
+url = "https://github.com/bridgecrewio/checkov/releases/download/3.2.524/checkov_windows_X86_64.zip"
+
 [[tools.awscli]]
 version = "2.34.26"
 backend = "aqua:aws/aws-cli"
-
-[tools.awscli."platforms.linux-arm64"]
-url = "https://awscli.amazonaws.com/awscli-exe-linux-aarch64-2.34.26.zip"
 
 [tools.awscli."platforms.linux-x64"]
 url = "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.34.26.zip"
@@ -43,10 +56,6 @@ url = "https://awscli.amazonaws.com/AWSCLIV2-2.34.26.pkg"
 [[tools.gitleaks]]
 version = "8.30.1"
 backend = "aqua:gitleaks/gitleaks"
-
-[tools.gitleaks."platforms.linux-arm64"]
-checksum = "sha256:e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080"
-url = "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_arm64.tar.gz"
 
 [tools.gitleaks."platforms.linux-x64"]
 checksum = "sha256:551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
@@ -67,10 +76,6 @@ url = "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8
 [[tools.go]]
 version = "1.26.2"
 backend = "core:go"
-
-[tools.go."platforms.linux-arm64"]
-checksum = "sha256:c958a1fe1b361391db163a485e21f5f228142d6f8b584f6bef89b26f66dc5b23"
-url = "https://dl.google.com/go/go1.26.2.linux-arm64.tar.gz"
 
 [tools.go."platforms.linux-x64"]
 checksum = "sha256:990e6b4bbba816dc3ee129eaeaf4b42f17c2800b88a2166c265ac1a200262282"
@@ -96,10 +101,6 @@ backend = "go:github.com/pressly/goose/v3/cmd/goose"
 version = "1.11.0"
 backend = "aqua:pypa/pipx"
 
-[tools.pipx."platforms.linux-arm64"]
-checksum = "sha256:088012ed44db557464e48721275b62b2c2a9a943f444cde05f82cf7a23e63dbc"
-url = "https://github.com/pypa/pipx/releases/download/1.11.0/pipx.pyz"
-
 [tools.pipx."platforms.linux-x64"]
 checksum = "sha256:088012ed44db557464e48721275b62b2c2a9a943f444cde05f82cf7a23e63dbc"
 url = "https://github.com/pypa/pipx/releases/download/1.11.0/pipx.pyz"
@@ -112,17 +113,9 @@ url = "https://github.com/pypa/pipx/releases/download/1.11.0/pipx.pyz"
 checksum = "sha256:088012ed44db557464e48721275b62b2c2a9a943f444cde05f82cf7a23e63dbc"
 url = "https://github.com/pypa/pipx/releases/download/1.11.0/pipx.pyz"
 
-[[tools."pipx:checkov"]]
-version = "3.2.517"
-backend = "pipx:checkov"
-
 [[tools.pre-commit]]
 version = "4.5.1"
 backend = "aqua:pre-commit/pre-commit"
-
-[tools.pre-commit."platforms.linux-arm64"]
-checksum = "sha256:19d00ba35cbf9c04dc3736cd8bb641e8633f3eddd4cedde71809574ae68a2cd1"
-url = "https://github.com/pre-commit/pre-commit/releases/download/v4.5.1/pre-commit-4.5.1.pyz"
 
 [tools.pre-commit."platforms.linux-x64"]
 checksum = "sha256:19d00ba35cbf9c04dc3736cd8bb641e8633f3eddd4cedde71809574ae68a2cd1"
@@ -136,46 +129,9 @@ url = "https://github.com/pre-commit/pre-commit/releases/download/v4.5.1/pre-com
 checksum = "sha256:19d00ba35cbf9c04dc3736cd8bb641e8633f3eddd4cedde71809574ae68a2cd1"
 url = "https://github.com/pre-commit/pre-commit/releases/download/v4.5.1/pre-commit-4.5.1.pyz"
 
-[tools.pre-commit."platforms.windows-x64"]
-checksum = "sha256:19d00ba35cbf9c04dc3736cd8bb641e8633f3eddd4cedde71809574ae68a2cd1"
-url = "https://github.com/pre-commit/pre-commit/releases/download/v4.5.1/pre-commit-4.5.1.pyz"
-
-[[tools.python]]
-version = "3.14.2"
-backend = "core:python"
-
-[tools.python."platforms.linux-arm64"]
-checksum = "sha256:1d243bfab134c9fd3e099780a811079d8c6158283bddde65de2bc5f6eda74f7c"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260127/cpython-3.14.2+20260127-aarch64-unknown-linux-gnu-install_only_stripped.tar.gz"
-provenance = "github-attestations"
-
-[tools.python."platforms.linux-x64"]
-checksum = "sha256:c2926d6707f4339e3bf30e90437b387712b47e60e9e55bff1dcb36bf7688b01d"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260127/cpython-3.14.2+20260127-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
-provenance = "github-attestations"
-
-[tools.python."platforms.macos-arm64"]
-checksum = "sha256:2f82ed0cf902c8a2863a3fc5864909645c761e4e0a96525850c9ef8f7e3b79e7"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260127/cpython-3.14.2+20260127-aarch64-apple-darwin-install_only_stripped.tar.gz"
-provenance = "github-attestations"
-
-[tools.python."platforms.macos-x64"]
-checksum = "sha256:51e886261fb79f64079b20181a7f8adfca738f2b2882882e981b67a165e1809b"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260127/cpython-3.14.2+20260127-x86_64-apple-darwin-install_only_stripped.tar.gz"
-provenance = "github-attestations"
-
-[tools.python."platforms.windows-x64"]
-checksum = "sha256:42638ce9bd8c177010c44c7a6a6fb3e1dc0b04ea372089036c689ccb57dc0d09"
-url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260127/cpython-3.14.2+20260127-x86_64-pc-windows-msvc-install_only_stripped.tar.gz"
-provenance = "github-attestations"
-
 [[tools.terraform]]
 version = "1.14.8"
 backend = "aqua:hashicorp/terraform"
-
-[tools.terraform."platforms.linux-arm64"]
-checksum = "sha256:c953171cde6b25ca0448c3b29a90d2f46c0310121e18742ec8f89631768e770c"
-url = "https://releases.hashicorp.com/terraform/1.14.8/terraform_1.14.8_linux_arm64.zip"
 
 [tools.terraform."platforms.linux-x64"]
 checksum = "sha256:56a5d12f47cbc1c6bedb8f5426ae7d5df984d1929572c24b56f4c82e9f9bf709"
@@ -197,10 +153,6 @@ url = "https://releases.hashicorp.com/terraform/1.14.8/terraform_1.14.8_windows_
 version = "0.22.0"
 backend = "aqua:terraform-docs/terraform-docs"
 
-[tools.terraform-docs."platforms.linux-arm64"]
-checksum = "sha256:4feccd471e0595546271bde7aabd275a5c1a5b055d6cd89c2678b38ced1376f6"
-url = "https://github.com/terraform-docs/terraform-docs/releases/download/v0.22.0/terraform-docs-v0.22.0-linux-arm64.tar.gz"
-
 [tools.terraform-docs."platforms.linux-x64"]
 checksum = "sha256:8ec66616777c66f3e622af4f2853e8ae399f38908ad4b262c9c526dd42501369"
 url = "https://github.com/terraform-docs/terraform-docs/releases/download/v0.22.0/terraform-docs-v0.22.0-linux-amd64.tar.gz"
@@ -220,10 +172,6 @@ url = "https://github.com/terraform-docs/terraform-docs/releases/download/v0.22.
 [[tools.terragrunt]]
 version = "1.0.0"
 backend = "aqua:gruntwork-io/terragrunt"
-
-[tools.terragrunt."platforms.linux-arm64"]
-checksum = "sha256:4e9993bd25e00d4f1a7f8d48e7aa881fc2edb6efff3cc70b49f9e3f02000736e"
-url = "https://github.com/gruntwork-io/terragrunt/releases/download/v1.0.0/terragrunt_linux_arm64.tar.gz"
 
 [tools.terragrunt."platforms.linux-x64"]
 checksum = "sha256:059e02368f88d188b32f5bef50368031f48d28af1891fd798be307ebe38f309f"
@@ -245,10 +193,6 @@ url = "https://github.com/gruntwork-io/terragrunt/releases/download/v1.0.0/terra
 version = "0.61.0"
 backend = "aqua:terraform-linters/tflint"
 
-[tools.tflint."platforms.linux-arm64"]
-checksum = "sha256:999c25cfdb5208fe1133dec6b219e666a39fc2a7a0786a781dc9924ea5945ebf"
-url = "https://github.com/terraform-linters/tflint/releases/download/v0.61.0/tflint_linux_arm64.zip"
-
 [tools.tflint."platforms.linux-x64"]
 checksum = "sha256:ca4e4e8cb7cc3436f2b6979e9c4fd4e2623a66fcca1ad1fe12f8669967636ae2"
 url = "https://github.com/terraform-linters/tflint/releases/download/v0.61.0/tflint_linux_amd64.zip"
@@ -269,10 +213,6 @@ url = "https://github.com/terraform-linters/tflint/releases/download/v0.61.0/tfl
 version = "3.14.1"
 backend = "aqua:errata-ai/vale"
 
-[tools.vale."platforms.linux-arm64"]
-checksum = "sha256:6a442a4ff1e67ff0beb08b608b039a38ab1f5bd6170afef903130a63831d1b2b"
-url = "https://github.com/vale-cli/vale/releases/download/v3.14.1/vale_3.14.1_Linux_arm64.tar.gz"
-
 [tools.vale."platforms.linux-x64"]
 checksum = "sha256:ff2b49ffaa9dcd246fd5008f03ff67746d2790b75bf4d3657e2fb9530fb96db3"
 url = "https://github.com/vale-cli/vale/releases/download/v3.14.1/vale_3.14.1_Linux_64-bit.tar.gz"
@@ -288,3 +228,22 @@ url = "https://github.com/vale-cli/vale/releases/download/v3.14.1/vale_3.14.1_ma
 [tools.vale."platforms.windows-x64"]
 checksum = "sha256:e75228aa7eec07dab8875830c039d7d1216514793d0c46d95740a96dc2f96ae1"
 url = "https://github.com/vale-cli/vale/releases/download/v3.14.1/vale_3.14.1_Windows_64-bit.zip"
+
+[[tools.python]]
+version = "3.14.2"
+backend = "core:python"
+
+[tools.python."platforms.linux-x64"]
+checksum = "sha256:c2926d6707f4339e3bf30e90437b387712b47e60e9e55bff1dcb36bf7688b01d"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260127/cpython-3.14.2+20260127-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz"
+provenance = "github-attestations"
+
+[tools.python."platforms.macos-arm64"]
+checksum = "sha256:2f82ed0cf902c8a2863a3fc5864909645c761e4e0a96525850c9ef8f7e3b79e7"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260127/cpython-3.14.2+20260127-aarch64-apple-darwin-install_only_stripped.tar.gz"
+provenance = "github-attestations"
+
+[tools.python."platforms.windows-x64"]
+checksum = "sha256:42638ce9bd8c177010c44c7a6a6fb3e1dc0b04ea372089036c689ccb57dc0d09"
+url = "https://github.com/astral-sh/python-build-standalone/releases/download/20260127/cpython-3.14.2+20260127-x86_64-pc-windows-msvc-install_only_stripped.tar.gz"
+provenance = "github-attestations"
