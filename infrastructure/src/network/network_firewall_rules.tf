@@ -116,3 +116,38 @@ resource "aws_networkfirewall_rule_group" "egress_domain_filter" {
     Name = "${local.resource_prefix}-egress-domain-filter"
   })
 }
+
+################################################################################
+# Network Firewall Rule Group - Default Deny All
+################################################################################
+
+resource "aws_networkfirewall_rule_group" "drop_all" {
+  count = var.enable_network_firewall && var.firewall_default_deny ? 1 : 0
+
+  capacity = 10
+  name     = "${local.resource_prefix}-drop-all"
+  type     = "STATEFUL"
+
+  rule_group {
+    rule_variables {
+      ip_sets {
+        key = "HOME_NET"
+        ip_set {
+          definition = [var.vpc_cidr]
+        }
+      }
+    }
+
+    rules_source {
+      rules_string = "drop ip any any -> any any (msg:\"Default deny all traffic\"; sid:1; rev:1;)"
+    }
+
+    stateful_rule_options {
+      rule_order = "STRICT_ORDER"
+    }
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-drop-all"
+  })
+}

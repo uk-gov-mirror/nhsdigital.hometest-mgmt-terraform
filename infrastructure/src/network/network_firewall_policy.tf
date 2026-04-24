@@ -36,6 +36,14 @@ resource "aws_networkfirewall_firewall_policy" "main" {
         resource_arn = aws_networkfirewall_rule_group.egress_domain_filter[0].arn
       }
     }
+
+    dynamic "stateful_rule_group_reference" {
+      for_each = var.firewall_default_deny ? [1] : []
+      content {
+        priority     = 65535
+        resource_arn = aws_networkfirewall_rule_group.drop_all[0].arn
+      }
+    }
   }
 
   tags = merge(local.common_tags, {
