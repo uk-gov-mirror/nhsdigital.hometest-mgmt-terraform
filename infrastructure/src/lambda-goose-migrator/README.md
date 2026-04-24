@@ -27,7 +27,8 @@ The ZIP artifact is built from the service repo before each Terraform plan/apply
            │  VPC (private subnets)
            ▼
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Aurora PostgreSQL                            │└─────────────────────────────────────────────────────────────────┘
+│                    Aurora PostgreSQL                            │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ## Source of Truth
