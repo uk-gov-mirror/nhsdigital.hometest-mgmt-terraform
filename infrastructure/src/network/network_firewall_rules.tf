@@ -62,42 +62,10 @@ resource "aws_networkfirewall_rule_group" "egress_ip_filter" {
     }
 
     rules_source {
-      stateful_rule {
-        action = "PASS"
-        header {
-          destination      = "$EXTERNAL_NET"
-          destination_port = "ANY"
-          direction        = "FORWARD"
-          protocol         = "IP"
-          source           = "$HOME_NET"
-          source_port      = "ANY"
-        }
-        rule_option {
-          keyword = "sid:1"
-        }
-      }
-
-      dynamic "stateful_rule" {
-        for_each = var.allowed_egress_ips
-        content {
-          action = "PASS"
-          header {
-            destination      = stateful_rule.value.ip
-            destination_port = stateful_rule.value.port
-            direction        = "FORWARD"
-            protocol         = stateful_rule.value.protocol
-            source           = "$HOME_NET"
-            source_port      = "ANY"
-          }
-          rule_option {
-            keyword = "sid:${stateful_rule.key + 2}"
-          }
-          rule_option {
-            keyword  = "msg"
-            settings = ["\"${stateful_rule.value.description}\""]
-          }
-        }
-      }
+      rules_string = join("\n", [
+        for idx, rule in var.allowed_egress_ips :
+        "pass ${lower(rule.protocol)} $HOME_NET any -> ${rule.ip} ${rule.port} (msg:\"${rule.description}\"; sid:${idx + 1}; rev:1;)"
+      ])
     }
 
     stateful_rule_options {
