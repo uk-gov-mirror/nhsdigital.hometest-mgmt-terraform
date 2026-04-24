@@ -94,7 +94,7 @@ resource "aws_networkfirewall_rule_group" "egress_ip_filter" {
           }
           rule_option {
             keyword  = "msg"
-            settings = [stateful_rule.value.description]
+            settings = ["\"${stateful_rule.value.description}\""]
           }
         }
       }
