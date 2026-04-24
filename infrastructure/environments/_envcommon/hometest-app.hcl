@@ -135,6 +135,7 @@ locals {
   nhs_login_base_url                         = local.account_app_vars.locals.nhs_login_base_url
   nhs_login_authorize_url                    = "${local.nhs_login_base_url}/authorize"
   nhs_login_client_id                        = local.account_app_vars.locals.nhs_login_client_id
+  nhs_login_scope                            = local.account_app_vars.locals.nhs_login_scope
   auth_session_max_duration_minutes          = "60"
   auth_access_token_expiry_duration_minutes  = "60"
   auth_refresh_token_expiry_duration_minutes = "60"
@@ -229,6 +230,8 @@ terraform {
         SPA_TYPE='${local.spa_type}' \
         NEXT_PUBLIC_BACKEND_URL='https://${local.api_domain}' \
         NEXT_PUBLIC_NHS_LOGIN_AUTHORIZE_URL='${local.spa_nhs_login_authorize_url}' \
+        NEXT_PUBLIC_NHS_LOGIN_CLIENT_ID='${local.nhs_login_client_id}' \
+        NEXT_PUBLIC_NHS_LOGIN_SCOPE='${local.nhs_login_scope}' \
         NEXT_PUBLIC_USE_WIREMOCK_AUTH='${local.use_wiremock_auth}' \
         mise exec -- '${local.scripts_dir}/build-spa.sh'
       EOF
@@ -513,10 +516,12 @@ inputs = {
         NHS_LOGIN_CLIENT_ID                        = local.nhs_login_client_id
         NHS_LOGIN_REDIRECT_URL                     = "${local.spa_origin}/callback"
         NHS_LOGIN_PRIVATE_KEY_SECRET_NAME          = local.nhs_login_private_key_secret_name
+        AUTH_COOKIE_PRIVATE_KEYS_SECRET_NAME       = local.nhs_login_private_key_secret_name
         AUTH_SESSION_MAX_DURATION_MINUTES          = local.auth_session_max_duration_minutes
         AUTH_ACCESS_TOKEN_EXPIRY_DURATION_MINUTES  = local.auth_access_token_expiry_duration_minutes
         AUTH_REFRESH_TOKEN_EXPIRY_DURATION_MINUTES = local.auth_refresh_token_expiry_duration_minutes
         AUTH_COOKIE_SAME_SITE                      = local.auth_cookie_same_site
+        AUTH_COOKIE_SECURE                         = "true"
         # COOKIE_ACCESS_CONTROL_ALLOW_ORIGIN         = local.spa_origin
       }
     }

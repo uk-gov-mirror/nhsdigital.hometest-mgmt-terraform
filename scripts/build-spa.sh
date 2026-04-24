@@ -9,6 +9,8 @@
 #   SPA_SOURCE_DIR=<path> SPA_CACHE_DIR=<path> \
 #   NEXT_PUBLIC_BACKEND_URL=<url> \
 #   NEXT_PUBLIC_NHS_LOGIN_AUTHORIZE_URL=<url> \
+#   NEXT_PUBLIC_NHS_LOGIN_CLIENT_ID=<client-id> \
+#   NEXT_PUBLIC_NHS_LOGIN_SCOPE=<scope> \
 #   NEXT_PUBLIC_USE_WIREMOCK_AUTH=true|false \
 #   ./build-spa.sh
 #
@@ -20,6 +22,8 @@
 #   SPA_CACHE_DIR                        Build cache directory (default: .spa-build-cache)
 #   SPA_TYPE                             "nextjs" (default) or "vite"
 #   NEXT_PUBLIC_NHS_LOGIN_AUTHORIZE_URL  NHS Login authorize URL baked into the build
+#   NEXT_PUBLIC_NHS_LOGIN_CLIENT_ID      NHS Login client ID baked into the build
+#   NEXT_PUBLIC_NHS_LOGIN_SCOPE          NHS Login scope baked into the build
 #   NEXT_PUBLIC_USE_WIREMOCK_AUTH        "true" to use WireMock auth, "false" for real sandpit (default: false)
 #   FORCE_SPA_REBUILD=true               Force rebuild even if no changes detected
 # -----------------------------------------------------------------------------
@@ -34,6 +38,8 @@ CACHE_DIR_INPUT="${SPA_CACHE_DIR:-.spa-build-cache}"
 BACKEND_URL="${NEXT_PUBLIC_BACKEND_URL:-}"
 SPA_TYPE="${SPA_TYPE:-nextjs}"
 NHS_LOGIN_AUTHORIZE_URL="${NEXT_PUBLIC_NHS_LOGIN_AUTHORIZE_URL:-}"
+NHS_LOGIN_CLIENT_ID="${NEXT_PUBLIC_NHS_LOGIN_CLIENT_ID:-}"
+NHS_LOGIN_SCOPE="${NEXT_PUBLIC_NHS_LOGIN_SCOPE:-}"
 USE_WIREMOCK_AUTH="${NEXT_PUBLIC_USE_WIREMOCK_AUTH:-false}"
 FORCE_REBUILD="${FORCE_SPA_REBUILD:-false}"
 
@@ -48,6 +54,8 @@ if [[ -z "$SPA_DIR_INPUT" ]]; then
   echo "  SPA_CACHE_DIR                          Build cache directory (default: .spa-build-cache)"
   echo "  SPA_TYPE                               'nextjs' (default) or 'vite'"
   echo "  NEXT_PUBLIC_NHS_LOGIN_AUTHORIZE_URL     NHS Login authorize URL"
+  echo "  NEXT_PUBLIC_NHS_LOGIN_CLIENT_ID         NHS Login client ID"
+  echo "  NEXT_PUBLIC_NHS_LOGIN_SCOPE             NHS Login scope"
   echo "  NEXT_PUBLIC_USE_WIREMOCK_AUTH           'true' for WireMock auth, 'false' for sandpit (default: false)"
   echo "  FORCE_SPA_REBUILD=true                  Force rebuild even if no changes detected"
   exit 1
@@ -170,6 +178,8 @@ calculate_source_hash() {
   # because Next.js bakes NEXT_PUBLIC_* vars into the static output at build time.
   all_hashes+="BACKEND_URL:${BACKEND_URL}|"
   all_hashes+="NHS_LOGIN_AUTHORIZE_URL:${NHS_LOGIN_AUTHORIZE_URL}|"
+  all_hashes+="NHS_LOGIN_CLIENT_ID:${NHS_LOGIN_CLIENT_ID}|"
+  all_hashes+="NHS_LOGIN_SCOPE:${NHS_LOGIN_SCOPE}|"
   all_hashes+="USE_WIREMOCK_AUTH:${USE_WIREMOCK_AUTH}|"
 
   # Combine all hashes into final hash
@@ -216,6 +226,8 @@ show_hash_inputs() {
   echo "  Environment:"
   echo "    NEXT_PUBLIC_BACKEND_URL=$BACKEND_URL"
   echo "    NEXT_PUBLIC_NHS_LOGIN_AUTHORIZE_URL=$NHS_LOGIN_AUTHORIZE_URL"
+  echo "    NEXT_PUBLIC_NHS_LOGIN_CLIENT_ID=$NHS_LOGIN_CLIENT_ID"
+  echo "    NEXT_PUBLIC_NHS_LOGIN_SCOPE=$NHS_LOGIN_SCOPE"
   echo "    NEXT_PUBLIC_USE_WIREMOCK_AUTH=$USE_WIREMOCK_AUTH"
 }
 
@@ -288,9 +300,13 @@ build_spa() {
   # Set environment variables for the build
   export NEXT_PUBLIC_BACKEND_URL="$BACKEND_URL"
   export NEXT_PUBLIC_NHS_LOGIN_AUTHORIZE_URL="$NHS_LOGIN_AUTHORIZE_URL"
+  export NEXT_PUBLIC_NHS_LOGIN_CLIENT_ID="$NHS_LOGIN_CLIENT_ID"
+  export NEXT_PUBLIC_NHS_LOGIN_SCOPE="$NHS_LOGIN_SCOPE"
   export NEXT_PUBLIC_USE_WIREMOCK_AUTH="$USE_WIREMOCK_AUTH"
   echo "  NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL"
   echo "  NEXT_PUBLIC_NHS_LOGIN_AUTHORIZE_URL=$NEXT_PUBLIC_NHS_LOGIN_AUTHORIZE_URL"
+  echo "  NEXT_PUBLIC_NHS_LOGIN_CLIENT_ID=$NEXT_PUBLIC_NHS_LOGIN_CLIENT_ID"
+  echo "  NEXT_PUBLIC_NHS_LOGIN_SCOPE=$NEXT_PUBLIC_NHS_LOGIN_SCOPE"
   echo "  NEXT_PUBLIC_USE_WIREMOCK_AUTH=$NEXT_PUBLIC_USE_WIREMOCK_AUTH"
 
   # Run the build
@@ -310,6 +326,8 @@ echo "Output dir:       $DIST_DIR"
 echo "Cache directory:  $CACHE_DIR"
 echo "Backend URL:      $BACKEND_URL"
 echo "NHS Login URL:    $NHS_LOGIN_AUTHORIZE_URL"
+echo "NHS Login Client: $NHS_LOGIN_CLIENT_ID"
+echo "NHS Login Scope:  $NHS_LOGIN_SCOPE"
 echo "WireMock auth:    $USE_WIREMOCK_AUTH"
 echo ""
 
@@ -367,6 +385,10 @@ if needs_rebuild; then
     echo "Duration: ${duration}s"
     echo "Hash: $new_hash"
     echo "Backend URL: $BACKEND_URL"
+    echo "NHS Login Authorize URL: $NHS_LOGIN_AUTHORIZE_URL"
+    echo "NHS Login Client ID: $NHS_LOGIN_CLIENT_ID"
+    echo "NHS Login Scope: $NHS_LOGIN_SCOPE"
+    echo "Use WireMock Auth: $USE_WIREMOCK_AUTH"
     echo "Output: $DIST_DIR ($file_count files)"
   } > "$BUILD_LOG"
 else

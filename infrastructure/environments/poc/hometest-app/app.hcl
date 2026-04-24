@@ -21,4 +21,5 @@ locals {
   # NHS Login Configuration (sandpit for POC)
   nhs_login_base_url  = "https://auth.sandpit.signin.nhs.uk"
   nhs_login_client_id = "hometest"
+  nhs_login_scope     = "openid profile email phone"
 }
