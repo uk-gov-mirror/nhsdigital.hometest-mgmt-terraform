@@ -151,3 +151,41 @@ resource "aws_networkfirewall_rule_group" "drop_all" {
     Name = "${local.resource_prefix}-drop-all"
   })
 }
+
+################################################################################
+# Network Firewall Rule Group - Stateful IP Filtering (Ingress)
+################################################################################
+
+resource "aws_networkfirewall_rule_group" "ingress_ip_filter" {
+  count = var.enable_network_firewall && length(var.allowed_ingress_ips) > 0 ? 1 : 0
+
+  capacity = 100
+  name     = "${local.resource_prefix}-ingress-ip-filter"
+  type     = "STATEFUL"
+
+  rule_group {
+    rule_variables {
+      ip_sets {
+        key = "HOME_NET"
+        ip_set {
+          definition = [var.vpc_cidr]
+        }
+      }
+    }
+
+    rules_source {
+      rules_string = join("\n", [
+        for idx, rule in var.allowed_ingress_ips :
+        "pass ${lower(rule.protocol)} ${rule.ip} ${rule.port} -> $HOME_NET any (msg:\"${rule.description}\"; sid:${idx + 10001}; rev:1;)"
+      ])
+    }
+
+    stateful_rule_options {
+      rule_order = "STRICT_ORDER"
+    }
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-ingress-ip-filter"
+  })
+}

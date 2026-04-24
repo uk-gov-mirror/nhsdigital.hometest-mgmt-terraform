@@ -281,15 +281,17 @@ output "network_firewall_kms_key_arn" {
 output "egress_filtering_config" {
   description = "Summary of egress filtering configuration"
   value = var.enable_network_firewall ? {
-    firewall_enabled  = true
-    default_deny      = var.firewall_default_deny
-    allowed_ips_count = length(var.allowed_egress_ips)
-    allowed_domains   = var.allowed_egress_domains
+    firewall_enabled      = true
+    default_deny          = var.firewall_default_deny
+    allowed_ingress_count = length(var.allowed_ingress_ips)
+    allowed_egress_count  = length(var.allowed_egress_ips)
+    allowed_domains       = var.allowed_egress_domains
     } : {
-    firewall_enabled  = false
-    default_deny      = false
-    allowed_ips_count = 0
-    allowed_domains   = []
+    firewall_enabled      = false
+    default_deny          = false
+    allowed_ingress_count = 0
+    allowed_egress_count  = 0
+    allowed_domains       = []
   }
 }
 

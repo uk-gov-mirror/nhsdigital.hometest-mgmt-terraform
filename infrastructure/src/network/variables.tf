@@ -211,6 +211,35 @@ variable "allowed_egress_ips" {
   # ]
 }
 
+variable "allowed_ingress_ips" {
+  description = "List of allowed ingress IP addresses with port and protocol. These IPs will be permitted through the firewall for inbound traffic."
+  type = list(object({
+    ip          = string # IP address or CIDR (e.g., "203.0.113.10/32")
+    port        = string # Port number or "ANY"
+    protocol    = string # Protocol: TCP, UDP, or IP
+    description = string # Description for documentation
+  }))
+  default = []
+
+  validation {
+    condition = alltrue([
+      for rule in var.allowed_ingress_ips :
+      can(regex("^[^\";\n\r\\\\]*$", rule.description))
+    ])
+    error_message = "Descriptions cannot contain quotes (\"), semicolons (;), newlines, or backslashes (\\) as they break Suricata rule syntax."
+  }
+
+  # Example:
+  # allowed_ingress_ips = [
+  #   {
+  #     ip          = "203.0.113.10/32"
+  #     port        = "443"
+  #     protocol    = "TCP"
+  #     description = "External monitoring service"
+  #   }
+  # ]
+}
+
 variable "allowed_egress_domains" {
   description = "List of allowed egress domains (for HTTPS/TLS traffic). Supports wildcards like '.example.com'."
   type        = list(string)
