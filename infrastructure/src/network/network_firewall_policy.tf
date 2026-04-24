@@ -24,7 +24,7 @@ resource "aws_networkfirewall_firewall_policy" "main" {
     dynamic "stateful_rule_group_reference" {
       for_each = length(var.allowed_egress_domains) > 0 ? [1] : []
       content {
-        priority     = 100
+        priority     = 110
         resource_arn = aws_networkfirewall_rule_group.egress_domain_filter[0].arn
       }
     }
