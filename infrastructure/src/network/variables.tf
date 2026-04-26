@@ -294,6 +294,14 @@ variable "allowed_egress_domains" {
   type        = list(string)
   default     = []
 
+  validation {
+    condition = alltrue([
+      for d in var.allowed_egress_domains :
+      can(regex("^[.a-zA-Z0-9-]+\\.[a-zA-Z]{2,}$", d))
+    ])
+    error_message = "Each domain must be a valid domain name (e.g., 'api.example.com') or wildcard (e.g., '.example.com')."
+  }
+
   # Example:
   # allowed_egress_domains = [
   #   ".github.com",

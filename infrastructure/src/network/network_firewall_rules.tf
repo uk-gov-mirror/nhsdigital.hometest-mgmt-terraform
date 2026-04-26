@@ -176,7 +176,7 @@ resource "aws_networkfirewall_rule_group" "ingress_ip_filter" {
     rules_source {
       rules_string = join("\n", [
         for idx, rule in var.allowed_ingress_ips :
-        "pass ${lower(rule.protocol)} ${rule.ip} ${rule.port} -> $HOME_NET any (msg:\"${rule.description}\"; sid:${idx + 10001}; rev:1;)"
+        "pass ${lower(rule.protocol)} ${rule.ip} any -> $HOME_NET ${rule.port} (msg:\"${replace(replace(replace(replace(rule.description, "\"", "'"), ";", ","), "\r", " "), "\n", " ")}\"; sid:${idx + 10001}; rev:1;)"
       ])
     }
 

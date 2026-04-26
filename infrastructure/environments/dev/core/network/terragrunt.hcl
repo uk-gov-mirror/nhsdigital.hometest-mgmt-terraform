@@ -61,28 +61,17 @@ inputs = {
   ]
 
   # Allow specific outbound connections
-  allowed_egress_ips = [
-    {
-      ip          = "0.0.0.0/0"
-      port        = "443"
-      protocol    = "TCP"
-      description = "HTTPS from anywhere"
-    },
-    {
-      ip          = "0.0.0.0/0"
-      port        = "80"
-      protocol    = "TCP"
-      description = "HTTP from anywhere"
-    }
-    # Add specific external API endpoints here if needed
-    # Example:
-    # {
-    #   ip          = "203.0.113.10/32"
-    #   port        = "443"
-    #   protocol    = "TCP"
-    #   description = "External API"
-    # }
-  ]
+  # NOTE: Do NOT add 0.0.0.0/0 here - it would bypass domain filtering.
+  # Use allowed_egress_domains for HTTPS/TLS traffic.
+  # Only add specific IPs for non-HTTPS protocols or IPs that cannot be expressed as domains.
+  # allowed_egress_ips = [
+  #   {
+  #     ip          = "203.0.113.10/32"
+  #     port        = "443"
+  #     protocol    = "TCP"
+  #     description = "External API"
+  #   }
+  # ]
 
   # Allow specific domains for egress (HTTPS/TLS traffic)
   # Note: AWS service domains (.amazonaws.com) are automatically allowed
