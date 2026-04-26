@@ -25,8 +25,18 @@ include "app" {
 # ---------------------------------------------------------------------------------------------------------------------
 
 inputs = {
-  # TEMPORARY FIX: staging uses devtest.hometest.service.nhs.uk zone (Z10312861T421RGJG6CVB)
-  # instead of the default hometest.service.nhs.uk zone from the network module.
-  # TODO: Remove once the network module outputs the correct zone for this subenv.
-  route53_zone_id = "Z10312861T421RGJG6CVB"
+  # Hello World Lambda - simple health check (dev environment only)
+  lambdas = {
+    "hello-world-lambda" = {
+      description     = "Hello World Lambda - Health Check"
+      api_path_prefix = "hello-world"
+      handler         = "index.handler"
+      timeout         = 30
+      memory_size     = 256
+      environment = {
+        NODE_OPTIONS = "--enable-source-maps"
+        ENVIRONMENT  = basename(get_terragrunt_dir())
+      }
+    }
+  }
 }
