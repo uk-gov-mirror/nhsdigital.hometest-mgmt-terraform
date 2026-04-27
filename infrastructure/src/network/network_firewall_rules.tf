@@ -64,7 +64,7 @@ resource "aws_networkfirewall_rule_group" "egress_ip_filter" {
     rules_source {
       rules_string = join("\n", [
         for idx, rule in var.allowed_egress_ips :
-        "pass ${lower(rule.protocol)} $HOME_NET any -> ${rule.ip} ${rule.port} (msg:\"${replace(replace(replace(replace(rule.description, "\"", "'"), ";", ","), "\r", " "), "\n", " ")}\"; sid:${idx + 1}; rev:1;)"
+        "pass ${lower(rule.protocol)} ${rule.ip} any -> $HOME_NET ${rule.port} (msg:\"${rule.description}\"; sid:${idx + 10001}; rev:1;)"
       ])
     }
 
@@ -176,7 +176,7 @@ resource "aws_networkfirewall_rule_group" "ingress_ip_filter" {
     rules_source {
       rules_string = join("\n", [
         for idx, rule in var.allowed_ingress_ips :
-        "pass ${lower(rule.protocol)} ${rule.ip} any -> $HOME_NET ${rule.port} (msg:\"${replace(replace(replace(replace(rule.description, "\"", "'"), ";", ","), "\r", " "), "\n", " ")}\"; sid:${idx + 10001}; rev:1;)"
+        "pass ${lower(rule.protocol)} ${rule.ip} any -> $HOME_NET ${rule.port} (msg:\"${rule.description}\"; sid:${idx + 10001}; rev:1;)"
       ])
     }
 
