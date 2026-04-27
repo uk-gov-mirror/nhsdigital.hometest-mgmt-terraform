@@ -83,7 +83,7 @@ inputs = {
   allowed_egress_ips = [
     # Example: NTP time sync (UDP, can't use domain filter)
     # {
-    #   ip          = "169.254.169.123/32"
+    #   ip          = "169.254.169.123/32"  # gitleaks:allow
     #   port        = "123"
     #   protocol    = "UDP"
     #   description = "Amazon Time Sync Service"
