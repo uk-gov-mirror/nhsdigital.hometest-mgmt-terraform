@@ -54,13 +54,13 @@ terragrunt apply
     - [Step 7: Deploy](#step-7-deploy)
       - [Option A: Deploy Locally](#option-a-deploy-locally)
       - [Option B: Deploy via GitHub Actions](#option-b-deploy-via-github-actions)
+    - [Step 8: Verify the Deployment](#step-8-verify-the-deployment)
   - [Quick Deploy (Iterative Development)](#quick-deploy-iterative-development)
     - [Deploy Only Lambdas](#deploy-only-lambdas)
     - [Deploy Only UI](#deploy-only-ui)
     - [Deploy Both (Skip Nothing, But Target Lambdas)](#deploy-both-skip-nothing-but-target-lambdas)
     - [Force Rebuild](#force-rebuild)
     - [Environment Variables Reference](#environment-variables-reference)
-    - [Step 8: Verify the Deployment](#step-8-verify-the-deployment)
   - [File Structure After Creation](#file-structure-after-creation)
   - [How It Works](#how-it-works)
   - [Destroying an Environment](#destroying-an-environment)
@@ -368,18 +368,16 @@ There are two ways to deploy an environment: **locally** or via **GitHub Actions
 # Ensure AWS credentials are active
 export AWS_PROFILE=PoC-Dev
 
-cd infrastructure/environments/poc/hometest-app/${ENV_NAME}/app
+# Deploy the database migrator first (sets up per-environment schema)
+cd infrastructure/environments/poc/hometest-app/${ENV_NAME}/lambda-goose-migrator
+terragrunt apply
+
+# Then deploy the app
+cd ../app
 terragrunt apply
 ```
 
 When deploying locally, the build hooks reference your **local clone** of the `hometest-service` repo (expected at `../hometest-service/` relative to this repo's root). This means your local Lambda and SPA source code is what gets built and deployed — useful for testing changes before they're merged.
-
-> **Don't forget the database migrator!** After deploying the app, you must also deploy the goose migrator to set up the database schema for your environment:
->
-> ```bash
-> cd infrastructure/environments/poc/hometest-app/${ENV_NAME}/lambda-goose-migrator
-> terragrunt apply
-> ```
 
 #### Option B: Deploy via GitHub Actions
 
@@ -425,15 +423,36 @@ Both local and pipeline deployments will:
 
 > **Note:** Build hooks use content hashing to skip rebuilds when source code hasn't changed. To force a rebuild, set `FORCE_LAMBDA_REBUILD=true` or `FORCE_SPA_REBUILD=true`.
 
+### Step 8: Verify the Deployment
+
+After successful apply, Terraform outputs will show:
+
+```bash
+# Check the outputs
+terragrunt output
+
+# Key outputs:
+# spa_url              = "https://dev2.poc.hometest.service.nhs.uk"
+# cloudfront_id        = "E1234567890ABC"
+# lambda_function_names = ["nhs-hometest-dev2-eligibility-lookup-lambda", ...]
+```
+
+Test the deployment:
+
+```bash
+# SPA
+curl -I https://dev2.poc.hometest.service.nhs.uk/
+```
+
 ## Quick Deploy (Iterative Development)
 
 Once your environment is fully deployed, you can rapidly redeploy just lambdas, just the UI, or both without running a full `terragrunt apply`. This is useful when iterating on `hometest-service` code.
 
 | What changed | Command | How it works |
 |--------------|---------|--------------|
-| Lambda code only | `SKIP_SPA=true terragrunt apply -target='module.lambdas["<name>"].aws_lambda_function.this' -auto-approve` | Skips SPA build/upload, targets only the lambda resource → Terraform re-uploads the zip |
-| UI code only | `SKIP_LAMBDAS=true terragrunt apply -refresh-only -auto-approve` | Skips lambda build, Terraform is a no-op, but the `upload_spa` after-hook still runs → S3 sync + CloudFront invalidation |
-| Both | `terragrunt apply -target='module.lambdas["<name>"].aws_lambda_function.this' -auto-approve` | Builds both, targets lambda for Terraform, SPA hooks run regardless of `-target` |
+| Lambda code only | `SKIP_SPA=true terragrunt apply -target='module.lambdas["<name>"]' -auto-approve` | Skips SPA build/upload, targets only the lambda resource → Terraform re-uploads the zip |
+| UI code only | `SKIP_LAMBDAS=true terragrunt apply -target=provider.aws -auto-approve` | Skips lambda build, Terraform is a no-op, but the `upload_spa` after-hook still runs → S3 sync + CloudFront invalidation |
+| Both | `terragrunt apply -target='module.lambdas["<name>"]' -auto-approve` | Builds both, targets lambda for Terraform, SPA hooks run regardless of `-target` |
 
 All commands below assume you are in the environment's `app/` directory:
 
@@ -450,7 +469,7 @@ Skip the SPA build/upload and target only the lambda resources that changed:
 # All (and only) lambdas
 SKIP_SPA=true terragrunt apply -target='module.lambdas' -auto-approve
 
-## Or use the mise shortcut:
+# Or use the mise shortcut:
 mise run deploy-lambdas
 
 # Single lambda (~30s build + ~20s targeted apply)
@@ -526,27 +545,6 @@ FORCE_LAMBDA_REBUILD=true FORCE_SPA_REBUILD=true terragrunt apply
 | `SKIP_LAMBDAS=true` | Skip lambda build (before-hook) |
 | `FORCE_LAMBDA_REBUILD=true` | Ignore lambda build cache — always rebuild |
 | `FORCE_SPA_REBUILD=true` | Ignore SPA build cache — always rebuild |
-
-### Step 8: Verify the Deployment
-
-After successful apply, Terraform outputs will show:
-
-```bash
-# Check the outputs
-terragrunt output
-
-# Key outputs:
-# spa_url              = "https://dev2.poc.hometest.service.nhs.uk"
-# cloudfront_id        = "E1234567890ABC"
-# lambda_function_names = ["nhs-hometest-dev2-eligibility-lookup-lambda", ...]
-```
-
-Test the deployment:
-
-```bash
-# SPA
-curl -I https://dev2.poc.hometest.service.nhs.uk/
-```
 
 ## File Structure After Creation
 

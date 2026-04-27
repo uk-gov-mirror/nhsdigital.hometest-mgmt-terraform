@@ -1,5 +1,5 @@
 ---
-name: "Deploy Terraform HomeTest App"
+name: "[Template] TF HomeTest App"
 run-name: "Deploy account: ${{ inputs.account || 'poc' }}, env: ${{ inputs.env || 'dev' }}, tf: ${{ inputs.action || 'plan' }}"
 
 on:
