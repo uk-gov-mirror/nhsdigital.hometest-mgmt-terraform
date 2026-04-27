@@ -546,6 +546,9 @@ No modules.
 | [aws_cloudwatch_log_resource_policy.dns_query_logs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_resource_policy) | resource |
 | [aws_cloudwatch_log_stream.dns_query_firehose](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_stream) | resource |
 | [aws_cloudwatch_log_subscription_filter.dns_query_logs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_subscription_filter) | resource |
+| [aws_cloudwatch_metric_alarm.firewall_dropped_packets_high](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_metric_alarm) | resource |
+| [aws_cloudwatch_metric_alarm.firewall_passed_packets_zero](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_metric_alarm) | resource |
+| [aws_cloudwatch_metric_alarm.firewall_received_packets_zero](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_metric_alarm) | resource |
 | [aws_db_subnet_group.main](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_subnet_group) | resource |
 | [aws_eip.nat](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/eip) | resource |
 | [aws_flow_log.main](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/flow_log) | resource |
@@ -648,8 +651,10 @@ No modules.
 | <a name="input_enable_ipv6"></a> [enable\_ipv6](#input\_enable\_ipv6) | Enable IPv6 CIDR block assignment for the VPC (dual-stack) | `bool` | `false` | no |
 | <a name="input_enable_network_firewall"></a> [enable\_network\_firewall](#input\_enable\_network\_firewall) | Enable AWS Network Firewall for egress filtering and deep packet inspection | `bool` | `false` | no |
 | <a name="input_environment"></a> [environment](#input\_environment) | Environment name (e.g., mgmt, dev, staging, prod) | `string` | n/a | yes |
+| <a name="input_firewall_alert_sns_topic_arn"></a> [firewall\_alert\_sns\_topic\_arn](#input\_firewall\_alert\_sns\_topic\_arn) | ARN of the SNS topic for Network Firewall CloudWatch alarm notifications. If empty, alarms are created without actions. | `string` | `""` | no |
 | <a name="input_firewall_default_deny"></a> [firewall\_default\_deny](#input\_firewall\_default\_deny) | Enable default deny rule - drops all traffic not explicitly allowed. CAUTION: Ensure all required destinations are in allowed lists before enabling. | `bool` | `true` | no |
 | <a name="input_firewall_logs_retention_days"></a> [firewall\_logs\_retention\_days](#input\_firewall\_logs\_retention\_days) | Number of days to retain Network Firewall logs in CloudWatch | `number` | `90` | no |
+| <a name="input_firewall_rule_group_capacities"></a> [firewall\_rule\_group\_capacities](#input\_firewall\_rule\_group\_capacities) | Capacity units for each Network Firewall rule group. Capacity CANNOT be changed after creation (requires rule group recreation). Set values higher than your expected rule count to allow headroom for growth. | <pre>object({<br/>    aws_services  = optional(number, 50)<br/>    egress_ip     = optional(number, 100)<br/>    egress_domain = optional(number, 100)<br/>    ingress_ip    = optional(number, 100)<br/>    drop_all      = optional(number, 10)<br/>  })</pre> | `{}` | no |
 | <a name="input_health_check_failure_threshold"></a> [health\_check\_failure\_threshold](#input\_health\_check\_failure\_threshold) | The number of consecutive health check failures required before considering the endpoint unhealthy | `number` | `3` | no |
 | <a name="input_health_check_fqdn"></a> [health\_check\_fqdn](#input\_health\_check\_fqdn) | The FQDN to health check (defaults to route53\_zone\_name if not specified) | `string` | `""` | no |
 | <a name="input_health_check_path"></a> [health\_check\_path](#input\_health\_check\_path) | The path for HTTP/HTTPS health checks | `string` | `"/health"` | no |
@@ -697,6 +702,7 @@ No modules.
 | <a name="output_lambda_vpc_config"></a> [lambda\_vpc\_config](#output\_lambda\_vpc\_config) | VPC configuration for Lambda functions (ready to use) |
 | <a name="output_nat_gateway_ids"></a> [nat\_gateway\_ids](#output\_nat\_gateway\_ids) | List of NAT Gateway IDs |
 | <a name="output_nat_gateway_public_ips"></a> [nat\_gateway\_public\_ips](#output\_nat\_gateway\_public\_ips) | List of NAT Gateway public IP addresses |
+| <a name="output_network_firewall_alarm_arns"></a> [network\_firewall\_alarm\_arns](#output\_network\_firewall\_alarm\_arns) | ARNs of the Network Firewall CloudWatch alarms |
 | <a name="output_network_firewall_arn"></a> [network\_firewall\_arn](#output\_network\_firewall\_arn) | ARN of the Network Firewall |
 | <a name="output_network_firewall_enabled"></a> [network\_firewall\_enabled](#output\_network\_firewall\_enabled) | Whether Network Firewall is enabled |
 | <a name="output_network_firewall_endpoint_ids"></a> [network\_firewall\_endpoint\_ids](#output\_network\_firewall\_endpoint\_ids) | Map of AZ to Network Firewall endpoint IDs |
