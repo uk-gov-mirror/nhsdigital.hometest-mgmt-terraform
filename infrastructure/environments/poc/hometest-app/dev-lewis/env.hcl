@@ -1,7 +1,7 @@
 # Set common variables for the environment. This is automatically pulled in in the root terragrunt.hcl configuration to
 # feed forward to the child modules.
 locals {
-  environment = "lewis"
+  environment = "dev-lewis"
 
   enable_wiremock            = true
   wiremock_bypass_waf        = false

@@ -28,7 +28,7 @@ on:
           - dev
           - uat
           - staging
-          - lewis
+          - dev-lewis
       action:
         description: "Terraform action to perform"
         required: true
