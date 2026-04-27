@@ -11,6 +11,7 @@ module "goose_migrator_lambda" {
   version = "8.7.0"
 
   function_name          = "${local.resource_prefix}-lambda-goose-migrator"
+  description            = "Lambda function for running Goose DB migrations (Go, custom runtime)"
   handler                = "bootstrap" # Do not change - for custom runtimes, this must be 'bootstrap'
   runtime                = "provided.al2023"
   create_role            = false

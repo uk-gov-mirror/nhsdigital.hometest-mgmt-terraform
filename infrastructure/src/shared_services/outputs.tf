@@ -326,8 +326,8 @@ output "developer_role_arn" {
 }
 
 output "developer_deployment_policy_arns" {
-  description = "Developer deployment policy ARN (consolidated policy for SSO permission set attachment)"
-  value       = [aws_iam_policy.developer_deployment.arn]
+  description = "Developer deployment policy ARNs (split across two policies for SSO permission set attachment)"
+  value       = [aws_iam_policy.developer_deployment.arn, aws_iam_policy.developer_deployment_infra.arn]
 }
 
 output "developer_deployment_policy_name" {

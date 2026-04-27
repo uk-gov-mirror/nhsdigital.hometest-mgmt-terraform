@@ -105,14 +105,9 @@ resource "aws_iam_role_policy" "developer_lambda" {
 }
 
 ################################################################################
-# Developer Deployment Policy
+# Developer Deployment Policy (Part 1 - Compute & API)
 # Customer-managed policy for SSO Permission Set attachment
-# Allows developers to deploy/destroy hometest-app environments with Terragrunt
-#
-# Consolidated policy covering:
-#   - IAM, Lambda, API Gateway, SQS
-#   - CloudFront, S3, Route53
-#   - CloudWatch, KMS, EC2, WAF, ACM, SNS, Resource Groups, TF state
+# Covers: IAM, Lambda, API Gateway, SQS, CloudFront, S3, Route53, TF state
 ################################################################################
 
 resource "aws_iam_policy" "developer_deployment" {
@@ -195,7 +190,6 @@ resource "aws_iam_policy" "developer_deployment" {
         Action   = ["sqs:*"]
         Resource = "arn:aws:sqs:*:${var.aws_account_id}:${var.project_name}-*"
       },
-      # CDN & Storage (CloudFront, S3, Route53)
       {
         Sid      = "CloudFrontMgmt"
         Effect   = "Allow"
@@ -225,7 +219,61 @@ resource "aws_iam_policy" "developer_deployment" {
           "arn:aws:route53:::change/*"
         ]
       },
-      # Infra & Monitoring (CloudWatch, KMS, EC2, WAF, ACM, SNS, Resource Groups, TF state)
+      {
+        Sid    = "TFStateAccess"
+        Effect = "Allow"
+        Action = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"]
+        Resource = [
+          "arn:aws:s3:::${var.project_name}-*-s3-tfstate",
+          "arn:aws:s3:::${var.project_name}-*-s3-tfstate/*"
+        ]
+      },
+      {
+        Sid      = "RDSQueryEditor"
+        Effect   = "Allow"
+        Action   = ["dbqms:*", "rds-data:*"]
+        Resource = "*"
+      },
+      {
+        Sid    = "SecretsManagerMgmt"
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:CreateSecret",
+          "secretsmanager:DeleteSecret",
+          "secretsmanager:DescribeSecret",
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:PutSecretValue",
+          "secretsmanager:UpdateSecret",
+          "secretsmanager:TagResource",
+          "secretsmanager:UntagResource",
+          "secretsmanager:GetResourcePolicy",
+          "secretsmanager:PutResourcePolicy",
+          "secretsmanager:DeleteResourcePolicy"
+        ]
+        Resource = "arn:aws:secretsmanager:*:${var.aws_account_id}:secret:${var.project_name}/*"
+      }
+    ]
+  })
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-developer-deployment"
+  })
+}
+
+################################################################################
+# Developer Deployment Policy (Part 2 - Infrastructure & Networking)
+# Customer-managed policy for SSO Permission Set attachment
+# Covers: CloudWatch, KMS, EC2, WAF, ACM, ELB, Service Discovery, SNS
+################################################################################
+
+resource "aws_iam_policy" "developer_deployment_infra" {
+  name        = "${local.resource_prefix}-developer-deployment-infra"
+  description = "Infrastructure permissions for HomeTest developers via SSO (networking & monitoring)"
+  path        = "/"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
       {
         Sid    = "CWLogsMgmt"
         Effect = "Allow"
@@ -234,7 +282,9 @@ resource "aws_iam_policy" "developer_deployment" {
           "arn:aws:logs:*:${var.aws_account_id}:log-group:/aws/lambda/${var.project_name}-*",
           "arn:aws:logs:*:${var.aws_account_id}:log-group:/aws/lambda/${var.project_name}-*:*",
           "arn:aws:logs:*:${var.aws_account_id}:log-group:/aws/apigateway/${var.project_name}-*",
-          "arn:aws:logs:*:${var.aws_account_id}:log-group:/aws/apigateway/${var.project_name}-*:*"
+          "arn:aws:logs:*:${var.aws_account_id}:log-group:/aws/apigateway/${var.project_name}-*:*",
+          "arn:aws:logs:*:${var.aws_account_id}:log-group:/ecs/${var.project_name}-*",
+          "arn:aws:logs:*:${var.aws_account_id}:log-group:/ecs/${var.project_name}-*:*"
         ]
       },
       {
@@ -275,61 +325,122 @@ resource "aws_iam_policy" "developer_deployment" {
         Resource = "*"
       },
       {
+        Sid    = "EC2SecurityGroupMgmt"
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateSecurityGroup",
+          "ec2:DeleteSecurityGroup",
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:AuthorizeSecurityGroupEgress",
+          "ec2:RevokeSecurityGroupIngress",
+          "ec2:RevokeSecurityGroupEgress",
+          "ec2:CreateTags",
+          "ec2:DeleteTags"
+        ]
+        Resource = "*"
+        Condition = {
+          StringLike = {
+            "aws:RequestTag/Name" = ["${var.project_name}-*"]
+          }
+        }
+      },
+      {
+        Sid    = "EC2SecurityGroupMgmtByTag"
+        Effect = "Allow"
+        Action = [
+          "ec2:DeleteSecurityGroup",
+          "ec2:AuthorizeSecurityGroupIngress",
+          "ec2:AuthorizeSecurityGroupEgress",
+          "ec2:RevokeSecurityGroupIngress",
+          "ec2:RevokeSecurityGroupEgress",
+          "ec2:CreateTags",
+          "ec2:DeleteTags"
+        ]
+        Resource = "*"
+        Condition = {
+          StringLike = {
+            "ec2:ResourceTag/Name" = ["${var.project_name}-*"]
+          }
+        }
+      },
+      {
         Sid      = "WAFAssoc"
         Effect   = "Allow"
         Action   = ["wafv2:AssociateWebACL", "wafv2:DisassociateWebACL", "wafv2:GetWebACLForResource", "wafv2:GetWebACL"]
         Resource = "*"
       },
       {
-        Sid      = "ACMRead"
-        Effect   = "Allow"
-        Action   = ["acm:DescribeCertificate", "acm:ListTagsForCertificate"]
-        Resource = "arn:aws:acm:*:${var.aws_account_id}:certificate/*"
+        Sid    = "ACMMgmt"
+        Effect = "Allow"
+        Action = [
+          "acm:DescribeCertificate",
+          "acm:ListTagsForCertificate",
+          "acm:RequestCertificate",
+          "acm:DeleteCertificate",
+          "acm:AddTagsToCertificate",
+          "acm:RemoveTagsFromCertificate",
+          "acm:GetCertificate",
+          "acm:ListCertificates"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "ELBMgmt"
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:CreateTargetGroup",
+          "elasticloadbalancing:DeleteTargetGroup",
+          "elasticloadbalancing:ModifyTargetGroup",
+          "elasticloadbalancing:ModifyTargetGroupAttributes",
+          "elasticloadbalancing:DescribeTargetGroups",
+          "elasticloadbalancing:DescribeTargetGroupAttributes",
+          "elasticloadbalancing:DescribeTargetHealth",
+          "elasticloadbalancing:RegisterTargets",
+          "elasticloadbalancing:DeregisterTargets",
+          "elasticloadbalancing:CreateListener",
+          "elasticloadbalancing:DeleteListener",
+          "elasticloadbalancing:ModifyListener",
+          "elasticloadbalancing:DescribeListeners",
+          "elasticloadbalancing:CreateRule",
+          "elasticloadbalancing:DeleteRule",
+          "elasticloadbalancing:ModifyRule",
+          "elasticloadbalancing:DescribeRules",
+          "elasticloadbalancing:DescribeLoadBalancers",
+          "elasticloadbalancing:DescribeLoadBalancerAttributes",
+          "elasticloadbalancing:AddTags",
+          "elasticloadbalancing:RemoveTags",
+          "elasticloadbalancing:DescribeTags"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid    = "ServiceDiscoveryMgmt"
+        Effect = "Allow"
+        Action = [
+          "servicediscovery:CreateService",
+          "servicediscovery:DeleteService",
+          "servicediscovery:GetService",
+          "servicediscovery:UpdateService",
+          "servicediscovery:ListServices",
+          "servicediscovery:GetNamespace",
+          "servicediscovery:ListNamespaces",
+          "servicediscovery:TagResource",
+          "servicediscovery:UntagResource",
+          "servicediscovery:ListTagsForResource"
+        ]
+        Resource = "*"
       },
       {
         Sid      = "SNSRead"
         Effect   = "Allow"
         Action   = ["sns:GetTopicAttributes", "sns:ListTagsForResource"]
         Resource = "arn:aws:sns:*:${var.aws_account_id}:${var.project_name}-*"
-      },
-      {
-        Sid    = "TFStateAccess"
-        Effect = "Allow"
-        Action = ["s3:GetObject", "s3:PutObject", "s3:DeleteObject", "s3:ListBucket"]
-        Resource = [
-          "arn:aws:s3:::${var.project_name}-*-s3-tfstate",
-          "arn:aws:s3:::${var.project_name}-*-s3-tfstate/*"
-        ]
-      },
-      {
-        Sid      = "RDSQueryEditor"
-        Effect   = "Allow"
-        Action   = ["dbqms:*", "rds-data:*"]
-        Resource = "*"
-      },
-      {
-        Sid    = "SecretsManagerMgmt"
-        Effect = "Allow"
-        Action = [
-          "secretsmanager:CreateSecret",
-          "secretsmanager:DeleteSecret",
-          "secretsmanager:DescribeSecret",
-          "secretsmanager:GetSecretValue",
-          "secretsmanager:PutSecretValue",
-          "secretsmanager:UpdateSecret",
-          "secretsmanager:TagResource",
-          "secretsmanager:UntagResource",
-          "secretsmanager:GetResourcePolicy",
-          "secretsmanager:PutResourcePolicy",
-          "secretsmanager:DeleteResourcePolicy"
-        ]
-        Resource = "arn:aws:secretsmanager:*:${var.aws_account_id}:secret:${var.project_name}/*"
       }
     ]
   })
 
   tags = merge(local.common_tags, {
-    Name = "${local.resource_prefix}-developer-deployment"
+    Name = "${local.resource_prefix}-developer-deployment-infra"
   })
 }
 
