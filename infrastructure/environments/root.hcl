@@ -75,7 +75,7 @@ remote_state {
     use_lockfile = true
     # IMPORTANT: This key derives `environment` from env.hcl (via find_in_parent_folders)
     # and uses basename(path) as the module name. For NESTED modules (e.g., dev/lambda-goose-migrator)
-    # the basename alone is NOT unique across environments. Each subenv directory (dev/, uat/, etc.)
+    # the basename alone is NOT unique across environments. Each env directory (dev/, uat/, etc.)
     # MUST have an env.hcl that sets `environment = "<name>"` to disambiguate the key.
     # Without it, all environments share the same key and overwrite each other's state.
     key        = "${local.account_name}-${local.environment}-${basename(path_relative_to_include())}.tfstate"

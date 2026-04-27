@@ -136,15 +136,21 @@ infrastructure/
 │           └── staging/                # Staging environment
 ├── modules/                            # Reusable Terraform modules
 │   ├── api-gateway/                    # API Gateway REST API with custom domain
+│   ├── api-gateway-alarms/             # CloudWatch alarms for API Gateway metrics
+│   ├── aurora-alarms/                  # CloudWatch alarms for Aurora PostgreSQL
+│   ├── aurora-postgres/                # Aurora PostgreSQL via community module
+│   ├── cloudfront-alarms/              # CloudWatch alarms for CloudFront distributions
 │   ├── cloudfront-spa/                 # CloudFront + S3 for SPA with routing
 │   ├── deployment-artifacts/           # S3 bucket for Lambda packages
 │   ├── developer-iam/                  # Developer deploy role with scoped policies
 │   ├── lambda/                         # Lambda function with placeholder support
 │   ├── lambda-iam/                     # Lambda execution role + policies
-│   ├── aurora-postgres/                # Aurora PostgreSQL via community module
+│   ├── network-alarms/                 # CloudWatch alarms for NAT GW + Network Firewall
+│   ├── slack-alerts/                   # AWS Chatbot Slack integration for alarms
 │   ├── sns/                            # SNS topics with subscriptions
 │   ├── sqs/                            # SQS queues with DLQ + CloudWatch alarms
-│   └── waf/                            # WAFv2 Web ACL with managed rules
+│   ├── waf/                            # WAFv2 Web ACL with managed rules
+│   └── waf-alarms/                     # CloudWatch alarms for WAFv2 threat activity
 └── src/                                # Terraform root modules (composed from modules/)
     ├── bootstrap/                      # State backend + GitHub OIDC bootstrap
     ├── network/                        # VPC, subnets, firewall, Route53, endpoints
@@ -265,6 +271,14 @@ To add a new environment (e.g. `staging`), see `dev-example/` as a template:
 | **POC** | 781863586270 | poc | dev, uat, demo, prod, dev-example |
 | **DEV** | 781195019563 | dev | staging |
 
+| Environment | Integration | Deployment Trigger | Source | Stability |
+|---|---|---|---|---|
+| `dev` | Live | Auto on merge to `main` | `main` HEAD | Latest |
+| `uat` | Stubbed (WireMock) | Auto on merge to `main` | `main` HEAD | Latest |
+| `demo` | Live | Manual (on demand) | Tagged release | High |
+| `dev-{name}` | Configurable | Manual (on demand) | Any ref | Varies |
+
+See [Environment Strategy](../docs/environment-strategy.md) for full details on deployment triggers, intended use, and how to create on-demand environments.
 Domain pattern: `{env}.{account_shortname}.hometest.service.nhs.uk` (default, using shared wildcard cert)
 
 Environments can override domains in `env.hcl` for custom certs (e.g., `dev.hometest.service.nhs.uk`).

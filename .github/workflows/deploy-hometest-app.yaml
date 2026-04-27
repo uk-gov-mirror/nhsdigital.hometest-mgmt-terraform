@@ -1,0 +1,64 @@
+---
+name: "Deploy HomeTest App"
+run-name: "Deploy account: ${{ inputs.account || 'poc' }}, env: ${{ inputs.env || 'dev' }}, tf: ${{ inputs.action || 'plan' }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      hometest_service_ref:
+        description: "Branch, tag, or SHA to checkout for hometest-service"
+        required: false
+        type: string
+        default: "main"
+      account:
+        description: "Target AWS account"
+        required: true
+        type: choice
+        options:
+          - poc
+          - dev
+        default: poc
+      env:
+        description: "Target environment to deploy"
+        required: true
+        type: choice
+        default: dev
+        options:
+          # - dev-example
+          - dev
+          - uat
+          - staging
+      action:
+        description: "Terraform action to perform"
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+          - destroy
+        default: plan
+      targets:
+        description: "Comma-separated Terraform targets (leave empty for full deployment)"
+        required: false
+        type: string
+        default: ""
+      skip_migrator:
+        description: "Skip the goose migrator deployment"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/template-deploy-hometest-app.yaml
+    with:
+      hometest_service_ref: ${{ inputs.hometest_service_ref }}
+      account: ${{ inputs.account }}
+      env: ${{ inputs.env }}
+      action: ${{ inputs.action }}
+      targets: ${{ inputs.targets }}
+      skip_migrator: ${{ inputs.skip_migrator }}
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      NHS_HOMETEST_SERVICE_DEPLOY_KEY_SSH_PRIV: ${{ secrets.NHS_HOMETEST_SERVICE_DEPLOY_KEY_SSH_PRIV }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

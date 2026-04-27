@@ -1,0 +1,43 @@
+---
+name: "CI/CD Deploy POC"
+run-name: "CI/CD POC — core (ECS) + dev/uat hometest-app"
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy-core:
+    uses: ./.github/workflows/template-deploy-core.yaml
+    with:
+      account: poc
+      deploy_ecs: true
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  deploy-dev:
+    needs: [deploy-core]
+    uses: ./.github/workflows/template-deploy-hometest-app.yaml
+    with:
+      account: poc
+      env: dev
+      action: apply
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      NHS_HOMETEST_SERVICE_DEPLOY_KEY_SSH_PRIV: ${{ secrets.NHS_HOMETEST_SERVICE_DEPLOY_KEY_SSH_PRIV }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  deploy-uat:
+    needs: [deploy-core]
+    uses: ./.github/workflows/template-deploy-hometest-app.yaml
+    with:
+      account: poc
+      env: uat
+      action: apply
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      NHS_HOMETEST_SERVICE_DEPLOY_KEY_SSH_PRIV: ${{ secrets.NHS_HOMETEST_SERVICE_DEPLOY_KEY_SSH_PRIV }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

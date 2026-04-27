@@ -2,6 +2,77 @@
 
 This guide walks through the steps to create a new environment (e.g. `dev2`, `staging`, `test`) for the NHS HomeTest Service.
 
+## TL;DR
+
+```bash
+# 1. Login to AWS CLI
+aws sso login --profile PoC-Dev
+
+# 2. Export AWS profile (or add to ~/.zshrc)
+export AWS_PROFILE=PoC-Dev
+
+# 3. Copy the template environment
+ENV_NAME="dev2"  # Change to your environment name
+cp -r infrastructure/environments/poc/hometest-app/dev-example \
+      infrastructure/environments/poc/hometest-app/${ENV_NAME}
+
+# 4. Update the environment name in env.hcl
+sed -i '' "s/environment = \".*\"/environment = \"${ENV_NAME}\"/" \
+  infrastructure/environments/poc/hometest-app/${ENV_NAME}/env.hcl
+
+# 5. Deploy the database migrator
+cd infrastructure/environments/poc/hometest-app/${ENV_NAME}/lambda-goose-migrator
+terragrunt apply
+
+# 6. Deploy the app
+cd ../app
+terragrunt apply
+```
+
+## Contents
+
+- [Creating a New Development Environment](#creating-a-new-development-environment)
+  - [TL;DR](#tldr)
+  - [Contents](#contents)
+  - [Overview](#overview)
+  - [Prerequisites](#prerequisites)
+  - [AWS SSO Setup](#aws-sso-setup)
+    - [First-time configuration](#first-time-configuration)
+    - [Login and export profile](#login-and-export-profile)
+  - [Quick Start](#quick-start)
+  - [Step-by-Step Guide](#step-by-step-guide)
+    - [Step 1: Create the Environment Directory](#step-1-create-the-environment-directory)
+    - [Step 2: Create `env.hcl`](#step-2-create-envhcl)
+    - [Step 3: Create `app/terragrunt.hcl`](#step-3-create-appterragrunthcl)
+    - [Step 4: Customise the Configuration (Optional)](#step-4-customise-the-configuration-optional)
+      - [4a. Optional: Custom Domain](#4a-optional-custom-domain)
+      - [4b. Optional: Add Environment-Specific Lambdas](#4b-optional-add-environment-specific-lambdas)
+      - [4c. Optional: Enable WireMock](#4c-optional-enable-wiremock)
+      - [4d. Optional: Use Placeholder Lambdas](#4d-optional-use-placeholder-lambdas)
+    - [Step 5: Create the Database Migrator](#step-5-create-the-database-migrator)
+    - [Step 6: Validate the Configuration](#step-6-validate-the-configuration)
+    - [Step 7: Deploy](#step-7-deploy)
+      - [Option A: Deploy Locally](#option-a-deploy-locally)
+      - [Option B: Deploy via GitHub Actions](#option-b-deploy-via-github-actions)
+  - [Quick Deploy (Iterative Development)](#quick-deploy-iterative-development)
+    - [Deploy Only Lambdas](#deploy-only-lambdas)
+    - [Deploy Only UI](#deploy-only-ui)
+    - [Deploy Both (Skip Nothing, But Target Lambdas)](#deploy-both-skip-nothing-but-target-lambdas)
+    - [Force Rebuild](#force-rebuild)
+    - [Environment Variables Reference](#environment-variables-reference)
+    - [Step 8: Verify the Deployment](#step-8-verify-the-deployment)
+  - [File Structure After Creation](#file-structure-after-creation)
+  - [How It Works](#how-it-works)
+  - [Destroying an Environment](#destroying-an-environment)
+  - [Checklist](#checklist)
+  - [Troubleshooting](#troubleshooting)
+    - ["Can't find env.hcl"](#cant-find-envhcl)
+    - [DNS not resolving](#dns-not-resolving)
+    - [Lambda build failures](#lambda-build-failures)
+    - [SPA build failures](#spa-build-failures)
+    - [`NoCredentialProviders` or authentication errors](#nocredentialproviders-or-authentication-errors)
+    - [State lock errors](#state-lock-errors)
+
 ## Overview
 
 Each environment deploys its own isolated set of:
@@ -17,7 +88,7 @@ All environments share core infrastructure (VPC, WAF, ACM, KMS, Cognito, Aurora 
 ## Prerequisites
 
 - Core infrastructure already deployed (`network`, `shared_services`, `aurora-postgres`, `lambda-goose-migrator`, and optionally `ecs` for WireMock)
-- AWS SSO access configured (`aws sso login --profile Admin-PoC`)
+- AWS SSO access configured and logged in (see [AWS SSO Setup](#aws-sso-setup) below)
 - Terraform 1.14.8 and Terragrunt 1.0.0 installed (run `mise install`)
 - The `hometest-service` repo cloned alongside this repo (for Lambda and SPA source code)
 
@@ -27,6 +98,59 @@ parent-dir/
 └── hometest-service/           (application code)
     ├── lambdas/
     └── ui/
+```
+
+## AWS SSO Setup
+
+### First-time configuration
+
+If you haven't configured the AWS SSO profile yet, run the interactive wizard:
+
+```bash
+aws configure sso
+```
+
+When prompted, enter the following values:
+
+| Prompt | Value |
+|--------|-------|
+| SSO session name | `nhs` |
+| SSO start URL | `https://d-9c67018f89.awsapps.com/start/#` |
+| SSO region | `eu-west-2` |
+| SSO registration scopes | `sso:account:access` |
+
+The wizard will open a browser for authentication. After authenticating, select the **PoC account** and **Hometest-NonProd-Developers** role. When asked for a profile name, enter `PoC-Dev`.
+
+This creates the following in `~/.aws/config`:
+
+```ini
+[sso-session nhs]
+sso_start_url = https://d-9c67018f89.awsapps.com/start/#
+sso_region = eu-west-2
+sso_registration_scopes = sso:account:access
+
+[profile PoC-Dev]
+sso_session = nhs
+sso_account_id = 781863586270
+sso_role_name = Hometest-NonProd-Developers
+region = eu-west-2
+```
+
+### Login and export profile
+
+Before running any `terragrunt` command, you must log in and export the profile:
+
+```bash
+aws sso login --profile PoC-Dev
+export AWS_PROFILE=PoC-Dev
+```
+
+> **Important:** You must `export AWS_PROFILE` in every new terminal session. Without it, Terraform/Terragrunt will not pick up your SSO credentials and you'll get `NoCredentialProviders` errors.
+
+Verify credentials are working:
+
+```bash
+aws sts get-caller-identity
 ```
 
 ## Quick Start
@@ -200,9 +324,9 @@ inputs = {
 }
 ```
 
-### Step 5: Create the Database Migrator (Optional)
+### Step 5: Create the Database Migrator
 
-Each environment can have its own Goose database migrator. Create the subdirectory and config:
+Each environment requires its own Goose database migrator to set up the per-environment database schema. Create the subdirectory and config:
 
 ```bash
 mkdir -p infrastructure/environments/poc/hometest-app/${ENV_NAME}/lambda-goose-migrator
@@ -241,34 +365,44 @@ There are two ways to deploy an environment: **locally** or via **GitHub Actions
 #### Option A: Deploy Locally
 
 ```bash
+# Ensure AWS credentials are active
+export AWS_PROFILE=PoC-Dev
+
 cd infrastructure/environments/poc/hometest-app/${ENV_NAME}/app
 terragrunt apply
 ```
 
 When deploying locally, the build hooks reference your **local clone** of the `hometest-service` repo (expected at `../hometest-service/` relative to this repo's root). This means your local Lambda and SPA source code is what gets built and deployed — useful for testing changes before they're merged.
 
+> **Don't forget the database migrator!** After deploying the app, you must also deploy the goose migrator to set up the database schema for your environment:
+>
+> ```bash
+> cd infrastructure/environments/poc/hometest-app/${ENV_NAME}/lambda-goose-migrator
+> terragrunt apply
+> ```
+
 #### Option B: Deploy via GitHub Actions
 
 You can also trigger a deployment from the GitHub Actions UI:
 
-**[Deploy Terraform HomeTest App](https://github.com/NHSDigital/hometest-mgmt-terraform/actions/workflows/deploy-tf-hometest-app.yaml)** (workflow file: `.github/workflows/deploy-tf-hometest-app.yaml`)
+**[Deploy HomeTest App](https://github.com/NHSDigital/hometest-mgmt-terraform/actions/workflows/deploy-hometest-app.yaml)** (workflow file: `.github/workflows/deploy-hometest-app.yaml`)
 
 Click **"Run workflow"** and configure the following inputs:
 
 | Input | Type | Default | Description |
 |-------|------|---------|-------------|
 | `hometest_service_ref` | string | `main` | Branch, tag, or SHA to checkout for `hometest-service`. Unlike local deployment which uses your local copy, the pipeline checks out the specified ref from the remote repo. |
-| `environment` | choice | `poc` | AWS account to deploy to (`poc` or `dev`). |
-| `subenv` | choice | `dev` | Environment within the account (e.g. `dev`, `uat`, `demo`, `staging`). |
+| `account` | choice | `poc` | AWS account to deploy to (`poc` or `dev`). |
+| `env` | choice | `dev` | Target environment (e.g. `dev`, `uat`, `demo`, `staging`). |
 | `action` | choice | `plan` | Terraform action: `plan` (preview), `apply` (deploy), or `destroy` (teardown). |
 | `targets` | string | _(empty)_ | Comma-separated list of resources to target in the app stack only (e.g. `module.lambdas["order-status-lambda"]`). Leave empty for full deployment. Does not apply to the migrator. |
 | `skip_migrator` | boolean | `false` | Skip the goose migrator deployment entirely (deploy app stack only). Equivalent to `SKIP_MIGRATOR=true` locally. |
 
-> **Important:** The `subenv` input is a fixed choice list. To deploy a new environment from the pipeline, you must first add it to the `options` list under `inputs.subenv` in `.github/workflows/deploy-tf-hometest-app.yaml`:
+> **Important:** The `env` input is a fixed choice list. To deploy a new environment from the pipeline, you must first add it to the `options` list under `inputs.env` in `.github/workflows/deploy-hometest-app.yaml`:
 >
 > ```yaml
-> subenv:
->   description: "Terraform subenv to deploy"
+> env:
+>   description: "Target environment to deploy"
 >   required: true
 >   type: choice
 >   default: dev
@@ -290,6 +424,108 @@ Both local and pipeline deployments will:
 4. Upload the SPA to S3 and invalidate CloudFront cache (via `upload_spa` after hook)
 
 > **Note:** Build hooks use content hashing to skip rebuilds when source code hasn't changed. To force a rebuild, set `FORCE_LAMBDA_REBUILD=true` or `FORCE_SPA_REBUILD=true`.
+
+## Quick Deploy (Iterative Development)
+
+Once your environment is fully deployed, you can rapidly redeploy just lambdas, just the UI, or both without running a full `terragrunt apply`. This is useful when iterating on `hometest-service` code.
+
+| What changed | Command | How it works |
+|--------------|---------|--------------|
+| Lambda code only | `SKIP_SPA=true terragrunt apply -target='module.lambdas["<name>"].aws_lambda_function.this' -auto-approve` | Skips SPA build/upload, targets only the lambda resource → Terraform re-uploads the zip |
+| UI code only | `SKIP_LAMBDAS=true terragrunt apply -refresh-only -auto-approve` | Skips lambda build, Terraform is a no-op, but the `upload_spa` after-hook still runs → S3 sync + CloudFront invalidation |
+| Both | `terragrunt apply -target='module.lambdas["<name>"].aws_lambda_function.this' -auto-approve` | Builds both, targets lambda for Terraform, SPA hooks run regardless of `-target` |
+
+All commands below assume you are in the environment's `app/` directory:
+
+```bash
+export AWS_PROFILE=PoC-Dev
+cd infrastructure/environments/poc/hometest-app/${ENV_NAME}/app
+```
+
+### Deploy Only Lambdas
+
+Skip the SPA build/upload and target only the lambda resources that changed:
+
+```bash
+# All (and only) lambdas
+SKIP_SPA=true terragrunt apply -target='module.lambdas' -auto-approve
+
+## Or use the mise shortcut:
+mise run deploy-lambdas
+
+# Single lambda (~30s build + ~20s targeted apply)
+SKIP_SPA=true terragrunt apply \
+  -target='module.lambdas["login-lambda"].aws_lambda_function.this' \
+  -auto-approve
+
+# Multiple lambdas
+SKIP_SPA=true terragrunt apply \
+  -target='module.lambdas["login-lambda"].aws_lambda_function.this' \
+  -target='module.lambdas["order-service-lambda"].aws_lambda_function.this' \
+  -auto-approve
+```
+
+**Available lambda target names** (from `_envcommon/hometest-app.hcl`):
+
+| Lambda | Target |
+|--------|--------|
+| Eligibility Lookup | `module.lambdas["eligibility-lookup-lambda"].aws_lambda_function.this` |
+| Order Router | `module.lambdas["order-router-lambda"].aws_lambda_function.this` |
+| Login | `module.lambdas["login-lambda"].aws_lambda_function.this` |
+| Session | `module.lambdas["session-lambda"].aws_lambda_function.this` |
+| Order Result | `module.lambdas["order-result-lambda"].aws_lambda_function.this` |
+| Order Service | `module.lambdas["order-service-lambda"].aws_lambda_function.this` |
+| Get Order | `module.lambdas["get-order-lambda"].aws_lambda_function.this` |
+| Get Results | `module.lambdas["get-results-lambda"].aws_lambda_function.this` |
+| Order Status | `module.lambdas["order-status-lambda"].aws_lambda_function.this` |
+| Postcode Lookup | `module.lambdas["postcode-lookup-lambda"].aws_lambda_function.this` |
+
+### Deploy Only UI
+
+Skip the lambda build. Use `-target=provider.aws` so Terraform is a no-op, but the `upload_spa` after-hook still runs (builds the SPA, syncs to S3, invalidates CloudFront):
+
+```bash
+SKIP_LAMBDAS=true terragrunt apply -target=provider.aws -auto-approve
+
+# Or use the mise shortcut:
+mise run deploy-ui
+```
+
+### Deploy Both (Skip Nothing, But Target Lambdas)
+
+If you changed both lambda and UI code but want to skip evaluating the full Terraform graph:
+
+```bash
+terragrunt apply -target='module.lambdas' -auto-approve
+
+# Or use the mise shortcut:
+mise run deploy-all
+```
+
+The SPA build + upload hooks run regardless of `-target` (they are before/after hooks, not Terraform resources).
+
+### Force Rebuild
+
+Override the content-hash build cache:
+
+```bash
+# Force rebuild lambdas only
+FORCE_LAMBDA_REBUILD=true SKIP_SPA=true terragrunt apply \
+  -target='module.lambdas["login-lambda"].aws_lambda_function.this' \
+  -auto-approve
+
+# Force rebuild everything
+FORCE_LAMBDA_REBUILD=true FORCE_SPA_REBUILD=true terragrunt apply
+```
+
+### Environment Variables Reference
+
+| Variable | Effect |
+|----------|--------|
+| `SKIP_SPA=true` | Skip SPA build (before-hook) and upload (after-hook) |
+| `SKIP_LAMBDAS=true` | Skip lambda build (before-hook) |
+| `FORCE_LAMBDA_REBUILD=true` | Ignore lambda build cache — always rebuild |
+| `FORCE_SPA_REBUILD=true` | Ignore SPA build cache — always rebuild |
 
 ### Step 8: Verify the Deployment
 
@@ -392,7 +628,7 @@ The `empty_spa_bucket_on_destroy` hook will automatically clean all versioned ob
 - [ ] Created `infrastructure/environments/poc/hometest-app/{env}/env.hcl`
 - [ ] Created `infrastructure/environments/poc/hometest-app/{env}/app/terragrunt.hcl`
 - [ ] (Optional) Added domain overrides in `env.hcl` for custom domain
-- [ ] (Optional) Created `lambda-goose-migrator/terragrunt.hcl` for DB migrations
+- [ ] Created `lambda-goose-migrator/terragrunt.hcl` for DB migrations
 - [ ] (Optional) Enabled WireMock flags in `env.hcl`
 - [ ] Ran `terragrunt validate` successfully
 - [ ] Ran `terragrunt plan` and reviewed changes
@@ -422,8 +658,8 @@ Ensure the `hometest-service` repo is cloned alongside this repo and builds work
 
 ```bash
 cd ../hometest-service/lambdas
-npm ci
-npm run build
+pnpm install
+pnpm run build
 ```
 
 To force a rebuild: `FORCE_LAMBDA_REBUILD=true terragrunt apply`
@@ -432,11 +668,26 @@ To force a rebuild: `FORCE_LAMBDA_REBUILD=true terragrunt apply`
 
 ```bash
 cd ../hometest-service/ui
-npm ci
-npm run build
+pnpm install
+pnpm run build
 ```
 
 To force a rebuild: `FORCE_SPA_REBUILD=true terragrunt apply`
+
+### `NoCredentialProviders` or authentication errors
+
+Ensure you have exported the correct AWS profile:
+
+```bash
+aws sso login --profile PoC-Dev
+export AWS_PROFILE=PoC-Dev
+```
+
+Verify credentials are working:
+
+```bash
+aws sts get-caller-identity
+```
 
 ### State lock errors
 

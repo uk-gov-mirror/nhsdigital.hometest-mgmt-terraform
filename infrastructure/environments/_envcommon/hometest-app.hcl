@@ -68,6 +68,9 @@ locals {
   wiremock_cpu               = lookup(local._env_flags, "wiremock_cpu", 256)
   wiremock_memory            = lookup(local._env_flags, "wiremock_memory", 512)
 
+  # Alerts — opt-in per environment via env.hcl (default: false; enabled for prod and demo)
+  enable_alerts = lookup(local._env_flags, "enable_alerts", false)
+
   # mTLS on the API Gateway custom domain — opt-in per environment.
   # WARNING: enabling mTLS on the browser-facing API domain will break SPA CORS
   # because browsers never send client certificates on preflight OPTIONS requests.
@@ -203,6 +206,29 @@ terraform {
   # Build and package artifacts locally BEFORE terraform runs.
   # All configuration is passed via environment variables.
   # Scripts live in scripts/ and are run under hometest-service's mise env.
+  #
+  # QUICK DEPLOY (skip unnecessary builds for faster iteration):
+  #   SKIP_SPA=true      — skip SPA build + upload (lambda-only deploy)
+  #   SKIP_LAMBDAS=true  — skip lambda build (UI-only deploy)
+  #
+  # Examples from the environment app/ directory:
+  #   # Full deploy (default)
+  #   terragrunt apply
+  #
+  #   # Deploy only lambdas (skip SPA build/upload, target lambda resources)
+  #   SKIP_SPA=true terragrunt apply -target='module.lambdas["login-lambda"].aws_lambda_function.this' -auto-approve
+  #
+  #   # Deploy all lambdas at once
+  #   SKIP_SPA=true terragrunt apply \
+  #     -target='module.lambdas["login-lambda"].aws_lambda_function.this' \
+  #     -target='module.lambdas["order-service-lambda"].aws_lambda_function.this' \
+  #     -auto-approve
+  #
+  #   # Deploy only UI (skip lambda build, refresh-only so terraform is a no-op)
+  #   SKIP_LAMBDAS=true terragrunt apply -refresh-only -auto-approve
+  #
+  #   # Force rebuild (ignore build cache)
+  #   FORCE_LAMBDA_REBUILD=true FORCE_SPA_REBUILD=true terragrunt apply
   # ---------------------------------------------------------------------------
 
   before_hook "build_lambdas" {
@@ -210,6 +236,10 @@ terraform {
     execute = [
       "bash", "-c",
       <<-EOF
+        if [[ "$${SKIP_LAMBDAS:-}" == "true" ]]; then
+          echo "Skipping lambda build (SKIP_LAMBDAS=true)"
+          exit 0
+        fi
         cd '${local.hometest_service_dir}' && \
         LAMBDAS_SOURCE_DIR='${local.lambdas_source_dir}' \
         LAMBDAS_CACHE_DIR='${local.lambda_build_cache}' \
@@ -224,6 +254,10 @@ terraform {
     execute = [
       "bash", "-c",
       <<-EOF
+        if [[ "$${SKIP_SPA:-}" == "true" ]]; then
+          echo "Skipping SPA build (SKIP_SPA=true)"
+          exit 0
+        fi
         cd '${local.hometest_service_dir}' && \
         SPA_SOURCE_DIR='${local.spa_source_dir}' \
         SPA_CACHE_DIR='${local.spa_build_cache}' \
@@ -241,12 +275,17 @@ terraform {
   # Upload SPA to S3 after terraform creates the bucket, then invalidate CloudFront.
   # Uses scripts/upload-spa.sh with type-specific caching (Next.js / Vite).
   # Bucket name and CloudFront ID are read from terraform outputs at runtime.
+  # Skipped when SKIP_SPA=true (lambda-only deploy).
   after_hook "upload_spa" {
     commands     = ["apply"]
     run_on_error = false
     execute = [
       "bash", "-c",
       <<-EOF
+        if [[ "$${SKIP_SPA:-}" == "true" ]]; then
+          echo "Skipping SPA upload (SKIP_SPA=true)"
+          exit 0
+        fi
         SPA_BUCKET=$(terraform output -raw spa_bucket_id 2>/dev/null || echo "")
         CLOUDFRONT_ID=$(terraform output -raw cloudfront_distribution_id 2>/dev/null || echo "")
         if [[ -n "$SPA_BUCKET" ]]; then
@@ -268,7 +307,7 @@ terraform {
   }
 
   # Push WireMock stubs after apply when WireMock is enabled for the environment.
-  # Runs `npm run wiremock:push` from hometest-service/tests with the correct base URL.
+  # Runs `pnpm run wiremock:push` from hometest-service/tests with the correct base URL.
   after_hook "push_wiremock_stubs" {
     commands     = ["apply"]
     run_on_error = false
@@ -279,7 +318,7 @@ terraform {
           echo "Pushing WireMock stubs to ${local.wiremock_base_url_for_spa} ..."
           cd '${local.hometest_service_dir}/tests' && \
           WIREMOCK_BASE_URL='${local.wiremock_base_url_for_spa}' \
-          mise exec -- npm run wiremock:push
+          mise exec -- pnpm run wiremock:push
         else
           echo "WireMock not enabled for this environment, skipping stub push."
         fi
@@ -390,8 +429,8 @@ inputs = {
   # Dependencies from shared_services
   kms_key_arn                   = dependency.shared_services.outputs.kms_key_arn
   pii_data_kms_key_arn          = dependency.shared_services.outputs.pii_data_kms_key_arn
-  sns_alerts_topic_arn          = dependency.shared_services.outputs.sns_alerts_topic_arn
-  sns_alerts_critical_topic_arn = dependency.shared_services.outputs.sns_alerts_critical_topic_arn
+  sns_alerts_topic_arn          = local.enable_alerts ? dependency.shared_services.outputs.sns_alerts_topic_arn : null
+  sns_alerts_critical_topic_arn = local.enable_alerts ? dependency.shared_services.outputs.sns_alerts_critical_topic_arn : null
 
   # OK actions — set to true for prod to get notified when alarms recover
   enable_ok_actions = false

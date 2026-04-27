@@ -53,12 +53,6 @@ repos:
           - --args=--call-module-type=local
           - --hook-config=--parallelism-limit=4
 
-      # - id: terraform_trivy
-      #   files: ^infrastructure/src
-      #   args:
-      #     - --args=--config=__GIT_WORKING_DIR__/trivy.yaml
-      #     - --args=--skip-dirs=.external_modules
-
       - id: terragrunt_validate_inputs
         name: Terragrunt validate inputs Bootstrap
         files: ^infrastructure/environments/poc/core/bootstrap/[^/]+$
@@ -173,3 +167,19 @@ repos:
         entry: gitleaks detect --no-git --redact --verbose --config=scripts/config/gitleaks.toml
         language: system
         pass_filenames: false
+
+      - id: syft-sbom
+        name: Syft SBOM generation
+        entry: syft scan dir:. --output spdx-json=sbom.spdx.json --output cyclonedx-json=sbom.cdx.json
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+      - id: grype-vuln-scan
+        name: Grype vulnerability scan
+        entry: grype sbom:sbom.cdx.json --fail-on high --only-fixed
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]

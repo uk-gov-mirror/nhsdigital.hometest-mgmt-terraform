@@ -63,7 +63,7 @@ calculate_source_hash() {
   # Calculate hash of all source files that affect the build:
   # - TypeScript/JavaScript source files (*.ts, *.js, *.mjs, *.cjs)
   # - JSON config files in src
-  # - package.json and package-lock.json (dependencies)
+  # - package.json and pnpm-lock.yaml (dependencies)
   # - tsconfig.json (build configuration)
   # - Build scripts
 
@@ -102,7 +102,7 @@ calculate_source_hash() {
   # Hash config files at root level
   for file in \
     "$LAMBDAS_DIR/package.json" \
-    "$LAMBDAS_DIR/package-lock.json" \
+    "$LAMBDAS_DIR/pnpm-lock.yaml" \
     "$LAMBDAS_DIR/tsconfig.json" \
     "$LAMBDAS_DIR/babel.config.cjs" \
     "$LAMBDAS_DIR/esbuild.config.js"; do
@@ -131,7 +131,7 @@ show_hash_inputs() {
   fi
 
   echo "  Config files:"
-  for file in package.json package-lock.json tsconfig.json babel.config.cjs; do
+  for file in package.json pnpm-lock.yaml tsconfig.json babel.config.cjs; do
     if [[ -f "$LAMBDAS_DIR/$file" ]]; then
       echo "    $file"
     fi
@@ -202,12 +202,12 @@ install_dependencies() {
   # Install root dependencies (if needed for shared libs)
   cd "$SERVICE_ROOT"
   if [[ -f "package.json" ]]; then
-    npm install --silent 2>/dev/null || npm install
+    pnpm install --silent 2>/dev/null || pnpm install
   fi
 
   # Install lambda dependencies
   cd "$LAMBDAS_DIR"
-  npm ci --silent 2>/dev/null || npm install --silent 2>/dev/null || npm install
+  pnpm install --frozen-lockfile --silent 2>/dev/null || pnpm install --silent 2>/dev/null || pnpm install
 }
 
 build_lambdas() {
@@ -215,7 +215,7 @@ build_lambdas() {
   cd "$LAMBDAS_DIR"
 
   # NODE_ENV controls minification in esbuild: production=minified, development=unminified+sourcemaps
-  NODE_ENV="$NODE_ENV" npm run build --silent 2>/dev/null || NODE_ENV="$NODE_ENV" npm run build
+  NODE_ENV="$NODE_ENV" pnpm --silent run build 2>/dev/null || NODE_ENV="$NODE_ENV" pnpm run build
 }
 
 package_lambdas() {

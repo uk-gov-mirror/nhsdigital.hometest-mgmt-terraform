@@ -97,7 +97,7 @@ calculate_source_hash() {
   # - Source code (*.ts, *.tsx, *.js, *.jsx, *.css, *.scss, *.json in src/)
   # - Public assets (public/)
   # - Content files (content/ — e.g., MDX, Markdown)
-  # - Config files (package.json, package-lock.json, next.config.*, tsconfig.json, etc.)
+  # - Config files (package.json, pnpm-lock.yaml, next.config.*, tsconfig.json, etc.)
   # - The NEXT_PUBLIC_BACKEND_URL (changing the URL means a different build)
 
   local hash_cmd="sha256sum"
@@ -155,7 +155,7 @@ calculate_source_hash() {
   # Hash config files at root level
   for file in \
     "$SPA_DIR/package.json" \
-    "$SPA_DIR/package-lock.json" \
+    "$SPA_DIR/pnpm-lock.yaml" \
     "$SPA_DIR/tsconfig.json" \
     "$SPA_DIR/next.config.ts" \
     "$SPA_DIR/next.config.js" \
@@ -213,7 +213,7 @@ show_hash_inputs() {
   fi
 
   echo "  Config files:"
-  for file in package.json package-lock.json tsconfig.json \
+  for file in package.json pnpm-lock.yaml tsconfig.json \
     next.config.ts next.config.js next.config.mjs \
     postcss.config.mjs postcss.config.js \
     tailwind.config.ts tailwind.config.js \
@@ -286,10 +286,10 @@ install_dependencies() {
   echo "Installing dependencies..."
   cd "$SPA_DIR"
 
-  if [[ -f "package-lock.json" ]]; then
-    npm ci --silent 2>/dev/null || npm install --silent 2>/dev/null || npm install
+  if [[ -f "pnpm-lock.yaml" ]]; then
+    pnpm install --frozen-lockfile --silent 2>/dev/null || pnpm install --silent 2>/dev/null || pnpm install
   else
-    npm install --silent 2>/dev/null || npm install
+    pnpm install --silent 2>/dev/null || pnpm install
   fi
 }
 
@@ -310,7 +310,7 @@ build_spa() {
   echo "  NEXT_PUBLIC_USE_WIREMOCK_AUTH=$NEXT_PUBLIC_USE_WIREMOCK_AUTH"
 
   # Run the build
-  npm run build --silent 2>/dev/null || npm run build
+  pnpm --silent run build 2>/dev/null || pnpm run build
 }
 
 # -----------------------------------------------------------------------------

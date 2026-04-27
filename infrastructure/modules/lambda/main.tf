@@ -297,8 +297,8 @@ resource "aws_cloudwatch_metric_alarm" "lambda_concurrent_executions" {
 ################################################################################
 # CloudWatch Logs Metric Filter — Logged Errors
 # Catches errors that are logged but don't fail the invocation (e.g. caught
-# exceptions, console.error). Matches Node.js ERROR level, stack traces, and
-# common error patterns in structured and unstructured logs.
+# exceptions, console.error). Matches structured JSON logs where the level
+# field indicates an error.
 ################################################################################
 
 resource "aws_cloudwatch_log_metric_filter" "logged_errors" {
@@ -306,7 +306,7 @@ resource "aws_cloudwatch_log_metric_filter" "logged_errors" {
 
   name           = "${local.function_name}-logged-errors"
   log_group_name = aws_cloudwatch_log_group.lambda.name
-  pattern        = "?ERROR ?Error ?Exception ?errorType"
+  pattern        = "{ $.level = \"ERROR\" || $.level = \"error\" || $.level = \"Error\" }"
 
   metric_transformation {
     name          = "${local.function_name}-LoggedErrors"

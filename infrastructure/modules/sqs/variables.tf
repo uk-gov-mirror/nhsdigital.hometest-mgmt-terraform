@@ -208,7 +208,7 @@ variable "enable_dlq_redrive" {
 #------------------------------------------------------------------------------
 
 variable "create_queue_policy" {
-  description = "Create a queue policy. Always true — HTTPS-only access is enforced via an automatically-merged DenyNonSSLAccess statement. Set queue_policy_statements to add extra statements."
+  description = "Create a queue policy. When true (default), a DenyNonSSLAccess statement is automatically merged with any caller-provided queue_policy_statements to enforce HTTPS-only access."
   type        = bool
   default     = true
 }

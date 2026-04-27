@@ -3,6 +3,8 @@
 .scannerwork
 *cloc*report*.json
 *sbom*report*.json
+sbom.spdx.json
+sbom.cdx.json
 *vulnerabilities*report*.json
 *report*json.zip
 .version

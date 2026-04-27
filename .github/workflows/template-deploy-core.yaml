@@ -1,25 +1,24 @@
 ---
-name: "CI/CD deploy"
-run-name: "Deploy hometest-mgmt-terraform to env: ${{ inputs.environment || 'poc' }}, tf: apply"
+name: "CI/CD deploy core"
+run-name: "Deploy core to account: ${{ inputs.account || 'poc' }}, tf: apply"
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+  workflow_call:
     inputs:
-      environment:
-        description: "Target environment"
+      account:
+        description: "Target AWS account (poc or dev)"
         required: true
-        type: choice
-        default: poc
-        options:
-          - poc
-          - dev
-      # hometest_service_ref:
-      #   description: "Branch, tag, or SHA to checkout for hometest-service"
-      #   required: false
-      #   default: "main"
+        type: string
+      deploy_ecs:
+        description: "Whether to deploy the ECS component (poc only)"
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      AWS_ROLE_ARN:
+        required: true
+      SLACK_WEBHOOK_URL:
+        required: false
 
 env:
   AWS_REGION: "eu-west-2"
@@ -79,17 +78,17 @@ jobs:
         with:
           mgmt_terraform_path: "."
           extra_rows: |
-            | Environment | ${{ inputs.environment || 'poc' }} |
+            | Account | ${{ inputs.account || 'poc' }} |
             | Action | apply |
 
   deploy-bootstrap:
     name: "Deploy TF Core/Bootstrap"
     runs-on: ubuntu-latest
     needs: [metadata]
-    environment: ${{ inputs.environment || 'poc' }}
+    environment: ${{ inputs.account || 'poc' }}
     timeout-minutes: 30
     env:
-      DEPLOY_PATH: ./hometest-mgmt-terraform/infrastructure/environments/${{ inputs.environment || 'poc' }}/core/bootstrap
+      DEPLOY_PATH: ./hometest-mgmt-terraform/infrastructure/environments/${{ inputs.account || 'poc' }}/core/bootstrap
     permissions:
       id-token: write    # REQUIRED for OIDC token
       contents: read     # For checkout
@@ -114,10 +113,10 @@ jobs:
     name: "Deploy TF Core/Network"
     runs-on: ubuntu-latest
     needs: [deploy-bootstrap]
-    environment: ${{ inputs.environment || 'poc' }}
+    environment: ${{ inputs.account || 'poc' }}
     timeout-minutes: 30
     env:
-      DEPLOY_PATH: ./hometest-mgmt-terraform/infrastructure/environments/${{ inputs.environment || 'poc' }}/core/network
+      DEPLOY_PATH: ./hometest-mgmt-terraform/infrastructure/environments/${{ inputs.account || 'poc' }}/core/network
     permissions:
       id-token: write    # REQUIRED for OIDC token
       contents: read     # For checkout
@@ -142,10 +141,10 @@ jobs:
     name: "Deploy TF Core/shared_services"
     runs-on: ubuntu-latest
     needs: [deploy-network]
-    environment: ${{ inputs.environment || 'poc' }}
+    environment: ${{ inputs.account || 'poc' }}
     timeout-minutes: 30
     env:
-      DEPLOY_PATH: ./hometest-mgmt-terraform/infrastructure/environments/${{ inputs.environment || 'poc' }}/core/shared_services
+      DEPLOY_PATH: ./hometest-mgmt-terraform/infrastructure/environments/${{ inputs.account || 'poc' }}/core/shared_services
     permissions:
       id-token: write    # REQUIRED for OIDC token
       contents: read     # For checkout
@@ -170,10 +169,10 @@ jobs:
     name: "Deploy TF Core/aurora-postgres"
     runs-on: ubuntu-latest
     needs: [deploy-shared-services]
-    environment: ${{ inputs.environment || 'poc' }}
+    environment: ${{ inputs.account || 'poc' }}
     timeout-minutes: 30
     env:
-      DEPLOY_PATH: ./hometest-mgmt-terraform/infrastructure/environments/${{ inputs.environment || 'poc' }}/core/aurora-postgres
+      DEPLOY_PATH: ./hometest-mgmt-terraform/infrastructure/environments/${{ inputs.account || 'poc' }}/core/aurora-postgres
     permissions:
       id-token: write    # REQUIRED for OIDC token
       contents: read     # For checkout
@@ -198,11 +197,11 @@ jobs:
     name: "Deploy TF Core/ECS"
     runs-on: ubuntu-latest
     needs: [deploy-aurora]
-    if: ${{ (inputs.environment || 'poc') == 'poc' }}
-    environment: ${{ inputs.environment || 'poc' }}
+    if: ${{ inputs.deploy_ecs }}
+    environment: ${{ inputs.account || 'poc' }}
     timeout-minutes: 30
     env:
-      DEPLOY_PATH: ./hometest-mgmt-terraform/infrastructure/environments/poc/core/ecs
+      DEPLOY_PATH: ./hometest-mgmt-terraform/infrastructure/environments/${{ inputs.account }}/core/ecs
     permissions:
       id-token: write    # REQUIRED for OIDC token
       contents: read     # For checkout
@@ -261,7 +260,7 @@ jobs:
   #     - name: Deploy TF Dev
   #       uses: ./hometest-mgmt-terraform/.github/actions/deploy-terragrunt
   #       with:
-  #         working_directory: hometest-mgmt-terraform/infrastructure/environments/${{ inputs.environment || 'poc' }}/dev/hometest-app
+  #         working_directory: hometest-mgmt-terraform/infrastructure/environments/${{ inputs.account || 'poc' }}/dev/hometest-app
   #         aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
 
   # TODO: More jobs or/and steps here
@@ -312,5 +311,5 @@ jobs:
         with:
           slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
           status: failure
-          environment: ${{ inputs.environment || 'poc' }}
+          environment: ${{ inputs.account || 'poc' }}
           module: "hometest-mgmt-terraform"
