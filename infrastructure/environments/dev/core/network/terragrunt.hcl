@@ -42,7 +42,7 @@ inputs = {
   enable_firewall_flow_logs    = false
   firewall_logs_retention_days = 7
 
-  firewall_default_deny = true
+  firewall_default_deny = false
 
   # ---------------------------------------------------------------------------
   # INGRESS FILTERING (inbound traffic to VPC)
