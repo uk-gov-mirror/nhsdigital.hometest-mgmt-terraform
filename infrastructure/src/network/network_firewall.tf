@@ -123,9 +123,9 @@ resource "aws_networkfirewall_firewall" "main" {
   name                              = "${local.resource_prefix}-network-firewall"
   firewall_policy_arn               = aws_networkfirewall_firewall_policy.main[0].arn
   vpc_id                            = aws_vpc.main.id
-  delete_protection                 = true
-  firewall_policy_change_protection = false
-  subnet_change_protection          = true
+  delete_protection                 = var.firewall_delete_protection
+  firewall_policy_change_protection = var.firewall_policy_change_protection
+  subnet_change_protection          = var.firewall_subnet_change_protection
 
   dynamic "subnet_mapping" {
     for_each = aws_subnet.firewall

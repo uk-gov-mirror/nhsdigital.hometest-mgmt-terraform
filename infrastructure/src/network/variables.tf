@@ -176,6 +176,24 @@ variable "firewall_default_deny" {
   default     = true
 }
 
+variable "firewall_delete_protection" {
+  description = "Enable deletion protection for the Network Firewall. Set to true in production to prevent accidental deletion."
+  type        = bool
+  default     = false
+}
+
+variable "firewall_policy_change_protection" {
+  description = "Enable firewall policy change protection. Set to true in production to prevent accidental policy changes."
+  type        = bool
+  default     = false
+}
+
+variable "firewall_subnet_change_protection" {
+  description = "Enable subnet change protection for the Network Firewall. Set to true in production to prevent accidental subnet changes."
+  type        = bool
+  default     = false
+}
+
 variable "firewall_rule_group_capacities" {
   description = "Capacity units for each Network Firewall rule group. Capacity CANNOT be changed after creation (requires rule group recreation). Set values higher than your expected rule count to allow headroom for growth."
   type = object({
