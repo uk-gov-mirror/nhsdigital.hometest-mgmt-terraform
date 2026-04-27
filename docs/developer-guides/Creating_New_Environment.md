@@ -27,6 +27,12 @@ terragrunt apply
 # 6. Deploy the app
 cd ../app
 terragrunt apply
+
+# Or, for subsequent redeployments only (requires full terragrunt apply
+# for both lambda-goose-migrator and app to have been run first):
+# mise run deploy-lambdas   # Lambdas only
+# mise run deploy-ui        # UI only
+# mise run deploy-all       # Both
 ```
 
 ## Contents
@@ -448,11 +454,11 @@ curl -I https://dev2.poc.hometest.service.nhs.uk/
 
 Once your environment is fully deployed, you can rapidly redeploy just lambdas, just the UI, or both without running a full `terragrunt apply`. This is useful when iterating on `hometest-service` code.
 
-| What changed | Command | How it works |
-|--------------|---------|--------------|
-| Lambda code only | `SKIP_SPA=true terragrunt apply -target='module.lambdas["<name>"]' -auto-approve` | Skips SPA build/upload, targets only the lambda resource → Terraform re-uploads the zip |
-| UI code only | `SKIP_LAMBDAS=true terragrunt apply -target=provider.aws -auto-approve` | Skips lambda build, Terraform is a no-op, but the `upload_spa` after-hook still runs → S3 sync + CloudFront invalidation |
-| Both | `terragrunt apply -target='module.lambdas["<name>"]' -auto-approve` | Builds both, targets lambda for Terraform, SPA hooks run regardless of `-target` |
+| What changed | Command | Mise shortcut | How it works |
+|--------------|---------|---------------|--------------|
+| Lambda code only | `SKIP_SPA=true terragrunt apply -target='module.lambdas["<name>"]' -auto-approve` | `mise run deploy-lambdas` | Skips SPA build/upload, targets only the lambda resource → Terraform re-uploads the zip |
+| UI code only | `SKIP_LAMBDAS=true terragrunt apply -target=provider.aws -auto-approve` | `mise run deploy-ui` | Skips lambda build, Terraform is a no-op, but the `upload_spa` after-hook still runs → S3 sync + CloudFront invalidation |
+| Both | `terragrunt apply -target='module.lambdas["<name>"]' -auto-approve` | `mise run deploy-all` | Builds both, targets lambda for Terraform, SPA hooks run regardless of `-target` |
 
 All commands below assume you are in the environment's `app/` directory:
 
