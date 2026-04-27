@@ -208,9 +208,9 @@ variable "firewall_rule_group_capacities" {
   validation {
     condition = alltrue([
       for k, v in var.firewall_rule_group_capacities :
-      v == null || (v >= 1 && v <= 30000)
+      v >= 1 && v <= 30000
     ])
-    error_message = "Each capacity value must be between 1 and 30000."
+    error_message = "Each capacity value must be between 1 and 30000 and cannot be null."
   }
 }
 
