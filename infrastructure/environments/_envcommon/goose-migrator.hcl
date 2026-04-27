@@ -37,7 +37,7 @@ locals {
   migrator_build_cache = "${get_repo_root()}/.migrator-build-cache"
 
   # Path to service directory
-  hometest_service_dir = trimspace(run_cmd("realpath", "${get_repo_root()}/../hometest-service"))
+  hometest_service_dir = abspath("${get_repo_root()}/../hometest-service")
 
 }
 
