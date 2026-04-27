@@ -231,7 +231,16 @@ variable "allowed_egress_ips" {
   validation {
     condition = alltrue([
       for rule in var.allowed_egress_ips :
-      can(regex("^[0-9./]+$", rule.ip)) && can(cidrhost(rule.ip, 0))
+      (
+        can(cidrhost(rule.ip, 0))
+        ) || (
+        can(regex("^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$", rule.ip))
+        &&
+        alltrue([
+          for octet in split(".", rule.ip) :
+          can(tonumber(octet)) && tonumber(octet) >= 0 && tonumber(octet) <= 255
+        ])
+      )
     ])
     error_message = "IP must be a valid IPv4 address or CIDR block (e.g., '10.0.0.1/32' or '192.168.0.0/24')."
   }
