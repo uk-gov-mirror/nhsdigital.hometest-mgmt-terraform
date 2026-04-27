@@ -33,7 +33,7 @@ resource "aws_cloudwatch_metric_alarm" "api_5xx" {
 
   metric_query {
     id          = "error_rate"
-    expression  = "(errors / requests) * 100"
+    expression  = "IF(requests == 0, 0, (errors / requests) * 100)"
     label       = "5XX Error Rate %"
     return_data = true
   }
@@ -89,7 +89,7 @@ resource "aws_cloudwatch_metric_alarm" "api_4xx" {
 
   metric_query {
     id          = "error_rate"
-    expression  = "(errors / requests) * 100"
+    expression  = "IF(requests == 0, 0, (errors / requests) * 100)"
     label       = "4XX Error Rate %"
     return_data = true
   }

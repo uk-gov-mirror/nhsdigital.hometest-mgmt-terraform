@@ -3,6 +3,9 @@
 locals {
   environment = "prod"
 
+  # Alerts enabled for prod environment
+  enable_alerts = true
+
   # Domain overrides for prod environment.
   # SPA is served from the apex domain; API from the api. subdomain.
   # Both require dedicated certs since *.poc.hometest.service.nhs.uk does not cover these.

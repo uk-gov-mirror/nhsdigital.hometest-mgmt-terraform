@@ -1,0 +1,31 @@
+---
+name: "CI/CD Deploy Dev"
+run-name: "CI/CD Dev — core (no ECS) + staging hometest-app"
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy-core:
+    uses: ./.github/workflows/template-deploy-core.yaml
+    with:
+      account: dev
+      deploy_ecs: false
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  deploy-staging:
+    needs: [deploy-core]
+    uses: ./.github/workflows/template-deploy-hometest-app.yaml
+    with:
+      account: dev
+      env: staging
+      action: apply
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      NHS_HOMETEST_SERVICE_DEPLOY_KEY_SSH_PRIV: ${{ secrets.NHS_HOMETEST_SERVICE_DEPLOY_KEY_SSH_PRIV }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

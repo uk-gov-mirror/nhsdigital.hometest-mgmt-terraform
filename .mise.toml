@@ -47,9 +47,6 @@ go = "1.26.2"
 
 ## Security scanning
 
-# https://github.com/aquasecurity/trivy/releases
-"aqua:aquasecurity/trivy" = "v0.69.3"
-
 # https://github.com/pypa/pipx/releases
 pipx = "1.11.0"
 
@@ -58,6 +55,12 @@ pipx = "1.11.0"
 
 # https://github.com/gitleaks/gitleaks/releases
 gitleaks = "8.30.1"
+
+# https://github.com/anchore/syft/releases
+syft = "1.27.1"
+
+# https://github.com/anchore/grype/releases
+grype = "0.93.0"
 
 ## Pre-commit and linting
 
@@ -101,6 +104,21 @@ echo "Found $count directories. Removing..."
 echo "$dirs" | xargs rm -rf
 echo "Done."
 '''
+
+[tasks.deploy-lambdas]
+description = "Quick deploy: rebuild and deploy only lambdas (skips SPA). Run from the environment's app/ directory."
+dir = "{{cwd}}"
+run = "SKIP_SPA=true terragrunt apply -target='module.lambdas' -auto-approve"
+
+[tasks.deploy-ui]
+description = "Quick deploy: rebuild and deploy only the SPA (skips lambdas). Run from the environment's app/ directory."
+dir = "{{cwd}}"
+run = "SKIP_LAMBDAS=true terragrunt apply -target=provider.aws -auto-approve"
+
+[tasks.deploy-all]
+description = "Quick deploy: rebuild and deploy both lambdas and SPA. Run from the environment's app/ directory."
+dir = "{{cwd}}"
+run = "terragrunt apply -target='module.lambdas' -auto-approve"
 
 [tasks.find-untagged]
 description = "List AWS resources missing the 'Project' tag"

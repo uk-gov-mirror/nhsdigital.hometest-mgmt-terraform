@@ -1,53 +1,44 @@
 ---
 name: "Deploy Terraform HomeTest App"
-run-name: "Deploy env: ${{ inputs.environment || 'poc' }}, subenv: ${{ inputs.subenv || 'dev' }}, tf: ${{ inputs.action || 'plan' }}"
+run-name: "Deploy account: ${{ inputs.account || 'poc' }}, env: ${{ inputs.env || 'dev' }}, tf: ${{ inputs.action || 'plan' }}"
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       hometest_service_ref:
         description: "Branch, tag, or SHA to checkout for hometest-service"
         required: false
+        type: string
         default: "main"
-      environment:
-        description: "Target environment"
+      account:
+        description: "Target AWS account (poc or dev)"
         required: true
-        type: choice
-        options:
-          - poc
-          - dev
-        default: poc
-      subenv:
-        description: "Terraform subenv to deploy"
+        type: string
+      env:
+        description: "Target environment to deploy (dev, uat, demo, staging, dev-*)"
         required: true
-        type: choice
-        default: dev
-        options:
-          # - dev-example
-          - dev
-          - uat
-          - demo
-          - staging
+        type: string
       action:
-        description: "Terraform action to perform"
+        description: "Terraform action: plan, apply, or destroy"
         required: true
-        type: choice
-        options:
-          - plan
-          - apply
-          - destroy
-          # - destroy-plan
-        default: plan
+        type: string
       targets:
-        description: "Comma-separated list of resources to target in the app stack only (e.g., module.lambdas[\"order-status-lambda\"]). Does not apply to migrator. Leave empty for full deployment."
+        description: "Comma-separated list of resources to target in the app stack only. Leave empty for full deployment."
         required: false
         type: string
         default: ""
       skip_migrator:
-        description: "Skip the goose migrator deployment entirely (deploy app stack only). Equivalent to SKIP_MIGRATOR=true locally."
+        description: "Skip the goose migrator deployment entirely (deploy app stack only)."
         required: false
         type: boolean
         default: false
+    secrets:
+      AWS_ROLE_ARN:
+        required: true
+      NHS_HOMETEST_SERVICE_DEPLOY_KEY_SSH_PRIV:
+        required: true
+      SLACK_WEBHOOK_URL:
+        required: false
 
 env:
   AWS_REGION: "eu-west-2"
@@ -60,8 +51,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 1
     outputs:
-      subenvs: ${{ steps.set-subenvs.outputs.subenvs }}
-      working_dir_base: ${{ steps.set-subenvs.outputs.working_dir_base }}
+      envs: ${{ steps.set-envs.outputs.envs }}
+      working_dir_base: ${{ steps.set-envs.outputs.working_dir_base }}
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v6
@@ -76,25 +67,25 @@ jobs:
           path: hometest-service
           ssh-key: ${{ secrets.NHS_HOMETEST_SERVICE_DEPLOY_KEY_SSH_PRIV }}
 
-      - name: "Set subenvs to deploy"
-        id: set-subenvs
+      - name: "Set envs to deploy"
+        id: set-envs
         env:
-          INPUT_ENVIRONMENT: ${{ inputs.environment || 'poc' }}
-          INPUT_SUBENV: ${{ inputs.subenv || 'dev' }}
+          INPUT_ACCOUNT: ${{ inputs.account || 'poc' }}
+          INPUT_ENV: ${{ inputs.env || 'dev' }}
         run: |
-          WORKING_DIR_BASE="hometest-mgmt-terraform/infrastructure/environments/${INPUT_ENVIRONMENT}/hometest-app"
+          WORKING_DIR_BASE="hometest-mgmt-terraform/infrastructure/environments/${INPUT_ACCOUNT}/hometest-app"
           echo "working_dir_base=${WORKING_DIR_BASE}" >> "$GITHUB_OUTPUT"
-          echo "subenvs=[\"${INPUT_SUBENV}\"]" >> "$GITHUB_OUTPUT"
+          echo "envs=[\"${INPUT_ENV}\"]" >> "$GITHUB_OUTPUT"
 
-      - name: "Validate subenv path exists"
+      - name: "Validate env path exists"
         env:
-          INPUT_ENVIRONMENT: ${{ inputs.environment || 'poc' }}
-          INPUT_SUBENV: ${{ inputs.subenv || 'dev' }}
+          INPUT_ACCOUNT: ${{ inputs.account || 'poc' }}
+          INPUT_ENV: ${{ inputs.env || 'dev' }}
         run: |
-          BASE_PATH="hometest-mgmt-terraform/infrastructure/environments/${INPUT_ENVIRONMENT}/hometest-app"
-          if [ "${INPUT_SUBENV}" != "all" ]; then
-            if [ ! -d "${BASE_PATH}/${INPUT_SUBENV}" ]; then
-              echo "::error::subenv path '${BASE_PATH}/${INPUT_SUBENV}' does not exist"
+          BASE_PATH="hometest-mgmt-terraform/infrastructure/environments/${INPUT_ACCOUNT}/hometest-app"
+          if [ "${INPUT_ENV}" != "all" ]; then
+            if [ ! -d "${BASE_PATH}/${INPUT_ENV}" ]; then
+              echo "::error::env path '${BASE_PATH}/${INPUT_ENV}' does not exist"
               exit 1
             fi
           fi
@@ -105,9 +96,9 @@ jobs:
           hometest_service_path: hometest-service
           hometest_service_ref: ${{ inputs.hometest_service_ref || 'main' }}
           extra_rows: |
-            | Environment | ${{ inputs.environment || 'poc' }} |
+            | Account | ${{ inputs.account || 'poc' }} |
             | Stack | hometest-app |
-            | Subenv(s) | ${{ inputs.subenv || 'dev' }} |
+            | Env(s) | ${{ inputs.env || 'dev' }} |
             | Action | ${{ inputs.action || 'plan' }} |
             | Targets | ${{ inputs.targets || 'all resources' }} |
             | Skip Migrator | ${{ inputs.skip_migrator || 'false' }} |
@@ -119,11 +110,11 @@ jobs:
   # ---------------------------------------------------------------------------
 
   deploy-migrator:
-    name: "Migrate DB ${{ matrix.subenv }}"
+    name: "Migrate DB ${{ matrix.env }}"
     if: inputs.action != 'destroy' && inputs.skip_migrator != true
     runs-on: ubuntu-latest
     needs: [validate-inputs]
-    environment: ${{ inputs.environment || 'poc' }}
+    environment: ${{ inputs.account || 'poc' }}
     timeout-minutes: 30
     permissions:
       id-token: write
@@ -132,7 +123,7 @@ jobs:
       fail-fast: true
       max-parallel: 1
       matrix:
-        subenv: ${{ fromJson(needs.validate-inputs.outputs.subenvs) }}
+        env: ${{ fromJson(needs.validate-inputs.outputs.envs) }}
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v6
@@ -142,34 +133,34 @@ jobs:
       - name: Install mise tools
         uses: ./hometest-mgmt-terraform/.github/actions/install-mise
         with:
-          working_directory: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.subenv }}/lambda-goose-migrator
+          working_directory: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.env }}/lambda-goose-migrator
 
-      - name: "Deploy goose migrator (${{ matrix.subenv }})"
+      - name: "Deploy goose migrator (${{ matrix.env }})"
         uses: ./hometest-mgmt-terraform/.github/actions/deploy-terragrunt
         with:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region: ${{ env.AWS_REGION }}
-          working_directory: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.subenv }}/lambda-goose-migrator
+          working_directory: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.env }}/lambda-goose-migrator
           action: ${{ inputs.action || 'plan' }}
 
       - name: "Post migration summary"
         if: always()
         env:
-          SUBENV: ${{ matrix.subenv }}
+          TARGET_ENV: ${{ matrix.env }}
           INPUT_ACTION: ${{ inputs.action || 'plan' }}
         run: |
           {
-            echo "## Migrate DB: ${SUBENV}"
+            echo "## Migrate DB: ${TARGET_ENV}"
             echo "- **Status**: ${{ job.status }}"
             echo "- **Action**: ${INPUT_ACTION}"
           } >> "$GITHUB_STEP_SUMMARY"
 
   deploy-app:
-    name: "Deploy App ${{ matrix.subenv }}"
+    name: "Deploy App ${{ matrix.env }}"
     if: "!cancelled() && needs.validate-inputs.result == 'success' && inputs.action != 'destroy' && (needs.deploy-migrator.result == 'success' || inputs.skip_migrator == true)"
     runs-on: ubuntu-latest
     needs: [validate-inputs, deploy-migrator]
-    environment: ${{ inputs.environment || 'poc' }}
+    environment: ${{ inputs.account || 'poc' }}
     timeout-minutes: 30
     permissions:
       id-token: write
@@ -178,7 +169,7 @@ jobs:
       fail-fast: true
       max-parallel: 1
       matrix:
-        subenv: ${{ fromJson(needs.validate-inputs.outputs.subenvs) }}
+        env: ${{ fromJson(needs.validate-inputs.outputs.envs) }}
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v6
@@ -204,30 +195,27 @@ jobs:
             mise-hometest-service-${{ runner.os }}-mgmt-
             mise-hometest-service-${{ runner.os }}-
 
-      - name: "Restore node_modules cache"
+      - name: "Restore pnpm store cache"
         uses: actions/cache/restore@v5
         with:
           path: |
-            hometest-service/node_modules
-            hometest-service/ui/node_modules
-            hometest-service/lambdas/node_modules
-            hometest-service/tests/node_modules
-          key: node-modules-${{ runner.os }}-mgmt-${{ hashFiles('hometest-service/**/package-lock.json') }}
+            ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-mgmt-${{ hashFiles('hometest-service/**/pnpm-lock.yaml') }}
           restore-keys: |
-            node-modules-${{ runner.os }}-mgmt-
-            node-modules-${{ runner.os }}-
+            pnpm-store-${{ runner.os }}-mgmt-
+            pnpm-store-${{ runner.os }}-
 
       - name: Install mise tools
         uses: ./hometest-mgmt-terraform/.github/actions/install-mise
         with:
-          working_directory: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.subenv }}/app
+          working_directory: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.env }}/app
 
-      - name: "Deploy app (${{ matrix.subenv }})"
+      - name: "Deploy app (${{ matrix.env }})"
         uses: ./hometest-mgmt-terraform/.github/actions/deploy-terragrunt
         with:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region: ${{ env.AWS_REGION }}
-          working_directory: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.subenv }}/app
+          working_directory: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.env }}/app
           action: ${{ inputs.action || 'plan' }}
           targets: ${{ inputs.targets }}
 
@@ -240,29 +228,26 @@ jobs:
             hometest-service/.mise-cache
           key: mise-hometest-service-${{ runner.os }}-mgmt-${{ hashFiles('hometest-service/.mise.toml') }}
 
-      - name: "Save node_modules cache"
+      - name: "Save pnpm store cache"
         if: always()
         uses: actions/cache/save@v5
         with:
           path: |
-            hometest-service/node_modules
-            hometest-service/ui/node_modules
-            hometest-service/lambdas/node_modules
-            hometest-service/tests/node_modules
-          key: node-modules-${{ runner.os }}-mgmt-${{ hashFiles('hometest-service/**/package-lock.json') }}
+            ~/.local/share/pnpm/store
+          key: pnpm-store-${{ runner.os }}-mgmt-${{ hashFiles('hometest-service/**/pnpm-lock.yaml') }}
 
       - name: "Post deployment summary"
         if: always()
         env:
-          SUBENV: ${{ matrix.subenv }}
+          TARGET_ENV: ${{ matrix.env }}
           INPUT_ACTION: ${{ inputs.action || 'plan' }}
           WORKING_DIR_BASE: ${{ needs.validate-inputs.outputs.working_dir_base }}
         run: |
           {
-            echo "## Deploy App: ${SUBENV}"
+            echo "## Deploy App: ${TARGET_ENV}"
             echo "- **Status**: ${{ job.status }}"
             echo "- **Action**: ${INPUT_ACTION}"
-            echo "- **Path**: ${WORKING_DIR_BASE}/${SUBENV}"
+            echo "- **Path**: ${WORKING_DIR_BASE}/${TARGET_ENV}"
           } >> "$GITHUB_STEP_SUMMARY"
 
   # ---------------------------------------------------------------------------
@@ -272,11 +257,11 @@ jobs:
   # ---------------------------------------------------------------------------
 
   destroy-app:
-    name: "Destroy App ${{ matrix.subenv }}"
+    name: "Destroy App ${{ matrix.env }}"
     if: inputs.action == 'destroy'
     runs-on: ubuntu-latest
     needs: [validate-inputs]
-    environment: ${{ inputs.environment || 'poc' }}
+    environment: ${{ inputs.account || 'poc' }}
     timeout-minutes: 30
     permissions:
       id-token: write
@@ -285,7 +270,7 @@ jobs:
       fail-fast: true
       max-parallel: 1
       matrix:
-        subenv: ${{ fromJson(needs.validate-inputs.outputs.subenvs) }}
+        env: ${{ fromJson(needs.validate-inputs.outputs.envs) }}
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v6
@@ -303,33 +288,33 @@ jobs:
       - name: Install mise tools
         uses: ./hometest-mgmt-terraform/.github/actions/install-mise
         with:
-          working_directory: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.subenv }}/app
+          working_directory: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.env }}/app
 
-      - name: "Destroy app (${{ matrix.subenv }})"
+      - name: "Destroy app (${{ matrix.env }})"
         uses: ./hometest-mgmt-terraform/.github/actions/deploy-terragrunt
         with:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region: ${{ env.AWS_REGION }}
-          working_directory: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.subenv }}/app
+          working_directory: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.env }}/app
           action: destroy
           targets: ${{ inputs.targets }}
 
       - name: "Post destroy summary"
         if: always()
         env:
-          SUBENV: ${{ matrix.subenv }}
+          TARGET_ENV: ${{ matrix.env }}
         run: |
           {
-            echo "## Destroy App: ${SUBENV}"
+            echo "## Destroy App: ${TARGET_ENV}"
             echo "- **Status**: ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
   destroy-migrator:
-    name: "Destroy Migrator ${{ matrix.subenv }}"
+    name: "Destroy Migrator ${{ matrix.env }}"
     if: inputs.action == 'destroy'
     runs-on: ubuntu-latest
     needs: [validate-inputs, destroy-app]
-    environment: ${{ inputs.environment || 'poc' }}
+    environment: ${{ inputs.account || 'poc' }}
     timeout-minutes: 30
     permissions:
       id-token: write
@@ -338,7 +323,7 @@ jobs:
       fail-fast: true
       max-parallel: 1
       matrix:
-        subenv: ${{ fromJson(needs.validate-inputs.outputs.subenvs) }}
+        env: ${{ fromJson(needs.validate-inputs.outputs.envs) }}
     steps:
       - name: "Checkout code"
         uses: actions/checkout@v6
@@ -348,23 +333,23 @@ jobs:
       - name: Install mise tools
         uses: ./hometest-mgmt-terraform/.github/actions/install-mise
         with:
-          working_directory: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.subenv }}/lambda-goose-migrator
+          working_directory: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.env }}/lambda-goose-migrator
 
-      - name: "Destroy goose migrator (${{ matrix.subenv }})"
+      - name: "Destroy goose migrator (${{ matrix.env }})"
         uses: ./hometest-mgmt-terraform/.github/actions/deploy-terragrunt
         with:
           aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
           aws_region: ${{ env.AWS_REGION }}
-          working_directory: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.subenv }}/lambda-goose-migrator
+          working_directory: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.env }}/lambda-goose-migrator
           action: destroy
 
       - name: "Post destroy migrator summary"
         if: always()
         env:
-          SUBENV: ${{ matrix.subenv }}
+          TARGET_ENV: ${{ matrix.env }}
         run: |
           {
-            echo "## Destroy Migrator: ${SUBENV}"
+            echo "## Destroy Migrator: ${TARGET_ENV}"
             echo "- **Status**: ${{ job.status }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -380,8 +365,8 @@ jobs:
     steps:
       - name: "Generate summary"
         env:
-          INPUT_ENVIRONMENT: ${{ inputs.environment || 'poc' }}
-          INPUT_SUBENV: ${{ inputs.subenv || 'dev' }}
+          INPUT_ACCOUNT: ${{ inputs.account || 'poc' }}
+          INPUT_ENV: ${{ inputs.env || 'dev' }}
           INPUT_ACTION: ${{ inputs.action || 'plan' }}
           INPUT_TARGETS: ${{ inputs.targets || 'all resources' }}
           INPUT_SKIP_MIGRATOR: ${{ inputs.skip_migrator || 'false' }}
@@ -391,9 +376,9 @@ jobs:
             echo ""
             echo "| Detail | Value |"
             echo "|--------|-------|"
-            echo "| Environment | ${INPUT_ENVIRONMENT} |"
+            echo "| Account | ${INPUT_ACCOUNT} |"
             echo "| Stack | hometest-app |"
-            echo "| Subenv(s) | ${INPUT_SUBENV} |"
+            echo "| Env(s) | ${INPUT_ENV} |"
             echo "| Action | ${INPUT_ACTION} |"
             echo "| Targets | ${INPUT_TARGETS} |"
             echo "| Skip Migrator | ${INPUT_SKIP_MIGRATOR} |"
@@ -424,5 +409,5 @@ jobs:
         with:
           slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
           status: failure
-          environment: "${{ inputs.environment || 'poc' }}/${{ inputs.subenv || 'dev' }}"
+          environment: "${{ inputs.account || 'poc' }}/${{ inputs.env || 'dev' }}"
           module: "hometest-app (${{ inputs.action || 'plan' }})"

@@ -1,12 +1,12 @@
 ---
 name: "Deploy Terraform Core"
-run-name: "Deploy env: ${{ inputs.environment || 'poc' }}, module: ${{ inputs.module || 'all' }}, tf: ${{ inputs.action || 'plan' }}"
+run-name: "Deploy account: ${{ inputs.account || 'poc' }}, module: ${{ inputs.module || 'all' }}, tf: ${{ inputs.action || 'plan' }}"
 
 on:
   workflow_dispatch:
     inputs:
-      environment:
-        description: "Target environment"
+      account:
+        description: "Target AWS account"
         required: true
         type: choice
         options:
@@ -58,25 +58,25 @@ jobs:
       - name: "Set modules to deploy"
         id: set-modules
         env:
-          INPUT_ENVIRONMENT: ${{ inputs.environment || 'poc' }}
+          INPUT_ACCOUNT: ${{ inputs.account || 'poc' }}
           INPUT_MODULE: ${{ inputs.module || 'all' }}
         run: |
-          WORKING_DIR_BASE="hometest-mgmt-terraform/infrastructure/environments/${INPUT_ENVIRONMENT}/core"
+          WORKING_DIR_BASE="hometest-mgmt-terraform/infrastructure/environments/${INPUT_ACCOUNT}/core"
           echo "working_dir_base=${WORKING_DIR_BASE}" >> "$GITHUB_OUTPUT"
 
           if [ "${INPUT_MODULE}" == "all" ]; then
             # Deploy in dependency order
-            echo 'modules=["bootstrap", "network", "aurora-postgres", "shared_services", "ecs", "lambda-goose-migrator"]' >> "$GITHUB_OUTPUT"
+            echo 'modules=["bootstrap", "network", "aurora-postgres", "shared_services", "ecs"]' >> "$GITHUB_OUTPUT"
           else
             echo "modules=[\"${INPUT_MODULE}\"]" >> "$GITHUB_OUTPUT"
           fi
 
       - name: "Validate module path exists"
         env:
-          INPUT_ENVIRONMENT: ${{ inputs.environment || 'poc' }}
+          INPUT_ACCOUNT: ${{ inputs.account || 'poc' }}
           INPUT_MODULE: ${{ inputs.module || 'all' }}
         run: |
-          BASE_PATH="hometest-mgmt-terraform/infrastructure/environments/${INPUT_ENVIRONMENT}/core"
+          BASE_PATH="hometest-mgmt-terraform/infrastructure/environments/${INPUT_ACCOUNT}/core"
           if [ "${INPUT_MODULE}" != "all" ]; then
             if [ ! -d "${BASE_PATH}/${INPUT_MODULE}" ]; then
               echo "::error::Module path '${BASE_PATH}/${INPUT_MODULE}' does not exist"
@@ -88,7 +88,7 @@ jobs:
         uses: ./hometest-mgmt-terraform/.github/actions/display-deployment-info
         with:
           extra_rows: |
-            | Environment | ${{ inputs.environment || 'poc' }} |
+            | Account | ${{ inputs.account || 'poc' }} |
             | Stack | core |
             | Module(s) | ${{ inputs.module || 'all' }} |
             | Action | ${{ inputs.action || 'plan' }} |
@@ -97,7 +97,7 @@ jobs:
     name: "Deploy ${{ matrix.module }}"
     runs-on: ubuntu-latest
     needs: [validate-inputs]
-    environment: ${{ inputs.environment || 'poc' }}
+    environment: ${{ inputs.account || 'poc' }}
     timeout-minutes: 30
     permissions:
       id-token: write
@@ -148,7 +148,7 @@ jobs:
     steps:
       - name: "Generate summary"
         env:
-          INPUT_ENVIRONMENT: ${{ inputs.environment || 'poc' }}
+          INPUT_ACCOUNT: ${{ inputs.account || 'poc' }}
           INPUT_MODULE: ${{ inputs.module || 'all' }}
           INPUT_ACTION: ${{ inputs.action || 'plan' }}
           DEPLOY_RESULT: ${{ needs.deploy.result }}
@@ -158,7 +158,7 @@ jobs:
             echo ""
             echo "| Detail | Value |"
             echo "|--------|-------|"
-            echo "| Environment | ${INPUT_ENVIRONMENT} |"
+            echo "| Account | ${INPUT_ACCOUNT} |"
             echo "| Stack | core |"
             echo "| Module(s) | ${INPUT_MODULE} |"
             echo "| Action | ${INPUT_ACTION} |"
@@ -179,5 +179,5 @@ jobs:
         with:
           slack_webhook_url: ${{ secrets.SLACK_WEBHOOK_URL }}
           status: failure
-          environment: ${{ inputs.environment || 'poc' }}
+          environment: ${{ inputs.account || 'poc' }}
           module: "core/${{ inputs.module || 'all' }} (${{ inputs.action || 'plan' }})"

@@ -106,9 +106,11 @@ The CI pipeline runs these stages on every PR:
 
 ### Deployment Pipelines
 
-- **cicd-3-deploy.yaml** — Auto-deploys core modules sequentially on push to main: bootstrap → network → aurora-postgres → shared_services
+- **template-deploy-core.yaml** — Reusable template for core infrastructure deployment: bootstrap → network → shared_services → aurora → ecs (optional)
+- **cicd-deploy-poc.yaml** — Auto-deploys on push to main: POC core (with ECS) + dev/uat hometest-app
+- **cicd-deploy-dev.yaml** — Auto-deploys on push to main: Dev core (no ECS) + staging hometest-app
 - **deploy-tf-core.yaml** — Manual dispatch for core infrastructure modules with optional Lambda goose-migrator invocation and CloudWatch log polling
-- **deploy-tf-hometest-app.yaml** — Manual dispatch for hometest-app deployment with environment/sub-environment selection, goose-migrator, and destroy path
+- **template-deploy-hometest-app.yaml** — Reusable template for hometest-app deployment with environment selection, goose-migrator, and destroy path
 
 All deployments use the `deploy-terragrunt` composite action which runs `mise exec -- terragrunt init/plan/apply` with AWS OIDC authentication.
 
@@ -210,7 +212,7 @@ terragrunt apply
 
 - Region: eu-west-2 (London)
 - Authentication: AWS SSO with OIDC
-- Profile: Admin-PoC
+- Profile: PoC-Admin
 - Terraform plugin cache: `.terraform-plugin-cache/` (set via `TF_PLUGIN_CACHE_DIR`)
 - Terragrunt experiment: `dependency-fetch-output-from-state` enabled
 - `AWS_PAGER=""` — always set this environment variable to disable the AWS CLI pager (prevents output being piped through `less`)

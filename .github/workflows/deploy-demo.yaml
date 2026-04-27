@@ -1,0 +1,45 @@
+---
+name: "Deploy Demo"
+run-name: "Deploy demo — ref: ${{ inputs.hometest_service_ref || 'main' }}, tf: ${{ inputs.action || 'plan' }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      hometest_service_ref:
+        description: "Tag, branch, or SHA for hometest-service (e.g. v1.2.0)"
+        required: true
+        type: string
+        default: "main"
+      action:
+        description: "Terraform action to perform"
+        required: true
+        type: choice
+        options:
+          - plan
+          - apply
+        default: plan
+      targets:
+        description: "Comma-separated Terraform targets (leave empty for full deployment)"
+        required: false
+        type: string
+        default: ""
+      skip_migrator:
+        description: "Skip the goose migrator deployment"
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  deploy-demo:
+    uses: ./.github/workflows/template-deploy-hometest-app.yaml
+    with:
+      hometest_service_ref: ${{ inputs.hometest_service_ref }}
+      account: poc
+      env: demo
+      action: ${{ inputs.action }}
+      targets: ${{ inputs.targets }}
+      skip_migrator: ${{ inputs.skip_migrator }}
+    secrets:
+      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+      NHS_HOMETEST_SERVICE_DEPLOY_KEY_SSH_PRIV: ${{ secrets.NHS_HOMETEST_SERVICE_DEPLOY_KEY_SSH_PRIV }}
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

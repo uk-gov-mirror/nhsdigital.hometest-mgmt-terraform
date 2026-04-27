@@ -3,6 +3,9 @@
 locals {
   environment = "demo"
 
+  # Alerts enabled for demo environment
+  enable_alerts = true
+
   # Domain overrides for demo environment.
   env_domain = "demo.hometest.service.nhs.uk"
   api_domain = "api.demo.hometest.service.nhs.uk"

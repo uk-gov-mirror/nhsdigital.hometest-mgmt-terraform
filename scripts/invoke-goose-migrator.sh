@@ -6,12 +6,12 @@
 # Designed to be called from Terragrunt hooks or manually from the CLI.
 #
 # Usage:
-#   ./scripts/invoke-goose-migrator.sh <function_name> <action> [subenv]
+#   ./scripts/invoke-goose-migrator.sh <function_name> <action> [env]
 #
 # Arguments:
 #   function_name   Name of the Lambda function (from terraform output)
 #   action          "migrate" or "teardown"
-#   subenv          Optional label for log headers (defaults to action)
+#   env             Optional label for log headers (defaults to action)
 #
 # Environment variables:
 #   AWS_REGION      AWS region (default: eu-west-2)
@@ -28,13 +28,13 @@ set -euo pipefail
 # ── Arguments ────────────────────────────────────────────────────────────────
 FUNCTION_NAME="${1:-}"
 LAMBDA_ACTION="${2:-migrate}"
-SUBENV="${3:-${LAMBDA_ACTION}}"
+TARGET_ENV="${3:-${LAMBDA_ACTION}}"
 
 if [[ -z "$FUNCTION_NAME" ]]; then
-  echo "Usage: $0 <function_name> <action> [subenv]"
+  echo "Usage: $0 <function_name> <action> [env]"
   echo "  function_name: Lambda function name (from 'terragrunt output -raw function_name')"
   echo "  action:        migrate | teardown"
-  echo "  subenv:        label for logs (optional, defaults to action)"
+  echo "  env:           label for logs (optional, defaults to action)"
   exit 2
 fi
 
@@ -131,9 +131,9 @@ fi
 
 # ── Print logs ───────────────────────────────────────────────────────────────
 if [[ "$LAMBDA_ACTION" == "migrate" ]]; then
-  SUMMARY_TITLE="Migration Logs (${SUBENV})"
+  SUMMARY_TITLE="Migration Logs (${TARGET_ENV})"
 else
-  SUMMARY_TITLE="Teardown Logs (${SUBENV})"
+  SUMMARY_TITLE="Teardown Logs (${TARGET_ENV})"
 fi
 
 echo ""

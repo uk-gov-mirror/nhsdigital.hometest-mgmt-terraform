@@ -32,7 +32,7 @@ All topics also send to the email subscriptions configured in `sns_alerts_email_
 
 ### Infrastructure Alerts (SNS → AWS Chatbot → Slack)
 
-- **Module**: `infrastructure/modules/slack-alerts`
+- **Module**: [`infrastructure/modules/slack-alerts`](../infrastructure/modules/slack-alerts/README.md)
 - **Deployed in**: `shared_services` layer
 - **Mechanism**: AWS Chatbot Slack channel configurations subscribe to SNS topics and post formatted alarm messages to Slack
 - **Slack channel**: `#hometest-ops-alerts` (all tiers currently routed to one channel)
@@ -67,7 +67,7 @@ All three severity tiers currently point to the same channel (`#hometest-ops-ale
 
 - **Action**: `.github/actions/notify-slack`
 - **Secret**: `SLACK_WEBHOOK_URL` (GitHub Actions repository secret)
-- **Triggers**: End of `cicd-3-deploy` and `deploy-tf-hometest-app` workflows
+- **Triggers**: End of `cicd-deploy-poc`, `cicd-deploy-dev`, `deploy-hometest-app`, and `deploy-demo` workflows
 - **Content**: Deployment status (success/failure/cancelled), environment, module, actor, and a link to the run
 
 ---
@@ -76,7 +76,7 @@ All three severity tiers currently point to the same channel (`#hometest-ops-ale
 
 ### shared_services
 
-#### WAF Alarms (`modules/waf-alarms`)
+#### WAF Alarms ([`modules/waf-alarms`](../infrastructure/modules/waf-alarms/README.md))
 
 | Alarm | Metric | Threshold | Severity |
 |---|---|---|---|
@@ -88,7 +88,7 @@ Applied to both the regional WAF (API Gateway/ALB) and CloudFront WAF.
 
 > **Note**: CloudFront WAF alarms are created in **us-east-1** via `providers = { aws = aws.us_east_1 }` because CloudFront WAF metrics are published there.
 
-#### Network Alarms (`modules/network-alarms`)
+#### Network Alarms ([`modules/network-alarms`](../infrastructure/modules/network-alarms/README.md))
 
 | Alarm | Metric | Threshold | Severity |
 |---|---|---|---|
@@ -100,7 +100,7 @@ NAT Gateway alarms are created per gateway via `for_each`.
 
 ### aurora-postgres
 
-#### Aurora Alarms (`modules/aurora-alarms`)
+#### Aurora Alarms ([`modules/aurora-alarms`](../infrastructure/modules/aurora-alarms/README.md))
 
 | Alarm | Metric | Threshold | Severity |
 |---|---|---|---|
@@ -116,7 +116,7 @@ Thresholds are configurable via the module variables.
 
 ### hometest-app
 
-#### Lambda Alarms (built into `modules/lambda`)
+#### Lambda Alarms (built into [`modules/lambda`](../infrastructure/modules/lambda/README.md))
 
 Each Lambda function gets these alarms automatically:
 
@@ -132,7 +132,7 @@ The concurrency alarm is only created when `reserved_concurrent_executions > 0`.
 
 The **Logged Errors** alarm uses a CloudWatch Logs metric filter to catch errors that are logged (e.g. `console.error`, caught exceptions) but don't fail the Lambda invocation. The filter matches `?ERROR ?Error ?Exception ?errorType` patterns.
 
-#### SQS Alarms (built into `modules/sqs`)
+#### SQS Alarms (built into [`modules/sqs`](../infrastructure/modules/sqs/README.md))
 
 Each SQS queue gets an `ApproximateAgeOfOldestMessage` alarm. The following queues are monitored:
 
@@ -144,7 +144,7 @@ Each SQS queue gets an `ApproximateAgeOfOldestMessage` alarm. The following queu
 
 Each queue also has a dead-letter queue (DLQ) with its own age alarm.
 
-#### API Gateway Alarms (`modules/api-gateway-alarms`)
+#### API Gateway Alarms ([`modules/api-gateway-alarms`](../infrastructure/modules/api-gateway-alarms/README.md))
 
 | Alarm | Metric | Threshold | Severity |
 |---|---|---|---|
@@ -153,7 +153,7 @@ Each queue also has a dead-letter queue (DLQ) with its own age alarm.
 | Latency (p99) | Latency (p99) | > 3000 ms in 5 min | Critical |
 | Integration Latency (p99) | IntegrationLatency (p99) | > 2000 ms in 5 min | Critical |
 
-#### CloudFront Alarms (`modules/cloudfront-alarms`)
+#### CloudFront Alarms ([`modules/cloudfront-alarms`](../infrastructure/modules/cloudfront-alarms/README.md))
 
 | Alarm | Metric | Threshold | Severity |
 |---|---|---|---|

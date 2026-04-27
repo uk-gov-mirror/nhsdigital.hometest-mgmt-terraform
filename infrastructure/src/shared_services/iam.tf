@@ -80,13 +80,25 @@ resource "aws_iam_role_policy" "developer_lambda" {
         }
       },
       {
+        Sid    = "SecretsManagerRead"
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
+        ]
+        Resource = "arn:aws:secretsmanager:${var.aws_region}:${var.aws_account_id}:secret:${var.project_name}/*"
+      },
+      {
         Sid    = "KMSAccess"
         Effect = "Allow"
         Action = [
           "kms:Decrypt",
           "kms:GenerateDataKey"
         ]
-        Resource = aws_kms_key.main.arn
+        Resource = [
+          aws_kms_key.main.arn,
+          aws_kms_key.pii_data.arn
+        ]
       }
     ]
   })
@@ -118,6 +130,22 @@ resource "aws_iam_policy" "developer_deployment" {
         Resource = "arn:aws:iam::${var.aws_account_id}:role/${var.project_name}-*"
       },
       {
+        Sid    = "IAMPolicyMgmt"
+        Effect = "Allow"
+        Action = [
+          "iam:CreatePolicy",
+          "iam:DeletePolicy",
+          "iam:GetPolicy",
+          "iam:GetPolicyVersion",
+          "iam:ListPolicyVersions",
+          "iam:CreatePolicyVersion",
+          "iam:DeletePolicyVersion",
+          "iam:TagPolicy",
+          "iam:UntagPolicy"
+        ]
+        Resource = "arn:aws:iam::${var.aws_account_id}:policy/${var.project_name}-*"
+      },
+      {
         Sid      = "LambdaMgmt"
         Effect   = "Allow"
         Action   = ["lambda:*"]
@@ -144,11 +172,14 @@ resource "aws_iam_policy" "developer_deployment" {
           "apigateway:POST",
           "apigateway:PUT",
           "apigateway:PATCH",
-          "apigateway:DELETE"
+          "apigateway:DELETE",
+          "apigateway:SetWebACL"
         ]
         Resource = [
           "arn:aws:apigateway:*::/restapis",
           "arn:aws:apigateway:*::/restapis/*",
+          "arn:aws:apigateway:*::/domainnames",
+          "arn:aws:apigateway:*::/domainnames/*",
           "arn:aws:apigateway:*::/tags/*"
         ]
       },
@@ -226,7 +257,7 @@ resource "aws_iam_policy" "developer_deployment" {
         ]
         Resource = "arn:aws:kms:*:${var.aws_account_id}:key/*"
         Condition = {
-          StringLike = {
+          "ForAnyValue:StringLike" = {
             "kms:ResourceAliases" = "alias/${var.project_name}-*"
           }
         }
@@ -273,8 +304,26 @@ resource "aws_iam_policy" "developer_deployment" {
       {
         Sid      = "RDSQueryEditor"
         Effect   = "Allow"
-        Action   = ["dbqms:*", "rds-data:*", "secretsmanager:GetSecretValue"]
+        Action   = ["dbqms:*", "rds-data:*"]
         Resource = "*"
+      },
+      {
+        Sid    = "SecretsManagerMgmt"
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:CreateSecret",
+          "secretsmanager:DeleteSecret",
+          "secretsmanager:DescribeSecret",
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:PutSecretValue",
+          "secretsmanager:UpdateSecret",
+          "secretsmanager:TagResource",
+          "secretsmanager:UntagResource",
+          "secretsmanager:GetResourcePolicy",
+          "secretsmanager:PutResourcePolicy",
+          "secretsmanager:DeleteResourcePolicy"
+        ]
+        Resource = "arn:aws:secretsmanager:*:${var.aws_account_id}:secret:${var.project_name}/*"
       }
     ]
   })
