@@ -649,7 +649,7 @@ The `empty_spa_bucket_on_destroy` hook will automatically clean all versioned ob
 
 A scheduled GitHub Actions workflow automatically destroys all `dev-*` environments every **Friday at 8pm UK time**.
 
-**Workflow:** [`.github/workflows/destroy-dev-environments.yml`](../../.github/workflows/destroy-dev-environments.yml)
+**Workflow:** [`.github/workflows/destroy-dev-environments.yaml`](../../.github/workflows/destroy-dev-environments.yaml)
 
 **How it works:**
 
