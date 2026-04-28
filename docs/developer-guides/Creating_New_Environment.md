@@ -413,7 +413,9 @@ Click **"Run workflow"** and configure the following inputs:
 >     - staging
 >     - dev2  # ← add your new environment here
 > ```
-
+>
+> **Important:** All `dev-*` directories are gitignored by default (see the root `.gitignore`):
+>
 > **Important:** All `dev-*` directories are gitignored by default (see the root `.gitignore`):
 >
 > ```gitignore
@@ -433,7 +435,7 @@ Click **"Run workflow"** and configure the following inputs:
 > ```
 >
 > Without this exclusion, the pipeline's checkout won't include your environment directory and the deploy will fail with `env path does not exist`.
-
+>
 > **Tip:** For a first deployment of a new environment, use `action: plan` first to review the changes, then re-run with `action: apply`.
 
 Both local and pipeline deployments will:
@@ -658,6 +660,7 @@ A scheduled GitHub Actions workflow automatically destroys all `dev-*` environme
 **Manual trigger:**
 
 You can also run it manually from the GitHub Actions UI:
+
 - Navigate to **Actions → Destroy Dev Environments → Run workflow**
 - Set **dry_run** to `true` (default) to see a destroy plan without making changes
 - Set **dry_run** to `false` to actually destroy the environments

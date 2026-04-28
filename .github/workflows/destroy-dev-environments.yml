@@ -4,8 +4,7 @@ run-name: "Destroy dev-* environments (${{ github.event_name == 'schedule' && 's
 
 on:
   schedule:
-    - cron: "0 19 * * 5" # 8pm BST Friday (late March – late October)
-    - cron: "0 20 * * 5" # 8pm GMT Friday (late October – late March)
+    - cron: "0 20 * * 5" # 8pm GMT Friday
   workflow_dispatch:
     inputs:
       dry_run:
@@ -62,9 +61,11 @@ jobs:
 
           echo "All environments found:"
           echo "$ENVS"
-          echo "all_envs<<EOF" >> "$GITHUB_OUTPUT"
-          echo "$ENVS" >> "$GITHUB_OUTPUT"
-          echo "EOF" >> "$GITHUB_OUTPUT"
+          {
+            echo "all_envs<<EOF"
+            echo "$ENVS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: "Filter dev-* environments"
         id: filter-envs
