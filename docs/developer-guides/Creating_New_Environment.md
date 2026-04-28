@@ -626,6 +626,27 @@ terragrunt destroy
 
 The `empty_spa_bucket_on_destroy` hook will automatically clean all versioned objects from the S3 SPA bucket before Terraform attempts to delete it.
 
+### Automated Cleanup of Dev Environments
+
+A scheduled GitHub Actions workflow automatically destroys all `dev-*` environments every **Friday at 8pm UK time**.
+
+**Workflow:** [`.github/workflows/destroy-dev-environments.yml`](../../.github/workflows/destroy-dev-environments.yml)
+
+**How it works:**
+
+1. Discovers all `dev-*` environments by querying the `Environment` tag on Lambda functions in AWS
+2. For each discovered environment, creates the Terragrunt directory from the `dev-example` template if it doesn't already exist
+3. Destroys the `app` stack first, then the `lambda-goose-migrator` stack (reverse dependency order)
+
+**Manual trigger:**
+
+You can also run it manually from the GitHub Actions UI:
+- Navigate to **Actions → Destroy Dev Environments → Run workflow**
+- Set **dry_run** to `true` (default) to see a destroy plan without making changes
+- Set **dry_run** to `false` to actually destroy the environments
+
+> **Note:** Scheduled runs always perform the actual destroy (no dry run). If you need your dev environment to persist over the weekend, re-deploy it on Monday using the [Deploy HomeTest App](../../.github/workflows/deploy-hometest-app.yaml) workflow.
+
 ## Checklist
 
 - [ ] Created `infrastructure/environments/poc/hometest-app/{env}/env.hcl`
