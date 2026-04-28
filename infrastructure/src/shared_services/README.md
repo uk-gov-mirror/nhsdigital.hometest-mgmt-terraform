@@ -142,6 +142,7 @@ inputs = {
 | [aws_cognito_user_pool_client.sh24_m2m](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cognito_user_pool_client) | resource |
 | [aws_cognito_user_pool_domain.main](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cognito_user_pool_domain) | resource |
 | [aws_iam_policy.developer_deployment](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
+| [aws_iam_policy.developer_deployment_infra](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
 | [aws_iam_policy.tfstate_readonly](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_policy) | resource |
 | [aws_iam_role.api_gateway_cloudwatch](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
 | [aws_iam_role.cognito_authenticated](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role) | resource |
@@ -303,7 +304,7 @@ inputs = {
 | <a name="output_cognito_user_pool_endpoint"></a> [cognito\_user\_pool\_endpoint](#output\_cognito\_user\_pool\_endpoint) | The endpoint of the Cognito User Pool |
 | <a name="output_cognito_user_pool_id"></a> [cognito\_user\_pool\_id](#output\_cognito\_user\_pool\_id) | The ID of the Cognito User Pool |
 | <a name="output_developer_deployment_policy_arn"></a> [developer\_deployment\_policy\_arn](#output\_developer\_deployment\_policy\_arn) | ARN of the developer deployment IAM policy |
-| <a name="output_developer_deployment_policy_arns"></a> [developer\_deployment\_policy\_arns](#output\_developer\_deployment\_policy\_arns) | Developer deployment policy ARN (consolidated policy for SSO permission set attachment) |
+| <a name="output_developer_deployment_policy_arns"></a> [developer\_deployment\_policy\_arns](#output\_developer\_deployment\_policy\_arns) | Developer deployment policy ARNs (split across two policies for SSO permission set attachment) |
 | <a name="output_developer_deployment_policy_name"></a> [developer\_deployment\_policy\_name](#output\_developer\_deployment\_policy\_name) | Name of the developer deployment policy |
 | <a name="output_developer_role_arn"></a> [developer\_role\_arn](#output\_developer\_role\_arn) | ARN of the developer deployment role |
 | <a name="output_developer_role_name"></a> [developer\_role\_name](#output\_developer\_role\_name) | Name of the developer deployment role |

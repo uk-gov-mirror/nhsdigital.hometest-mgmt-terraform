@@ -397,7 +397,7 @@ Click **"Run workflow"** and configure the following inputs:
 |-------|------|---------|-------------|
 | `hometest_service_ref` | string | `main` | Branch, tag, or SHA to checkout for `hometest-service`. Unlike local deployment which uses your local copy, the pipeline checks out the specified ref from the remote repo. |
 | `account` | choice | `poc` | AWS account to deploy to (`poc` or `dev`). |
-| `env` | choice | `dev` | Target environment (e.g. `dev`, `uat`, `demo`, `staging`). |
+| `env` | choice | `dev` | Target environment (e.g. `dev`, `uat`, `staging`). |
 | `action` | choice | `plan` | Terraform action: `plan` (preview), `apply` (deploy), or `destroy` (teardown). |
 | `targets` | string | _(empty)_ | Comma-separated list of resources to target in the app stack only (e.g. `module.lambdas["order-status-lambda"]`). Leave empty for full deployment. Does not apply to the migrator. |
 | `skip_migrator` | boolean | `false` | Skip the goose migrator deployment entirely (deploy app stack only). Equivalent to `SKIP_MIGRATOR=true` locally. |
@@ -413,7 +413,6 @@ Click **"Run workflow"** and configure the following inputs:
 >   options:
 >     - dev
 >     - uat
->     - demo
 >     - staging
 >     - dev2  # ← add your new environment here
 > ```
