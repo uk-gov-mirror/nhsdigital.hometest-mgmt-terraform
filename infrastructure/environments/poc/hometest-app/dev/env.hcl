@@ -1,8 +1,6 @@
 # Set common variables for the environment. This is automatically pulled in in the root terragrunt.hcl configuration to
 # feed forward to the child modules.
 locals {
-  environment = "dev"
-
   # Domain overrides for dev environment.
   # SPA and API use custom domains outside the POC wildcard cert scope,
   # so dedicated per-env certificates are created by the hometest-app module.

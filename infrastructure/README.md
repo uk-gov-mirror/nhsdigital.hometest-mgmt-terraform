@@ -107,7 +107,7 @@ infrastructure/
 │   │   ├── account.hcl                 # AWS account settings
 │   │   ├── terragrunt.hcl              # POC account coordination (skip=true)
 │   │   ├── core/
-│   │   │   ├── env.hcl                 # environment = "core"
+│   │   │   ├── env.hcl                 # feature flags (auto-derives environment from dir name)
 │   │   │   ├── bootstrap/              # S3 state backend, GitHub OIDC
 │   │   │   ├── network/                # VPC, Route53, Firewall, Endpoints
 │   │   │   ├── shared_services/        # WAF, ACM, KMS, Cognito, IAM, SNS, Secrets

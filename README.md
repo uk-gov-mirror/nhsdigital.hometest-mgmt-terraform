@@ -305,7 +305,7 @@ The infrastructure supports multiple AWS accounts and environments:
 See [Environment Strategy](./docs/environment-strategy.md) for full details on deployment triggers, intended use, and how to create on-demand environments.
 Each environment under `poc/hometest-app/{env}/` or `dev/hometest-app/{env}/` contains:
 
-- `env.hcl` — environment name, domain overrides, feature flags (e.g., WireMock)
+- `env.hcl` — domain overrides, feature flags (e.g., WireMock). Environment name is auto-derived from directory name.
 - `app/terragrunt.hcl` — hometest application stack
 - `lambda-goose-migrator/terragrunt.hcl` — database migrations
 

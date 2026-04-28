@@ -16,9 +16,7 @@ ENV_NAME="dev2"  # Change to your environment name
 cp -r infrastructure/environments/poc/hometest-app/dev-example \
       infrastructure/environments/poc/hometest-app/${ENV_NAME}
 
-# 4. Update the environment name in env.hcl
-sed -i '' "s/environment = \".*\"/environment = \"${ENV_NAME}\"/" \
-  infrastructure/environments/poc/hometest-app/${ENV_NAME}/env.hcl
+# 4. No need to update env.hcl — environment is auto-derived from the directory name
 
 # 5. Deploy the database migrator
 cd infrastructure/environments/poc/hometest-app/${ENV_NAME}/lambda-goose-migrator
@@ -170,7 +168,7 @@ cp -r infrastructure/environments/poc/hometest-app/dev-example \
       infrastructure/environments/poc/hometest-app/${ENV_NAME}
 ```
 
-Then update `env.hcl` with the correct environment name and follow the customisation steps below.
+Then follow the customisation steps below.
 
 ## Step-by-Step Guide
 
@@ -191,11 +189,12 @@ Create `infrastructure/environments/poc/hometest-app/${ENV_NAME}/env.hcl`:
 # Set common variables for the environment. This is automatically pulled in in the root terragrunt.hcl configuration to
 # feed forward to the child modules.
 locals {
-  environment = "dev2"  # Must match the directory name
+  # Environment name is auto-derived from the directory name.
+  # Add optional overrides here (domain, WireMock, alerts, etc.)
 }
 ```
 
-> **Note:** The environment name is also auto-derived from the parent directory name via `basename(dirname(get_terragrunt_dir()))` in `_envcommon/hometest-app.hcl`. The `env.hcl` value should match the directory name for consistency.
+> **Note:** The environment name is auto-derived from the directory name by both `root.hcl` and `_envcommon/hometest-app.hcl`. No need to set it manually.
 
 The `environment` value is used for:
 
@@ -263,8 +262,6 @@ To use a custom domain outside the POC wildcard scope (e.g. `dev2.hometest.servi
 
 ```hcl
 locals {
-  environment = "dev2"
-
   # Domain overrides — custom domains outside the POC wildcard cert scope.
   # Dedicated per-env certificates are created by the hometest-app module.
   env_domain = "dev2.hometest.service.nhs.uk"
@@ -307,7 +304,6 @@ To enable WireMock (ECS Fargate) for stubbing third-party APIs in E2E tests, add
 
 ```hcl
 locals {
-  environment                = "dev2"
   enable_wiremock            = true
   wiremock_bypass_waf        = false   # Use shared ALB — WAF allowlist rule exempts WireMock traffic
   wiremock_scheduled_scaling = false   # Scale to 0 outside business hours (Mon-Fri 9AM-6PM UTC)
@@ -594,7 +590,7 @@ infrastructure/environments/
     └── hometest-app/
         ├── app.hcl                      # Account-level overrides (secrets, NHS Login)
         ├── dev/
-        │   ├── env.hcl                  # Environment name + domain overrides
+        │   ├── env.hcl                  # Domain overrides, feature flags
         │   ├── app/
         │   │   └── terragrunt.hcl       # App deployment config
         │   └── lambda-goose-migrator/
@@ -609,7 +605,7 @@ infrastructure/environments/
         ├── demo/
         ├── prod/
         └── dev2/                        # ← New environment
-            ├── env.hcl                  # Environment name + optional domain/wiremock overrides
+            ├── env.hcl                  # Optional domain/wiremock overrides
             ├── app/
             │   └── terragrunt.hcl       # App deployment config
             └── lambda-goose-migrator/
@@ -620,7 +616,7 @@ infrastructure/environments/
 
 The Terragrunt configuration chain:
 
-1. **`env.hcl`** — Sets `environment = "dev2"`, plus optional domain overrides and feature flags (WireMock)
+1. **`env.hcl`** — Optional domain overrides and feature flags (WireMock). Environment name is auto-derived from the directory name.
 2. **`app/terragrunt.hcl`** includes:
    - `root.hcl` — S3 backend config, AWS account validation, tags
    - `_envcommon/hometest-app.hcl` — Shared defaults, Lambda definitions, build hooks, source paths, dependencies
@@ -634,7 +630,7 @@ The state file will be stored at:
 s3://nhs-hometest-poc-core-s3-tfstate/nhs-hometest-poc-dev2-app.tfstate
 ```
 
-> The key is `${account_name}-${environment}-${basename(path_relative_to_include())}.tfstate` (see `root.hcl`). The basename is `app` (the directory containing `terragrunt.hcl`), and environment comes from `env.hcl`.
+> The key is `${account_name}-${environment}-${basename(path_relative_to_include())}.tfstate` (see `root.hcl`). The basename is `app` (the directory containing `terragrunt.hcl`), and environment is auto-derived from the directory name.
 
 ## Destroying an Environment
 

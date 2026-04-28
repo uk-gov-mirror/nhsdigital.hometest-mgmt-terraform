@@ -14,6 +14,7 @@ locals {
   # Automatically load environment-level variables (optional - environments can define inline)
   # Uses find_in_parent_folders with fallback to a non-existent path; try() catches the read error
   _env_hcl_path = find_in_parent_folders("env.hcl", "${get_terragrunt_dir()}/__no_env_hcl__")
+  _has_env_hcl  = !endswith(local._env_hcl_path, "__no_env_hcl__")
   _env_locals   = try(read_terragrunt_config(local._env_hcl_path).locals, {})
 
   # Automatically load global variables
@@ -24,8 +25,12 @@ locals {
   account_name = local.account_vars.locals.aws_account_name
   account_id   = local.account_vars.locals.aws_account_id
 
-  # Environment: from env.hcl if available, otherwise derived from directory name
-  environment = try(local._env_locals.environment, basename(path_relative_to_include()))
+  # Environment: derived from the directory containing env.hcl (no need to set it manually).
+  # Fallback chain: explicit env.hcl local → env.hcl parent dir name → leaf dir name.
+  environment = try(
+    local._env_locals.environment,
+    local._has_env_hcl ? basename(dirname(local._env_hcl_path)) : basename(path_relative_to_include())
+  )
 
   # Verify that the AWS CLI is authenticated to the expected account
   # Set SKIP_AWS_ACCOUNT_CHECK=true to bypass this check (e.g. in pre-commit hooks)
@@ -73,11 +78,9 @@ remote_state {
   config = {
     bucket       = "${local.account_name}-core-s3-tfstate"
     use_lockfile = true
-    # IMPORTANT: This key derives `environment` from env.hcl (via find_in_parent_folders)
-    # and uses basename(path) as the module name. For NESTED modules (e.g., dev/lambda-goose-migrator)
-    # the basename alone is NOT unique across environments. Each env directory (dev/, uat/, etc.)
-    # MUST have an env.hcl that sets `environment = "<name>"` to disambiguate the key.
-    # Without it, all environments share the same key and overwrite each other's state.
+    # IMPORTANT: This key derives `environment` from the directory containing env.hcl
+    # (via find_in_parent_folders). The environment name is auto-derived from the directory
+    # name — no need to set it manually in env.hcl.
     key        = "${local.account_name}-${local.environment}-${basename(path_relative_to_include())}.tfstate"
     encrypt    = true
     kms_key_id = "arn:aws:kms:${local.region}:${local.account_id}:alias/${local.account_name}-core-kms-tfstate-key"

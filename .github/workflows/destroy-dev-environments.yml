@@ -121,14 +121,7 @@ jobs:
             echo "Creating $ENV_DIR from dev-example template..."
             cp -r "$DEV_EXAMPLE_DIR" "$ENV_DIR"
 
-            # Update env.hcl with the correct environment name
-            cat > "${ENV_DIR}/env.hcl" <<EOF
-          # Set common variables for the environment. This is automatically pulled in in the root terragrunt.hcl configuration to
-          # feed forward to the child modules.
-          locals {
-            environment = "${ENV_NAME}"
-          }
-          EOF
+            # env.hcl is copied from dev-example template — environment is auto-derived from directory name
           fi
 
           echo "Environment directory contents:"
@@ -194,13 +187,7 @@ jobs:
             echo "Creating $ENV_DIR from dev-example template..."
             cp -r "$DEV_EXAMPLE_DIR" "$ENV_DIR"
 
-            cat > "${ENV_DIR}/env.hcl" <<EOF
-          # Set common variables for the environment. This is automatically pulled in in the root terragrunt.hcl configuration to
-          # feed forward to the child modules.
-          locals {
-            environment = "${ENV_NAME}"
-          }
-          EOF
+            # env.hcl is copied from dev-example template — environment is auto-derived from directory name
           fi
 
       - name: "Install mise tools"

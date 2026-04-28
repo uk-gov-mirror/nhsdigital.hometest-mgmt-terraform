@@ -58,7 +58,8 @@ locals {
   # ---------------------------------------------------------------------------
 
   # Read per-environment config from env.hcl in the parent (environment) directory.
-  # env.hcl carries the environment name, domain overrides, and feature flags (e.g., wiremock).
+  # env.hcl carries domain overrides and feature flags (e.g., wiremock).
+  # Environment name is auto-derived from the directory name.
   _env_flags                 = try(read_terragrunt_config("${local._env_dir}/env.hcl").locals, {})
   _domain_overrides          = local._env_flags
   enable_wiremock            = lookup(local._env_flags, "enable_wiremock", false)
@@ -106,7 +107,10 @@ locals {
   # SOURCE PATHS
   # Override these in child terragrunt.hcl locals if needed
   # ---------------------------------------------------------------------------
-  hometest_service_dir = trimspace(run_cmd("realpath", "${get_repo_root()}/../hometest-service"))
+  hometest_service_dir = trimspace(run_cmd(
+    "bash", "-c",
+    "echo '[hometest-app.hcl] Resolving hometest-service source repo (terragrunt repo root: ${get_repo_root()})' >&2 && realpath '${get_repo_root()}/../hometest-service'"
+  ))
   scripts_dir          = "${get_repo_root()}/scripts"
   lambda_build_cache   = "${get_repo_root()}/.lambda-build-cache"
   spa_build_cache      = "${get_repo_root()}/.spa-build-cache"
