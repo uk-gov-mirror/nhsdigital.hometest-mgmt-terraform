@@ -27,6 +27,12 @@ terragrunt apply
 # 6. Deploy the app
 cd ../app
 terragrunt apply
+
+# Or, for subsequent redeployments only (requires full terragrunt apply
+# for both lambda-goose-migrator and app to have been run first):
+# mise run deploy-lambdas   # Lambdas only
+# mise run deploy-ui        # UI only
+# mise run deploy-all       # Both
 ```
 
 ## Contents
@@ -54,16 +60,17 @@ terragrunt apply
     - [Step 7: Deploy](#step-7-deploy)
       - [Option A: Deploy Locally](#option-a-deploy-locally)
       - [Option B: Deploy via GitHub Actions](#option-b-deploy-via-github-actions)
+    - [Step 8: Verify the Deployment](#step-8-verify-the-deployment)
   - [Quick Deploy (Iterative Development)](#quick-deploy-iterative-development)
     - [Deploy Only Lambdas](#deploy-only-lambdas)
     - [Deploy Only UI](#deploy-only-ui)
     - [Deploy Both (Skip Nothing, But Target Lambdas)](#deploy-both-skip-nothing-but-target-lambdas)
     - [Force Rebuild](#force-rebuild)
     - [Environment Variables Reference](#environment-variables-reference)
-    - [Step 8: Verify the Deployment](#step-8-verify-the-deployment)
   - [File Structure After Creation](#file-structure-after-creation)
   - [How It Works](#how-it-works)
   - [Destroying an Environment](#destroying-an-environment)
+    - [Automated Cleanup of Dev Environments](#automated-cleanup-of-dev-environments)
   - [Checklist](#checklist)
   - [Troubleshooting](#troubleshooting)
     - ["Can't find env.hcl"](#cant-find-envhcl)
@@ -368,18 +375,16 @@ There are two ways to deploy an environment: **locally** or via **GitHub Actions
 # Ensure AWS credentials are active
 export AWS_PROFILE=PoC-Dev
 
-cd infrastructure/environments/poc/hometest-app/${ENV_NAME}/app
+# Deploy the database migrator first (sets up per-environment schema)
+cd infrastructure/environments/poc/hometest-app/${ENV_NAME}/lambda-goose-migrator
+terragrunt apply
+
+# Then deploy the app
+cd ../app
 terragrunt apply
 ```
 
 When deploying locally, the build hooks reference your **local clone** of the `hometest-service` repo (expected at `../hometest-service/` relative to this repo's root). This means your local Lambda and SPA source code is what gets built and deployed — useful for testing changes before they're merged.
-
-> **Don't forget the database migrator!** After deploying the app, you must also deploy the goose migrator to set up the database schema for your environment:
->
-> ```bash
-> cd infrastructure/environments/poc/hometest-app/${ENV_NAME}/lambda-goose-migrator
-> terragrunt apply
-> ```
 
 #### Option B: Deploy via GitHub Actions
 
@@ -393,7 +398,7 @@ Click **"Run workflow"** and configure the following inputs:
 |-------|------|---------|-------------|
 | `hometest_service_ref` | string | `main` | Branch, tag, or SHA to checkout for `hometest-service`. Unlike local deployment which uses your local copy, the pipeline checks out the specified ref from the remote repo. |
 | `account` | choice | `poc` | AWS account to deploy to (`poc` or `dev`). |
-| `env` | choice | `dev` | Target environment (e.g. `dev`, `uat`, `demo`, `staging`). |
+| `env` | choice | `dev` | Target environment (e.g. `dev`, `uat`, `staging`). |
 | `action` | choice | `plan` | Terraform action: `plan` (preview), `apply` (deploy), or `destroy` (teardown). |
 | `targets` | string | _(empty)_ | Comma-separated list of resources to target in the app stack only (e.g. `module.lambdas["order-status-lambda"]`). Leave empty for full deployment. Does not apply to the migrator. |
 | `skip_migrator` | boolean | `false` | Skip the goose migrator deployment entirely (deploy app stack only). Equivalent to `SKIP_MIGRATOR=true` locally. |
@@ -405,14 +410,33 @@ Click **"Run workflow"** and configure the following inputs:
 >   description: "Target environment to deploy"
 >   required: true
 >   type: choice
->   default: dev
+>   default: dev2  # ← add your new environment here
 >   options:
 >     - dev
 >     - uat
->     - demo
 >     - staging
 >     - dev2  # ← add your new environment here
 > ```
+>
+> **Important:** All `dev-*` directories are gitignored by default (see the root `.gitignore`):
+>
+> ```gitignore
+> infrastructure/environments/poc/hometest-app/dev-*
+> !infrastructure/environments/poc/hometest-app/dev-example
+> ```
+>
+> If you want your `dev-*` environment to be deployable via the pipeline, you must add a negation rule to `.gitignore` and commit the directory:
+>
+> ```gitignore
+> !infrastructure/environments/poc/hometest-app/dev-myenv
+> ```
+>
+> ```bash
+> git add infrastructure/environments/poc/hometest-app/dev-myenv
+> git commit -m "Add dev-myenv environment"
+> ```
+>
+> Without this exclusion, the pipeline's checkout won't include your environment directory and the deploy will fail with `env path does not exist`.
 >
 > **Tip:** For a first deployment of a new environment, use `action: plan` first to review the changes, then re-run with `action: apply`.
 
@@ -425,15 +449,36 @@ Both local and pipeline deployments will:
 
 > **Note:** Build hooks use content hashing to skip rebuilds when source code hasn't changed. To force a rebuild, set `FORCE_LAMBDA_REBUILD=true` or `FORCE_SPA_REBUILD=true`.
 
+### Step 8: Verify the Deployment
+
+After successful apply, Terraform outputs will show:
+
+```bash
+# Check the outputs
+terragrunt output
+
+# Key outputs:
+# spa_url              = "https://dev2.poc.hometest.service.nhs.uk"
+# cloudfront_id        = "E1234567890ABC"
+# lambda_function_names = ["nhs-hometest-dev2-eligibility-lookup-lambda", ...]
+```
+
+Test the deployment:
+
+```bash
+# SPA
+curl -I https://dev2.poc.hometest.service.nhs.uk/
+```
+
 ## Quick Deploy (Iterative Development)
 
 Once your environment is fully deployed, you can rapidly redeploy just lambdas, just the UI, or both without running a full `terragrunt apply`. This is useful when iterating on `hometest-service` code.
 
-| What changed | Command | How it works |
-|--------------|---------|--------------|
-| Lambda code only | `SKIP_SPA=true terragrunt apply -target='module.lambdas["<name>"].aws_lambda_function.this' -auto-approve` | Skips SPA build/upload, targets only the lambda resource → Terraform re-uploads the zip |
-| UI code only | `SKIP_LAMBDAS=true terragrunt apply -refresh-only -auto-approve` | Skips lambda build, Terraform is a no-op, but the `upload_spa` after-hook still runs → S3 sync + CloudFront invalidation |
-| Both | `terragrunt apply -target='module.lambdas["<name>"].aws_lambda_function.this' -auto-approve` | Builds both, targets lambda for Terraform, SPA hooks run regardless of `-target` |
+| What changed | Command | Mise shortcut | How it works |
+|--------------|---------|---------------|--------------|
+| Lambda code only | `SKIP_SPA=true terragrunt apply -target='module.lambdas["<name>"]' -auto-approve` | `mise run deploy-lambdas` | Skips SPA build/upload, targets only the lambda resource → Terraform re-uploads the zip |
+| UI code only | `SKIP_LAMBDAS=true terragrunt apply -target=provider.aws -auto-approve` | `mise run deploy-ui` | Skips lambda build, Terraform is a no-op, but the `upload_spa` after-hook still runs → S3 sync + CloudFront invalidation |
+| Both | `terragrunt apply -target='module.lambdas["<name>"]' -auto-approve` | `mise run deploy-all` | Builds both, targets lambda for Terraform, SPA hooks run regardless of `-target` |
 
 All commands below assume you are in the environment's `app/` directory:
 
@@ -450,7 +495,7 @@ Skip the SPA build/upload and target only the lambda resources that changed:
 # All (and only) lambdas
 SKIP_SPA=true terragrunt apply -target='module.lambdas' -auto-approve
 
-## Or use the mise shortcut:
+# Or use the mise shortcut:
 mise run deploy-lambdas
 
 # Single lambda (~30s build + ~20s targeted apply)
@@ -527,27 +572,6 @@ FORCE_LAMBDA_REBUILD=true FORCE_SPA_REBUILD=true terragrunt apply
 | `FORCE_LAMBDA_REBUILD=true` | Ignore lambda build cache — always rebuild |
 | `FORCE_SPA_REBUILD=true` | Ignore SPA build cache — always rebuild |
 
-### Step 8: Verify the Deployment
-
-After successful apply, Terraform outputs will show:
-
-```bash
-# Check the outputs
-terragrunt output
-
-# Key outputs:
-# spa_url              = "https://dev2.poc.hometest.service.nhs.uk"
-# cloudfront_id        = "E1234567890ABC"
-# lambda_function_names = ["nhs-hometest-dev2-eligibility-lookup-lambda", ...]
-```
-
-Test the deployment:
-
-```bash
-# SPA
-curl -I https://dev2.poc.hometest.service.nhs.uk/
-```
-
 ## File Structure After Creation
 
 ```text
@@ -622,6 +646,28 @@ terragrunt destroy
 ```
 
 The `empty_spa_bucket_on_destroy` hook will automatically clean all versioned objects from the S3 SPA bucket before Terraform attempts to delete it.
+
+### Automated Cleanup of Dev Environments
+
+A scheduled GitHub Actions workflow automatically destroys all `dev-*` environments every **Friday at 8pm UK time**.
+
+**Workflow:** [`.github/workflows/destroy-dev-environments.yml`](../../.github/workflows/destroy-dev-environments.yml)
+
+**How it works:**
+
+1. Discovers all `dev-*` environments by querying the `Environment` tag on Lambda functions in AWS
+2. For each discovered environment, creates the Terragrunt directory from the `dev-example` template if it doesn't already exist
+3. Destroys the `app` stack first, then the `lambda-goose-migrator` stack (reverse dependency order)
+
+**Manual trigger:**
+
+You can also run it manually from the GitHub Actions UI:
+
+- Navigate to **Actions → Destroy Dev Environments → Run workflow**
+- Set **dry_run** to `true` (default) to see a destroy plan without making changes
+- Set **dry_run** to `false` to actually destroy the environments
+
+> **Note:** Scheduled runs always perform the actual destroy (no dry run). If you need your dev environment to persist over the weekend, re-deploy it on Monday using the [Deploy HomeTest App](../../.github/workflows/deploy-hometest-app.yaml) workflow.
 
 ## Checklist
 

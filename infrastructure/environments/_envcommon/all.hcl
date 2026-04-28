@@ -62,6 +62,8 @@ locals {
     ".prevx.io",              # Preventx staging/prod API
     ".preventx.com",          # Preventx website
     ".azurewebsites.net",     # Preventx Azure functions
-    ".sh24.org.uk"            # SH24 all environments
+    ".sh24.org.uk",           # SH24 all environments
+    ".docker.io",             # Docker Hub registry (registry-1.docker.io, auth.docker.io) — required for WireMock image pull
+    ".docker.com",            # Docker Hub CDN (production.cloudflare.docker.com) — required for WireMock image layers
   ]
 }
