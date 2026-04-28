@@ -15,10 +15,6 @@ resource "aws_security_group" "lambda" {
   tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-lambda-sg"
   })
-
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 resource "aws_vpc_security_group_egress_rule" "lambda_https" {
@@ -74,10 +70,6 @@ resource "aws_security_group" "lambda_rds" {
   tags = merge(local.common_tags, {
     Name = "${local.resource_prefix}-lambda-rds-sg"
   })
-
-  lifecycle {
-    create_before_destroy = true
-  }
 }
 
 resource "aws_vpc_security_group_egress_rule" "lambda_rds_postgres" {

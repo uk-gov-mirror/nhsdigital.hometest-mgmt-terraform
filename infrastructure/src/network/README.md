@@ -358,6 +358,7 @@ When `enable_network_firewall = true`, AWS Network Firewall is deployed for adva
 enable_network_firewall = true
 firewall_default_deny   = true
 
+
 # Allow specific inbound connections
 allowed_ingress_ips = [
   {
@@ -449,7 +450,7 @@ resource "aws_lambda_function" "example" {
 ## Inputs
 
 | Name | Description | Type | Default | Required |
-|------|-------------|------|---------|:--------:|
+| ---- | ----------- | ---- | ------- | :------: |
 | aws_region | AWS region for resources | `string` | n/a | yes |
 | aws_account_id | AWS account ID | `string` | n/a | yes |
 | aws_account_shortname | AWS account short name for resource naming | `string` | n/a | yes |
@@ -471,7 +472,7 @@ resource "aws_lambda_function" "example" {
 ## Outputs
 
 | Name | Description |
-|------|-------------|
+| ---- | ----------- |
 | vpc_id | The ID of the VPC |
 | vpc_cidr_block | The CIDR block of the VPC |
 | public_subnet_ids | List of public subnet IDs |
@@ -484,7 +485,7 @@ resource "aws_lambda_function" "example" {
 | network_firewall_id | ID of the Network Firewall (when enabled) |
 | network_firewall_arn | ARN of the Network Firewall |
 | firewall_subnet_ids | List of firewall subnet IDs |
-| egress_filtering_config | Summary of egress filtering configuration |
+| firewall_filtering_config | Summary of Network Firewall filtering configuration (ingress and egress) |
 
 ## Best Practices Implemented
 
@@ -512,7 +513,7 @@ resource "aws_lambda_function" "example" {
 ## Requirements
 
 | Name | Version |
-|------|---------|
+| ---- | ------- |
 | terraform | >= 1.14.0 |
 | aws | ~> 6.28.0 |
 
@@ -545,6 +546,9 @@ No modules.
 | [aws_cloudwatch_log_resource_policy.dns_query_logs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_resource_policy) | resource |
 | [aws_cloudwatch_log_stream.dns_query_firehose](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_stream) | resource |
 | [aws_cloudwatch_log_subscription_filter.dns_query_logs](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_subscription_filter) | resource |
+| [aws_cloudwatch_metric_alarm.firewall_dropped_packets_high](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_metric_alarm) | resource |
+| [aws_cloudwatch_metric_alarm.firewall_passed_packets_zero](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_metric_alarm) | resource |
+| [aws_cloudwatch_metric_alarm.firewall_received_packets_zero](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_metric_alarm) | resource |
 | [aws_db_subnet_group.main](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/db_subnet_group) | resource |
 | [aws_eip.nat](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/eip) | resource |
 | [aws_flow_log.main](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/flow_log) | resource |
@@ -577,6 +581,7 @@ No modules.
 | [aws_route.private_nat](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route) | resource |
 | [aws_route.private_to_firewall](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route) | resource |
 | [aws_route.public_internet](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route) | resource |
+| [aws_route.public_to_firewall_private](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route) | resource |
 | [aws_route53_health_check.main](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_health_check) | resource |
 | [aws_route53_hosted_zone_dnssec.main](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_hosted_zone_dnssec) | resource |
 | [aws_route53_key_signing_key.main](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/route53_key_signing_key) | resource |
@@ -624,8 +629,8 @@ No modules.
 | Name | Description | Type | Default | Required |
 | ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_allowed_egress_domains"></a> [allowed\_egress\_domains](#input\_allowed\_egress\_domains) | List of allowed egress domains (for HTTPS/TLS traffic). Supports wildcards like '.example.com'. | `list(string)` | `[]` | no |
-| <a name="input_allowed_egress_ips"></a> [allowed\_egress\_ips](#input\_allowed\_egress\_ips) | List of allowed egress IP addresses with port and protocol. These IPs will be permitted through the firewall. | <pre>list(object({<br/>    ip          = string # IP address or CIDR (e.g., "203.0.113.10/32")<br/>    port        = string # Port number or "ANY"<br/>    protocol    = string # Protocol: TCP, UDP, or IP<br/>    description = string # Description for documentation<br/>  }))</pre> | `[]` | no |
-| <a name="input_allowed_ingress_ips"></a> [allowed\_ingress\_ips](#input\_allowed\_ingress\_ips) | List of allowed ingress IP addresses with port and protocol. These IPs will be permitted through the firewall for inbound traffic. | <pre>list(object({<br/>    ip          = string # IP address or CIDR (e.g., "203.0.113.10/32")<br/>    port        = string # Port number or "ANY"<br/>    protocol    = string # Protocol: TCP, UDP, or IP<br/>    description = string # Description for documentation<br/>  }))</pre> | `[]` | no |
+| <a name="input_allowed_egress_ips"></a> [allowed\_egress\_ips](#input\_allowed\_egress\_ips) | List of allowed egress IP addresses with port and protocol. These IPs will be permitted through the firewall. | <pre>list(object({<br/>    ip          = string # IP address in CIDR notation (e.g., "203.0.113.10/32" for single IP)<br/>    port        = string # Port number or "ANY"<br/>    protocol    = string # Protocol: TCP, UDP, or IP<br/>    description = string # Description for documentation<br/>  }))</pre> | `[]` | no |
+| <a name="input_allowed_ingress_ips"></a> [allowed\_ingress\_ips](#input\_allowed\_ingress\_ips) | List of allowed ingress IP addresses with port and protocol. These IPs will be permitted through the firewall for inbound traffic. | <pre>list(object({<br/>    ip          = string # IP address in CIDR notation (e.g., "203.0.113.10/32" for single IP)<br/>    port        = string # Port number or "ANY"<br/>    protocol    = string # Protocol: TCP, UDP, or IP<br/>    description = string # Description for documentation<br/>  }))</pre> | `[]` | no |
 | <a name="input_aws_account_id"></a> [aws\_account\_id](#input\_aws\_account\_id) | AWS account ID for resources | `string` | n/a | yes |
 | <a name="input_aws_account_shortname"></a> [aws\_account\_shortname](#input\_aws\_account\_shortname) | AWS account short name/alias for resource naming | `string` | n/a | yes |
 | <a name="input_aws_allowed_regions"></a> [aws\_allowed\_regions](#input\_aws\_allowed\_regions) | List of AWS regions allowed for resource deployment | `list(string)` | <pre>[<br/>  "eu-west-2",<br/>  "us-east-1"<br/>]</pre> | no |
@@ -646,8 +651,13 @@ No modules.
 | <a name="input_enable_ipv6"></a> [enable\_ipv6](#input\_enable\_ipv6) | Enable IPv6 CIDR block assignment for the VPC (dual-stack) | `bool` | `false` | no |
 | <a name="input_enable_network_firewall"></a> [enable\_network\_firewall](#input\_enable\_network\_firewall) | Enable AWS Network Firewall for egress filtering and deep packet inspection | `bool` | `false` | no |
 | <a name="input_environment"></a> [environment](#input\_environment) | Environment name (e.g., mgmt, dev, staging, prod) | `string` | n/a | yes |
+| <a name="input_firewall_alert_sns_topic_arn"></a> [firewall\_alert\_sns\_topic\_arn](#input\_firewall\_alert\_sns\_topic\_arn) | ARN of the SNS topic for Network Firewall CloudWatch alarm notifications. If empty, alarms are created without actions. | `string` | `""` | no |
 | <a name="input_firewall_default_deny"></a> [firewall\_default\_deny](#input\_firewall\_default\_deny) | Enable default deny rule - drops all traffic not explicitly allowed. CAUTION: Ensure all required destinations are in allowed lists before enabling. | `bool` | `true` | no |
+| <a name="input_firewall_delete_protection"></a> [firewall\_delete\_protection](#input\_firewall\_delete\_protection) | Enable deletion protection for the Network Firewall. Set to true in production to prevent accidental deletion. | `bool` | `false` | no |
 | <a name="input_firewall_logs_retention_days"></a> [firewall\_logs\_retention\_days](#input\_firewall\_logs\_retention\_days) | Number of days to retain Network Firewall logs in CloudWatch | `number` | `90` | no |
+| <a name="input_firewall_policy_change_protection"></a> [firewall\_policy\_change\_protection](#input\_firewall\_policy\_change\_protection) | Enable firewall policy change protection. Set to true in production to prevent accidental policy changes. | `bool` | `false` | no |
+| <a name="input_firewall_rule_group_capacities"></a> [firewall\_rule\_group\_capacities](#input\_firewall\_rule\_group\_capacities) | Capacity units for each Network Firewall rule group. Capacity CANNOT be changed after creation (requires rule group recreation). Set values higher than your expected rule count to allow headroom for growth. | <pre>object({<br/>    aws_services  = optional(number, 50)<br/>    egress_ip     = optional(number, 100)<br/>    egress_domain = optional(number, 100)<br/>    ingress_ip    = optional(number, 100)<br/>    drop_all      = optional(number, 10)<br/>  })</pre> | `{}` | no |
+| <a name="input_firewall_subnet_change_protection"></a> [firewall\_subnet\_change\_protection](#input\_firewall\_subnet\_change\_protection) | Enable subnet change protection for the Network Firewall. Set to true in production to prevent accidental subnet changes. | `bool` | `false` | no |
 | <a name="input_health_check_failure_threshold"></a> [health\_check\_failure\_threshold](#input\_health\_check\_failure\_threshold) | The number of consecutive health check failures required before considering the endpoint unhealthy | `number` | `3` | no |
 | <a name="input_health_check_fqdn"></a> [health\_check\_fqdn](#input\_health\_check\_fqdn) | The FQDN to health check (defaults to route53\_zone\_name if not specified) | `string` | `""` | no |
 | <a name="input_health_check_path"></a> [health\_check\_path](#input\_health\_check\_path) | The path for HTTP/HTTPS health checks | `string` | `"/health"` | no |
@@ -684,7 +694,7 @@ No modules.
 | <a name="output_dns_query_logs_s3_bucket_id"></a> [dns\_query\_logs\_s3\_bucket\_id](#output\_dns\_query\_logs\_s3\_bucket\_id) | The ID of the S3 bucket for DNS query logs |
 | <a name="output_dnssec_enabled"></a> [dnssec\_enabled](#output\_dnssec\_enabled) | Whether DNSSEC is enabled for the hosted zone |
 | <a name="output_dnssec_kms_key_arn"></a> [dnssec\_kms\_key\_arn](#output\_dnssec\_kms\_key\_arn) | The ARN of the KMS key used for DNSSEC signing |
-| <a name="output_egress_filtering_config"></a> [egress\_filtering\_config](#output\_egress\_filtering\_config) | Summary of egress filtering configuration |
+| <a name="output_firewall_filtering_config"></a> [firewall\_filtering\_config](#output\_firewall\_filtering\_config) | Summary of Network Firewall filtering configuration (ingress and egress) |
 | <a name="output_firewall_subnet_arns"></a> [firewall\_subnet\_arns](#output\_firewall\_subnet\_arns) | List of firewall subnet ARNs |
 | <a name="output_firewall_subnet_cidrs"></a> [firewall\_subnet\_cidrs](#output\_firewall\_subnet\_cidrs) | List of firewall subnet CIDR blocks |
 | <a name="output_firewall_subnet_ids"></a> [firewall\_subnet\_ids](#output\_firewall\_subnet\_ids) | List of firewall subnet IDs |
@@ -695,6 +705,7 @@ No modules.
 | <a name="output_lambda_vpc_config"></a> [lambda\_vpc\_config](#output\_lambda\_vpc\_config) | VPC configuration for Lambda functions (ready to use) |
 | <a name="output_nat_gateway_ids"></a> [nat\_gateway\_ids](#output\_nat\_gateway\_ids) | List of NAT Gateway IDs |
 | <a name="output_nat_gateway_public_ips"></a> [nat\_gateway\_public\_ips](#output\_nat\_gateway\_public\_ips) | List of NAT Gateway public IP addresses |
+| <a name="output_network_firewall_alarm_arns"></a> [network\_firewall\_alarm\_arns](#output\_network\_firewall\_alarm\_arns) | ARNs of the Network Firewall CloudWatch alarms |
 | <a name="output_network_firewall_arn"></a> [network\_firewall\_arn](#output\_network\_firewall\_arn) | ARN of the Network Firewall |
 | <a name="output_network_firewall_enabled"></a> [network\_firewall\_enabled](#output\_network\_firewall\_enabled) | Whether Network Firewall is enabled |
 | <a name="output_network_firewall_endpoint_ids"></a> [network\_firewall\_endpoint\_ids](#output\_network\_firewall\_endpoint\_ids) | Map of AZ to Network Firewall endpoint IDs |

@@ -10,6 +10,14 @@ include "root" {
   path = find_in_parent_folders("root.hcl")
 }
 
+# ---------------------------------------------------------------------------------------------------------------------
+# LOCALS - Load global configuration
+# ---------------------------------------------------------------------------------------------------------------------
+
+locals {
+  global_vars = read_terragrunt_config(find_in_parent_folders("_envcommon/all.hcl"))
+}
+
 terraform {
   source = "../../../..//src/network"
 }
@@ -32,7 +40,13 @@ dependency "bootstrap" {
 # For production, remove these overrides to restore az_count = 3 and full logging.
 inputs = {
   logs_kms_key_arn             = dependency.bootstrap.outputs.logs_kms_key_arn
+  enable_network_firewall      = true
   az_count                     = 1
   enable_firewall_flow_logs    = false
   firewall_logs_retention_days = 7
+
+  # Allow specific domains for egress (HTTPS/TLS traffic)
+  # Note: AWS service domains (.amazonaws.com) are automatically allowed
+  # Defined in _envcommon/all.hcl for consistency across environments
+  allowed_egress_domains = local.global_vars.locals.allowed_egress_domains
 }

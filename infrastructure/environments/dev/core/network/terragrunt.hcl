@@ -10,6 +10,14 @@ include "root" {
   path = find_in_parent_folders("root.hcl")
 }
 
+# ---------------------------------------------------------------------------------------------------------------------
+# LOCALS - Load global configuration
+# ---------------------------------------------------------------------------------------------------------------------
+
+locals {
+  global_vars = read_terragrunt_config(find_in_parent_folders("_envcommon/all.hcl"))
+}
+
 terraform {
   source = "../../../..//src/network"
 }
@@ -34,55 +42,56 @@ inputs = {
   enable_firewall_flow_logs    = false
   firewall_logs_retention_days = 7
 
-  firewall_default_deny = true
+  firewall_default_deny = false
 
-  # Allow specific inbound connections (e.g., from ALB, API Gateway)
+  # ---------------------------------------------------------------------------
+  # INGRESS FILTERING (inbound traffic to VPC)
+  # ---------------------------------------------------------------------------
+  # Ingress is IP + port based. Domain/URL filtering does NOT apply to inbound
+  # traffic because the TLS SNI in an inbound connection contains YOUR domain,
+  # not the client's. Use security groups and ALB/WAF for application-layer
+  # ingress filtering.
   allowed_ingress_ips = [
     {
       ip          = "0.0.0.0/0"
       port        = "443"
       protocol    = "TCP"
-      description = "HTTPS from anywhere"
+      description = "HTTPS from anywhere (ALB/API Gateway)"
     },
     {
       ip          = "0.0.0.0/0"
       port        = "80"
       protocol    = "TCP"
-      description = "HTTP from anywhere"
+      description = "HTTP from anywhere (redirect to HTTPS)"
     }
   ]
 
-  # Allow specific outbound connections
+  # ---------------------------------------------------------------------------
+  # EGRESS FILTERING (outbound traffic from VPC)
+  # ---------------------------------------------------------------------------
+  # Two mechanisms work together:
+  #   1. Domain filter (allowed_egress_domains) — allowlists HTTPS/TLS traffic
+  #      by inspecting TLS SNI and HTTP Host headers. Use for URLs/APIs.
+  #   2. IP filter (allowed_egress_ips) — allowlists by IP/CIDR + port.
+  #      Use for non-HTTPS protocols or endpoints without stable domains.
+  #
+  # IMPORTANT: Do NOT add 0.0.0.0/0 to allowed_egress_ips on port 443/80 —
+  # it would bypass domain filtering and allow all HTTPS/HTTP traffic.
+  # ---------------------------------------------------------------------------
+
+  # IP-based egress: for specific non-HTTPS endpoints or IPs without domains
   allowed_egress_ips = [
-    {
-      ip          = "0.0.0.0/0"
-      port        = "443"
-      protocol    = "TCP"
-      description = "HTTPS from anywhere"
-    },
-    {
-      ip          = "0.0.0.0/0"
-      port        = "80"
-      protocol    = "TCP"
-      description = "HTTP from anywhere"
-    }
-    # Add specific external API endpoints here if needed
-    # Example:
+    # Example: NTP time sync (UDP, can't use domain filter)
     # {
-    #   ip          = "203.0.113.10/32"
-    #   port        = "443"
-    #   protocol    = "TCP"
-    #   description = "External API"
+    #   ip          = "169.254.169.123/32"  # gitleaks:allow
+    #   port        = "123"
+    #   protocol    = "UDP"
+    #   description = "Amazon Time Sync Service"
     # }
   ]
 
-  # Allow specific domains for egress (HTTPS/TLS traffic)
-  # Note: AWS service domains (.amazonaws.com) are automatically allowed
-  allowed_egress_domains = [
-    ".nhs.uk",               # NHS domains
-    ".gov.uk",               # Government domains
-    ".github.com",           # GitHub
-    ".githubusercontent.com" # GitHub content
-    # Add more domains as needed for your application
-  ]
+  # Domain-based egress: for HTTPS/TLS traffic (URLs and APIs)
+  # AWS service domains (.amazonaws.com) are automatically allowed
+  # Defined in _envcommon/all.hcl for consistency across environments
+  allowed_egress_domains = local.global_vars.locals.allowed_egress_domains
 }
