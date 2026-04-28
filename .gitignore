@@ -147,3 +147,5 @@ dist
 .spa-build-cache
 
 **/lambda-db-auth-test/src/bootstrap
+!infrastructure/environments/poc/hometest-app/dev-example
+infrastructure/environments/poc/hometest-app/dev-*
