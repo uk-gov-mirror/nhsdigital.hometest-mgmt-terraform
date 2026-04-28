@@ -1,0 +1,252 @@
+---
+name: "Destroy Dev Environments"
+run-name: "Destroy dev-* environments (${{ github.event_name == 'schedule' && 'scheduled' || format('dry_run: {0}', inputs.dry_run) }})"
+
+on:
+  schedule:
+    - cron: "0 20 * * 5" # 8pm GMT Friday
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run - only list environments and show destroy plan"
+        required: true
+        default: "true"
+        type: choice
+        options:
+          - "true"
+          - "false"
+
+env:
+  AWS_REGION: "eu-west-2"
+  TF_INPUT: false
+  TF_IN_AUTOMATION: true
+
+jobs:
+  discover-environments:
+    name: "Discover dev-* environments from Lambda tags"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      id-token: write
+      contents: read
+    outputs:
+      environments: ${{ steps.filter-envs.outputs.environments }}
+      working_dir_base: ${{ steps.set-paths.outputs.working_dir_base }}
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v6
+        with:
+          path: hometest-mgmt-terraform
+
+      - name: "Set paths"
+        id: set-paths
+        run: |
+          echo "working_dir_base=hometest-mgmt-terraform/infrastructure/environments/poc/hometest-app" >> "$GITHUB_OUTPUT"
+
+      - name: "Configure AWS credentials"
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: "List Lambda environment tags"
+        id: list-lambdas
+        run: |
+          # Get all unique environment tag values from Lambda functions using resource tagging API
+          ENVS=$(aws resourcegroupstaggingapi get-resources \
+            --resource-type-filters lambda:function \
+            --tag-filters Key=Environment \
+            --query "ResourceTagMappingList[].Tags[?Key=='Environment'].Value" \
+            --output text | tr '\t' '\n' | sort -u)
+
+          echo "All environments found:"
+          echo "$ENVS"
+          {
+            echo "all_envs<<EOF"
+            echo "$ENVS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: "Filter dev-* environments"
+        id: filter-envs
+        run: |
+          # Filter only dev-* environments (exclude dev-example template)
+          FILTERED=$(echo "${{ steps.list-lambdas.outputs.all_envs }}" | grep -E '^dev-' | grep -v '^dev-example$' | sort -u)
+
+          echo "Filtered dev-* environments:"
+          echo "$FILTERED"
+
+          if [ -z "$FILTERED" ]; then
+            echo "No dev-* environments found."
+            echo 'environments=[]' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Convert to JSON array for matrix strategy
+          JSON_ARRAY=$(echo "$FILTERED" | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "environments=$JSON_ARRAY" >> "$GITHUB_OUTPUT"
+          echo "Matrix: $JSON_ARRAY"
+
+  destroy-app:
+    name: "Destroy App ${{ matrix.env }}"
+    needs: discover-environments
+    if: needs.discover-environments.outputs.environments != '[]' && needs.discover-environments.outputs.environments != ''
+    runs-on: ubuntu-latest
+    environment: poc
+    timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      matrix:
+        env: ${{ fromJson(needs.discover-environments.outputs.environments) }}
+      max-parallel: 2
+      fail-fast: false
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v6
+        with:
+          path: hometest-mgmt-terraform
+
+      - name: "Create environment directory from dev-example template"
+        env:
+          WORKING_DIR_BASE: ${{ needs.discover-environments.outputs.working_dir_base }}
+        run: |
+          ENV_NAME="${{ matrix.env }}"
+          ENV_DIR="${WORKING_DIR_BASE}/${ENV_NAME}"
+          DEV_EXAMPLE_DIR="${WORKING_DIR_BASE}/dev-example"
+
+          if [ -d "$ENV_DIR" ]; then
+            echo "Directory $ENV_DIR already exists, using existing configuration."
+          else
+            echo "Creating $ENV_DIR from dev-example template..."
+            cp -r "$DEV_EXAMPLE_DIR" "$ENV_DIR"
+
+            # Update env.hcl with the correct environment name
+            cat > "${ENV_DIR}/env.hcl" <<EOF
+          # Set common variables for the environment. This is automatically pulled in in the root terragrunt.hcl configuration to
+          # feed forward to the child modules.
+          locals {
+            environment = "${ENV_NAME}"
+          }
+          EOF
+          fi
+
+          echo "Environment directory contents:"
+          find "$ENV_DIR" -type f
+
+      - name: "Install mise tools"
+        uses: ./hometest-mgmt-terraform/.github/actions/install-mise
+        with:
+          working_directory: ${{ needs.discover-environments.outputs.working_dir_base }}/${{ matrix.env }}/app
+
+      - name: "Destroy app (${{ matrix.env }})"
+        uses: ./hometest-mgmt-terraform/.github/actions/deploy-terragrunt
+        with:
+          aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws_region: ${{ env.AWS_REGION }}
+          working_directory: ${{ needs.discover-environments.outputs.working_dir_base }}/${{ matrix.env }}/app
+          action: ${{ inputs.dry_run == 'true' && 'destroy-plan' || 'destroy' }}
+
+      - name: "Post destroy summary"
+        if: always()
+        env:
+          TARGET_ENV: ${{ matrix.env }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          {
+            echo "## Destroy App: ${TARGET_ENV}"
+            echo "- **Status**: ${{ job.status }}"
+            echo "- **Dry Run**: ${DRY_RUN}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  destroy-migrator:
+    name: "Destroy Migrator ${{ matrix.env }}"
+    needs: [discover-environments, destroy-app]
+    if: needs.discover-environments.outputs.environments != '[]' && needs.discover-environments.outputs.environments != ''
+    runs-on: ubuntu-latest
+    environment: poc
+    timeout-minutes: 30
+    permissions:
+      id-token: write
+      contents: read
+    strategy:
+      matrix:
+        env: ${{ fromJson(needs.discover-environments.outputs.environments) }}
+      max-parallel: 2
+      fail-fast: false
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v6
+        with:
+          path: hometest-mgmt-terraform
+
+      - name: "Create environment directory from dev-example template"
+        env:
+          WORKING_DIR_BASE: ${{ needs.discover-environments.outputs.working_dir_base }}
+        run: |
+          ENV_NAME="${{ matrix.env }}"
+          ENV_DIR="${WORKING_DIR_BASE}/${ENV_NAME}"
+          DEV_EXAMPLE_DIR="${WORKING_DIR_BASE}/dev-example"
+
+          if [ -d "$ENV_DIR" ]; then
+            echo "Directory $ENV_DIR already exists, using existing configuration."
+          else
+            echo "Creating $ENV_DIR from dev-example template..."
+            cp -r "$DEV_EXAMPLE_DIR" "$ENV_DIR"
+
+            cat > "${ENV_DIR}/env.hcl" <<EOF
+          # Set common variables for the environment. This is automatically pulled in in the root terragrunt.hcl configuration to
+          # feed forward to the child modules.
+          locals {
+            environment = "${ENV_NAME}"
+          }
+          EOF
+          fi
+
+      - name: "Install mise tools"
+        uses: ./hometest-mgmt-terraform/.github/actions/install-mise
+        with:
+          working_directory: ${{ needs.discover-environments.outputs.working_dir_base }}/${{ matrix.env }}/lambda-goose-migrator
+
+      - name: "Destroy goose migrator (${{ matrix.env }})"
+        uses: ./hometest-mgmt-terraform/.github/actions/deploy-terragrunt
+        with:
+          aws_role_arn: ${{ secrets.AWS_ROLE_ARN }}
+          aws_region: ${{ env.AWS_REGION }}
+          working_directory: ${{ needs.discover-environments.outputs.working_dir_base }}/${{ matrix.env }}/lambda-goose-migrator
+          action: ${{ inputs.dry_run == 'true' && 'destroy-plan' || 'destroy' }}
+
+      - name: "Post destroy migrator summary"
+        if: always()
+        env:
+          TARGET_ENV: ${{ matrix.env }}
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+        run: |
+          {
+            echo "## Destroy Migrator: ${TARGET_ENV}"
+            echo "- **Status**: ${{ job.status }}"
+            echo "- **Dry Run**: ${DRY_RUN}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  summary:
+    name: "Destruction Summary"
+    needs: [discover-environments, destroy-app, destroy-migrator]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Generate summary"
+        env:
+          DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          ENVIRONMENTS: ${{ needs.discover-environments.outputs.environments }}
+        run: |
+          {
+            echo "## Dev Environment Destruction Summary"
+            echo ""
+            echo "| Detail | Value |"
+            echo "|--------|-------|"
+            echo "| Dry Run | ${DRY_RUN} |"
+            echo "| Environments | ${ENVIRONMENTS} |"
+            echo "| Destroy App | ${{ needs.destroy-app.result }} |"
+            echo "| Destroy Migrator | ${{ needs.destroy-migrator.result }} |"
+          } >> "$GITHUB_STEP_SUMMARY"

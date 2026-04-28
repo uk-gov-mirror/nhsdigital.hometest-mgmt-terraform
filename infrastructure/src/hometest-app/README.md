@@ -152,7 +152,6 @@ aws cloudfront create-invalidation \
 | `api-gateway` | REST API Gateway with logging and security |
 | `cloudfront-spa` | CloudFront distribution for SPA with S3 origin |
 | `deployment-artifacts` | S3 bucket for Lambda deployment packages |
-| `developer-iam` | IAM role for developers to deploy applications |
 
 ## Configuration
 
