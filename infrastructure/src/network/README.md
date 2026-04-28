@@ -672,6 +672,7 @@ No modules.
 | <a name="input_private_zone_name"></a> [private\_zone\_name](#input\_private\_zone\_name) | The domain name for the private hosted zone (defaults to route53\_zone\_name if not specified) | `string` | `""` | no |
 | <a name="input_project_name"></a> [project\_name](#input\_project\_name) | Project name used for resource naming | `string` | n/a | yes |
 | <a name="input_route53_zone_name"></a> [route53\_zone\_name](#input\_route53\_zone\_name) | The domain name for the Route 53 hosted zone | `string` | `"hometest.service.nhs.uk"` | no |
+| <a name="input_route_internal_alb_traffic_through_firewall"></a> [route\_internal\_alb\_traffic\_through\_firewall](#input\_route\_internal\_alb\_traffic\_through\_firewall) | Route public subnet to private subnet traffic through Network Firewall for ALB-to-private workloads. Disable when using a single firewall AZ to keep ALB-to-private traffic on local VPC routing. | `bool` | `true` | no |
 | <a name="input_tags"></a> [tags](#input\_tags) | Additional tags to apply to all resources | `map(string)` | `{}` | no |
 | <a name="input_vpc_cidr"></a> [vpc\_cidr](#input\_vpc\_cidr) | CIDR block for the VPC. Recommended /16 for full subnet allocation. | `string` | `"10.0.0.0/16"` | no |
 

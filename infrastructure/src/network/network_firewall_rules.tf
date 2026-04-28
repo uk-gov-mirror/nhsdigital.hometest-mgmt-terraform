@@ -1,9 +1,11 @@
 ################################################################################
-# Network Firewall Rule Group - Allow Internal VPC Traffic
-# Required: With symmetric routing (both public->private and private->public
-# traffic traverse the firewall), ALL internal VPC traffic must be passed.
-# Using 'ip' protocol matches all traffic (TCP, UDP, ICMP) in both directions.
-# Internal access control is handled by security groups, not the firewall.
+# Network Firewall Rule Group - Allow Internal VPC Traffic (scoped)
+# Only permits the specific ports required for internal service communication:
+#   - TCP 8080: ALB/Lambda → ECS container port
+#   - TCP 443:  Internal HTTPS (service-to-service)
+#   - TCP 5432: Lambda/ECS → Aurora PostgreSQL
+# All other internal traffic is subject to the default deny action.
+# Security groups remain the primary access control for internal traffic.
 ################################################################################
 
 resource "aws_networkfirewall_rule_group" "allow_internal" {
@@ -24,7 +26,11 @@ resource "aws_networkfirewall_rule_group" "allow_internal" {
     }
 
     rules_source {
-      rules_string = "pass ip $HOME_NET any -> $HOME_NET any (msg:\"Allow all internal VPC traffic\"; sid:1; rev:1;)"
+      rules_string = join("\n", [
+        "pass tcp $HOME_NET any -> $HOME_NET 8080 (msg:\"Allow ALB/Lambda to ECS container port\"; sid:1; rev:1;)",
+        "pass tcp $HOME_NET any -> $HOME_NET 443 (msg:\"Allow internal HTTPS\"; sid:2; rev:1;)",
+        "pass tcp $HOME_NET any -> $HOME_NET 5432 (msg:\"Allow internal PostgreSQL (Aurora)\"; sid:3; rev:1;)",
+      ])
     }
 
     stateful_rule_options {

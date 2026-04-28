@@ -39,13 +39,13 @@ dependency "bootstrap" {
 #   firewall_logs_retention_days = 7  : reduces CloudWatch storage for POC logs
 # For production, remove these overrides to restore az_count = 3 and full logging.
 inputs = {
-  logs_kms_key_arn             = dependency.bootstrap.outputs.logs_kms_key_arn
-  enable_network_firewall      = true
-  enable_ecs_internal_rules    = true
+  logs_kms_key_arn                            = dependency.bootstrap.outputs.logs_kms_key_arn
+  enable_network_firewall                     = true
+  enable_ecs_internal_rules                   = true
   route_internal_alb_traffic_through_firewall = false
-  az_count                     = 1
-  enable_firewall_flow_logs    = false
-  firewall_logs_retention_days = 7
+  az_count                                    = 1
+  enable_firewall_flow_logs                   = false
+  firewall_logs_retention_days                = 7
 
   # Allow specific domains for egress (HTTPS/TLS traffic)
   # Note: AWS service domains (.amazonaws.com) are automatically allowed
