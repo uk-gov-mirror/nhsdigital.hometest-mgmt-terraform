@@ -433,9 +433,9 @@ resource "aws_iam_policy" "developer_deployment_infra" {
       },
       {
         # ListCertificates and RequestCertificate do not support resource-level permissions.
-        Sid    = "ACMGlobal"
-        Effect = "Allow"
-        Action = ["acm:ListCertificates", "acm:RequestCertificate"]
+        Sid      = "ACMGlobal"
+        Effect   = "Allow"
+        Action   = ["acm:ListCertificates", "acm:RequestCertificate"]
         Resource = "*"
       },
       {
@@ -490,9 +490,9 @@ resource "aws_iam_policy" "developer_deployment_infra" {
       },
       {
         # Service Discovery List actions do not support resource-level permissions.
-        Sid    = "SDRead"
-        Effect = "Allow"
-        Action = ["servicediscovery:ListServices", "servicediscovery:ListNamespaces"]
+        Sid      = "SDRead"
+        Effect   = "Allow"
+        Action   = ["servicediscovery:ListServices", "servicediscovery:ListNamespaces"]
         Resource = "*"
       },
       {
