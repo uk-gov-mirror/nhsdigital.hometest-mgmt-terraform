@@ -54,6 +54,23 @@ module "lambda_iam" {
     "arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy",
   ]
 
+  custom_policies = {
+    "invoke-result-processors" = jsonencode({
+      Version = "2012-10-17"
+      Statement = [
+        {
+          Sid    = "InvokeResultProcessorLambdas"
+          Effect = "Allow"
+          Action = ["lambda:InvokeFunction"]
+          Resource = [
+            "arn:aws:lambda:${var.aws_region}:${var.aws_account_id}:function:${var.project_name}-${var.aws_account_shortname}-${var.environment}-hiv-result-processor-lambda",
+            "arn:aws:lambda:${var.aws_region}:${var.aws_account_id}:function:${var.project_name}-${var.aws_account_shortname}-${var.environment}-result-status-lambda",
+          ]
+        }
+      ]
+    })
+  }
+
   tags = local.common_tags
 
   depends_on = [

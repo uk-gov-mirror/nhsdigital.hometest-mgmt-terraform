@@ -594,17 +594,16 @@ inputs = {
       timeout         = local.lambda_timeout
       memory_size     = local.lambda_memory_size
       environment = {
-        NODE_OPTIONS              = "--enable-source-maps"
-        ENVIRONMENT               = local.environment
-        DB_USERNAME               = local.db_app_user
-        DB_ADDRESS                = dependency.aurora_postgres.outputs.cluster_endpoint
-        DB_PORT                   = tostring(dependency.aurora_postgres.outputs.cluster_port)
-        DB_NAME                   = dependency.aurora_postgres.outputs.cluster_database_name
-        DB_SCHEMA                 = local.db_schema
-        USE_IAM_AUTH              = "true"
-        DB_REGION                 = local.aws_region
-        NOTIFY_MESSAGES_QUEUE_URL = local.notify_messages_queue_url
-        HOME_TEST_BASE_URL        = local.spa_origin
+        NODE_OPTIONS                  = "--enable-source-maps"
+        ENVIRONMENT                   = local.environment
+        DB_USERNAME                   = local.db_app_user
+        DB_ADDRESS                    = dependency.aurora_postgres.outputs.cluster_endpoint
+        DB_PORT                       = tostring(dependency.aurora_postgres.outputs.cluster_port)
+        DB_NAME                       = dependency.aurora_postgres.outputs.cluster_database_name
+        DB_SCHEMA                     = local.db_schema
+        USE_IAM_AUTH                  = "true"
+        DB_REGION                     = local.aws_region
+        RESULT_PROCESSING_LAMBDA_NAME = "${local.project_name}-${local.aws_account_shortname}-${local.environment}-hiv-result-processor-lambda"
       }
       authorization        = "COGNITO_USER_POOLS"
       authorization_scopes = ["results/write"]
@@ -730,6 +729,42 @@ inputs = {
         POSTCODE_LOOKUP_RETRY_DELAY_MS          = local.postcode_lookup_retry_delay_ms
         POSTCODE_LOOKUP_RETRY_BACKOFF_FACTOR    = local.postcode_lookup_retry_backoff_factor
         USE_STUB_POSTCODE_CLIENT                = local.use_stub_postcode_client
+      }
+    }
+
+    # HIV Result Processor Lambda - Processes HIV test results (invoked by order-result-lambda)
+    # Not exposed via API Gateway - synchronously invoked by order-result-lambda
+    "hiv-result-processor-lambda" = {
+      description = "HIV Result Processor - Processes HIV test results and dispatches to result-status-lambda"
+      handler     = "index.handler"
+      timeout     = local.lambda_timeout
+      memory_size = local.lambda_memory_size
+      environment = {
+        NODE_OPTIONS              = "--enable-source-maps"
+        ENVIRONMENT               = local.environment
+        RESULT_STATUS_LAMBDA_NAME = "${local.project_name}-${local.aws_account_shortname}-${local.environment}-result-status-lambda"
+      }
+    }
+
+    # Result Status Lambda - Updates result status in DB and queues notifications
+    # Not exposed via API Gateway - synchronously invoked by hiv-result-processor-lambda
+    "result-status-lambda" = {
+      description = "Result Status Service - Updates result status and sends notifications"
+      handler     = "index.handler"
+      timeout     = local.lambda_timeout
+      memory_size = local.lambda_memory_size
+      environment = {
+        NODE_OPTIONS              = "--enable-source-maps"
+        ENVIRONMENT               = local.environment
+        DB_USERNAME               = local.db_app_user
+        DB_ADDRESS                = dependency.aurora_postgres.outputs.cluster_endpoint
+        DB_PORT                   = tostring(dependency.aurora_postgres.outputs.cluster_port)
+        DB_NAME                   = dependency.aurora_postgres.outputs.cluster_database_name
+        DB_SCHEMA                 = local.db_schema
+        USE_IAM_AUTH              = "true"
+        DB_REGION                 = local.aws_region
+        NOTIFY_MESSAGES_QUEUE_URL = local.notify_messages_queue_url
+        HOME_TEST_BASE_URL        = local.spa_origin
       }
     }
   }
