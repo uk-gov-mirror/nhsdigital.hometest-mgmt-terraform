@@ -13,6 +13,31 @@ resource "aws_route" "private_to_firewall" {
   depends_on = [aws_networkfirewall_firewall.main]
 }
 
+# Route return traffic from private subnets to public subnets through firewall (symmetric routing)
+# Without this, ALB->task goes through firewall but task->ALB bypasses it, breaking stateful inspection
+locals {
+  private_to_public_routes = var.enable_network_firewall ? flatten([
+    for pi in range(length(local.azs)) : [
+      for pui in range(length(local.public_azs)) : {
+        key               = "${pi}-${pui}"
+        route_table_id    = aws_route_table.private[pi].id
+        destination_cidr  = local.public_subnets[pui]
+        firewall_endpoint = local.firewall_endpoint_ids[local.azs[pi]]
+      }
+    ]
+  ]) : []
+}
+
+resource "aws_route" "private_to_firewall_public" {
+  for_each = { for r in local.private_to_public_routes : r.key => r }
+
+  route_table_id         = each.value.route_table_id
+  destination_cidr_block = each.value.destination_cidr
+  vpc_endpoint_id        = each.value.firewall_endpoint
+
+  depends_on = [aws_networkfirewall_firewall.main]
+}
+
 ################################################################################
 # IGW Route Table - Return Traffic Through Firewall
 ################################################################################
