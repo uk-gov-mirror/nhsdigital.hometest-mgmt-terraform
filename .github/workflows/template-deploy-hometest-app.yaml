@@ -338,10 +338,24 @@ jobs:
         with:
           path: hometest-mgmt-terraform
 
+      - name: "Checkout hometest-service"
+        uses: actions/checkout@v6
+        with:
+          repository: "NHSDigital/hometest-service"
+          ref: ${{ inputs.hometest_service_ref || 'main' }}
+          path: hometest-service
+          ssh-key: ${{ secrets.NHS_HOMETEST_SERVICE_DEPLOY_KEY_SSH_PRIV }}
+
       - name: Install mise tools
         uses: ./hometest-mgmt-terraform/.github/actions/install-mise
         with:
           working_directory: ${{ needs.validate-inputs.outputs.working_dir_base }}/${{ matrix.env }}/lambda-goose-migrator
+
+      - name: "Build goose migrator binary"
+        run: |
+          cd hometest-service
+          MIGRATOR_CACHE_DIR="../hometest-mgmt-terraform/.migrator-build-cache" \
+            mise exec -- lambdas/goose-migrator-lambda/scripts/build.sh
 
       - name: "Destroy goose migrator (${{ matrix.env }})"
         uses: ./hometest-mgmt-terraform/.github/actions/deploy-terragrunt

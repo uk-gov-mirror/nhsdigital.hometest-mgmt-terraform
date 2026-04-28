@@ -12,30 +12,25 @@ module "goose_migrator_lambda" {
   project_name          = var.project_name
   aws_account_shortname = var.aws_account_shortname
   function_name         = "lambda-goose-migrator"
+  description           = "Lambda function for running Goose DB migrations (Go, custom runtime)"
   environment           = var.environment
   lambda_role_arn       = aws_iam_role.lambda_goose_migrator.arn
 
   filename         = var.goose_migrator_zip_path
-  source_code_hash = filebase64sha256(var.goose_migrator_zip_path)
+  source_code_hash = fileexists(var.goose_migrator_zip_path) ? filebase64sha256(var.goose_migrator_zip_path) : null
 
-  handler     = "bootstrap"
+  handler     = "bootstrap" # Do not change - for custom runtimes, this must be 'bootstrap'
   runtime     = "provided.al2023"
   timeout     = 300
   memory_size = 128
 
   architectures = ["arm64"]
 
-  function_name          = "${local.resource_prefix}-lambda-goose-migrator"
-  description            = "Lambda function for running Goose DB migrations (Go, custom runtime)"
-  handler                = "bootstrap" # Do not change - for custom runtimes, this must be 'bootstrap'
-  runtime                = "provided.al2023"
-  create_role            = false
-  lambda_role            = aws_iam_role.lambda_goose_migrator.arn
-  timeout                = 300
-  memory_size            = 128
-  publish                = true
   vpc_subnet_ids         = var.subnet_ids
   vpc_security_group_ids = var.security_group_ids
+
+  lambda_kms_key_arn     = var.kms_key_arn
+  cloudwatch_kms_key_arn = var.kms_key_arn
 
   environment_variables = {
     DB_USERNAME          = var.db_username
