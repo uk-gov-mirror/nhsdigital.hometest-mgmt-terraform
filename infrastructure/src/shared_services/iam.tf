@@ -147,6 +147,8 @@ resource "aws_iam_policy" "developer_deployment" {
         Resource = "arn:aws:lambda:*:${var.aws_account_id}:function:${var.project_name}-*"
       },
       {
+        # ESM actions do not support resource-level permissions — Resource "*" is required.
+        # Scoped via Condition to restrict to project functions only.
         Sid    = "LambdaESM"
         Effect = "Allow"
         Action = [
@@ -154,10 +156,14 @@ resource "aws_iam_policy" "developer_deployment" {
           "lambda:UpdateEventSourceMapping",
           "lambda:DeleteEventSourceMapping",
           "lambda:GetEventSourceMapping",
-          "lambda:ListEventSourceMappings",
-          "Lambda:CreateFunction"
+          "lambda:ListEventSourceMappings"
         ]
         Resource = "*"
+        Condition = {
+          ArnLike = {
+            "lambda:FunctionArn" = "arn:aws:lambda:*:${var.aws_account_id}:function:${var.project_name}-*"
+          }
+        }
       },
       {
         Sid    = "APIGatewayMgmt"
@@ -191,10 +197,44 @@ resource "aws_iam_policy" "developer_deployment" {
         Resource = "arn:aws:sqs:*:${var.aws_account_id}:${var.project_name}-*"
       },
       {
-        Sid      = "CloudFrontMgmt"
-        Effect   = "Allow"
-        Action   = ["cloudfront:*"]
-        Resource = "*"
+        Sid    = "CloudFrontMgmt"
+        Effect = "Allow"
+        Action = [
+          "cloudfront:CreateDistribution",
+          "cloudfront:UpdateDistribution",
+          "cloudfront:DeleteDistribution",
+          "cloudfront:GetDistribution",
+          "cloudfront:GetDistributionConfig",
+          "cloudfront:ListDistributions",
+          "cloudfront:TagResource",
+          "cloudfront:UntagResource",
+          "cloudfront:ListTagsForResource",
+          "cloudfront:CreateInvalidation",
+          "cloudfront:GetInvalidation",
+          "cloudfront:ListInvalidations",
+          "cloudfront:CreateOriginAccessControl",
+          "cloudfront:UpdateOriginAccessControl",
+          "cloudfront:DeleteOriginAccessControl",
+          "cloudfront:GetOriginAccessControl",
+          "cloudfront:ListOriginAccessControls",
+          "cloudfront:CreateResponseHeadersPolicy",
+          "cloudfront:UpdateResponseHeadersPolicy",
+          "cloudfront:DeleteResponseHeadersPolicy",
+          "cloudfront:GetResponseHeadersPolicy",
+          "cloudfront:CreateCachePolicy",
+          "cloudfront:UpdateCachePolicy",
+          "cloudfront:DeleteCachePolicy",
+          "cloudfront:GetCachePolicy",
+          "cloudfront:CreateFunction",
+          "cloudfront:UpdateFunction",
+          "cloudfront:DeleteFunction",
+          "cloudfront:GetFunction",
+          "cloudfront:DescribeFunction",
+          "cloudfront:PublishFunction",
+          "cloudfront:ListFunctions"
+        ]
+        # CloudFront List/Create actions do not support resource-level permissions.
+        Resource = "arn:aws:cloudfront::${var.aws_account_id}:*"
       },
       {
         Sid    = "S3Mgmt"
@@ -229,10 +269,17 @@ resource "aws_iam_policy" "developer_deployment" {
         ]
       },
       {
+        # dbqms (Query Editor Saved Queries) does not support resource-level permissions.
         Sid      = "RDSQueryEditor"
         Effect   = "Allow"
-        Action   = ["dbqms:*", "rds-data:*"]
+        Action   = ["dbqms:*"]
         Resource = "*"
+      },
+      {
+        Sid      = "RDSDataAPI"
+        Effect   = "Allow"
+        Action   = ["rds-data:*"]
+        Resource = "arn:aws:rds:*:${var.aws_account_id}:cluster:${var.project_name}-*"
       },
       {
         Sid    = "SecretsManagerMgmt"
@@ -319,6 +366,7 @@ resource "aws_iam_policy" "developer_deployment_infra" {
         Resource = "arn:aws:resource-groups:*:${var.aws_account_id}:group/${var.project_name}-*"
       },
       {
+        # EC2 Describe actions do not support resource-level permissions — Resource "*" is required.
         Sid      = "EC2Describe"
         Effect   = "Allow"
         Action   = ["ec2:DescribeVpcs", "ec2:DescribeSubnets", "ec2:DescribeSecurityGroups", "ec2:DescribeNetworkInterfaces"]
@@ -337,7 +385,10 @@ resource "aws_iam_policy" "developer_deployment_infra" {
           "ec2:CreateTags",
           "ec2:DeleteTags"
         ]
-        Resource = "*"
+        Resource = [
+          "arn:aws:ec2:*:${var.aws_account_id}:security-group/*",
+          "arn:aws:ec2:*:${var.aws_account_id}:vpc/*"
+        ]
         Condition = {
           StringLike = {
             "aws:RequestTag/Name" = ["${var.project_name}-*"]
@@ -356,7 +407,7 @@ resource "aws_iam_policy" "developer_deployment_infra" {
           "ec2:CreateTags",
           "ec2:DeleteTags"
         ]
-        Resource = "*"
+        Resource = "arn:aws:ec2:*:${var.aws_account_id}:security-group/*"
         Condition = {
           StringLike = {
             "ec2:ResourceTag/Name" = ["${var.project_name}-*"]
@@ -364,23 +415,55 @@ resource "aws_iam_policy" "developer_deployment_infra" {
         }
       },
       {
-        Sid      = "WAFAssoc"
+        Sid    = "WAFAssoc"
+        Effect = "Allow"
+        Action = ["wafv2:AssociateWebACL", "wafv2:DisassociateWebACL", "wafv2:GetWebACL"]
+        Resource = [
+          "arn:aws:wafv2:*:${var.aws_account_id}:*/webacl/*/*",
+          "arn:aws:elasticloadbalancing:*:${var.aws_account_id}:loadbalancer/app/*",
+          "arn:aws:apigateway:*::/restapis/*"
+        ]
+      },
+      {
+        # GetWebACLForResource does not support resource-level permissions.
+        Sid      = "WAFRead"
         Effect   = "Allow"
-        Action   = ["wafv2:AssociateWebACL", "wafv2:DisassociateWebACL", "wafv2:GetWebACLForResource", "wafv2:GetWebACL"]
+        Action   = ["wafv2:GetWebACLForResource"]
         Resource = "*"
       },
       {
-        Sid    = "ACMMgmt"
+        # ListCertificates and RequestCertificate do not support resource-level permissions.
+        Sid    = "ACMGlobal"
+        Effect = "Allow"
+        Action = ["acm:ListCertificates", "acm:RequestCertificate"]
+        Resource = "*"
+      },
+      {
+        Sid    = "ACMCert"
         Effect = "Allow"
         Action = [
           "acm:DescribeCertificate",
           "acm:ListTagsForCertificate",
-          "acm:RequestCertificate",
           "acm:DeleteCertificate",
           "acm:AddTagsToCertificate",
           "acm:RemoveTagsFromCertificate",
-          "acm:GetCertificate",
-          "acm:ListCertificates"
+          "acm:GetCertificate"
+        ]
+        Resource = "arn:aws:acm:*:${var.aws_account_id}:certificate/*"
+      },
+      {
+        # ELB Describe actions do not support resource-level permissions.
+        Sid    = "ELBRead"
+        Effect = "Allow"
+        Action = [
+          "elasticloadbalancing:DescribeTargetGroups",
+          "elasticloadbalancing:DescribeTargetGroupAttributes",
+          "elasticloadbalancing:DescribeTargetHealth",
+          "elasticloadbalancing:DescribeListeners",
+          "elasticloadbalancing:DescribeRules",
+          "elasticloadbalancing:DescribeLoadBalancers",
+          "elasticloadbalancing:DescribeLoadBalancerAttributes",
+          "elasticloadbalancing:DescribeTags"
         ]
         Resource = "*"
       },
@@ -392,43 +475,40 @@ resource "aws_iam_policy" "developer_deployment_infra" {
           "elasticloadbalancing:DeleteTargetGroup",
           "elasticloadbalancing:ModifyTargetGroup",
           "elasticloadbalancing:ModifyTargetGroupAttributes",
-          "elasticloadbalancing:DescribeTargetGroups",
-          "elasticloadbalancing:DescribeTargetGroupAttributes",
-          "elasticloadbalancing:DescribeTargetHealth",
           "elasticloadbalancing:RegisterTargets",
           "elasticloadbalancing:DeregisterTargets",
           "elasticloadbalancing:CreateListener",
           "elasticloadbalancing:DeleteListener",
           "elasticloadbalancing:ModifyListener",
-          "elasticloadbalancing:DescribeListeners",
           "elasticloadbalancing:CreateRule",
           "elasticloadbalancing:DeleteRule",
           "elasticloadbalancing:ModifyRule",
-          "elasticloadbalancing:DescribeRules",
-          "elasticloadbalancing:DescribeLoadBalancers",
-          "elasticloadbalancing:DescribeLoadBalancerAttributes",
           "elasticloadbalancing:AddTags",
-          "elasticloadbalancing:RemoveTags",
-          "elasticloadbalancing:DescribeTags"
+          "elasticloadbalancing:RemoveTags"
         ]
+        Resource = "arn:aws:elasticloadbalancing:*:${var.aws_account_id}:*"
+      },
+      {
+        # Service Discovery List actions do not support resource-level permissions.
+        Sid    = "SDRead"
+        Effect = "Allow"
+        Action = ["servicediscovery:ListServices", "servicediscovery:ListNamespaces"]
         Resource = "*"
       },
       {
-        Sid    = "ServiceDiscoveryMgmt"
+        Sid    = "SDMgmt"
         Effect = "Allow"
         Action = [
           "servicediscovery:CreateService",
           "servicediscovery:DeleteService",
           "servicediscovery:GetService",
           "servicediscovery:UpdateService",
-          "servicediscovery:ListServices",
           "servicediscovery:GetNamespace",
-          "servicediscovery:ListNamespaces",
           "servicediscovery:TagResource",
           "servicediscovery:UntagResource",
           "servicediscovery:ListTagsForResource"
         ]
-        Resource = "*"
+        Resource = "arn:aws:servicediscovery:*:${var.aws_account_id}:*"
       },
       {
         Sid      = "SNSRead"
