@@ -14,9 +14,11 @@ resource "aws_route" "private_to_firewall" {
 }
 
 # Route return traffic from private subnets to public subnets through firewall (symmetric routing)
-# Without this, ALB->task goes through firewall but task->ALB bypasses it, breaking stateful inspection
+# Without this, ALB->task goes through firewall but task->ALB bypasses it, breaking stateful inspection.
+# This can be disabled in single-AZ cost-optimised environments where ALB public subnets span
+# more AZs than firewall endpoints, which can otherwise blackhole ALB health checks.
 locals {
-  private_to_public_routes = var.enable_network_firewall ? flatten([
+  private_to_public_routes = var.enable_network_firewall && var.route_internal_alb_traffic_through_firewall ? flatten([
     for pi in range(length(local.azs)) : [
       for pui in range(length(local.public_azs)) : {
         key               = "${pi}-${pui}"

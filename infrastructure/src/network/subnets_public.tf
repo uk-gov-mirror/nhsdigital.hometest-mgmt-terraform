@@ -31,10 +31,11 @@ resource "aws_route" "public_internet" {
   gateway_id             = aws_internet_gateway.main.id
 }
 
-# Route private subnet traffic through firewall for symmetric routing
-# This ensures return traffic from NAT Gateway to private subnets goes through firewall
+# Route private subnet traffic through firewall for symmetric routing.
+# This can be disabled in single-AZ cost-optimised environments to keep
+# ALB-to-private traffic on local VPC routing.
 resource "aws_route" "public_to_firewall_private" {
-  count = var.enable_network_firewall ? length(local.azs) : 0
+  count = var.enable_network_firewall && var.route_internal_alb_traffic_through_firewall ? length(local.azs) : 0
 
   route_table_id         = aws_route_table.public.id
   destination_cidr_block = local.private_subnets[count.index]

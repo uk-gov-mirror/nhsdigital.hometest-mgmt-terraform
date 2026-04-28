@@ -182,6 +182,12 @@ variable "enable_ecs_internal_rules" {
   default     = false
 }
 
+variable "route_internal_alb_traffic_through_firewall" {
+  description = "Route public subnet to private subnet traffic through Network Firewall for ALB-to-private workloads. Disable when using a single firewall AZ to keep ALB-to-private traffic on local VPC routing."
+  type        = bool
+  default     = true
+}
+
 variable "firewall_delete_protection" {
   description = "Enable deletion protection for the Network Firewall. Set to true in production to prevent accidental deletion."
   type        = bool

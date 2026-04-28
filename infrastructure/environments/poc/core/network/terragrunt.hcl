@@ -42,6 +42,7 @@ inputs = {
   logs_kms_key_arn             = dependency.bootstrap.outputs.logs_kms_key_arn
   enable_network_firewall      = true
   enable_ecs_internal_rules    = true
+  route_internal_alb_traffic_through_firewall = false
   az_count                     = 1
   enable_firewall_flow_logs    = false
   firewall_logs_retention_days = 7
