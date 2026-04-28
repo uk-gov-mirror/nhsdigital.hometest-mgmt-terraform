@@ -116,3 +116,23 @@ inputs = merge(
     }
   }
 )
+
+
+# The PoC environment doesn't override `firewall_default_deny`, so it defaults to `true`, creating the `drop ip any any -> any any` rule. Dev environment has it set to `false`.
+
+# ## Summary
+
+# **The `drop_all` rule is fundamentally incompatible with domain-based filtering.** You have two fix options:
+
+# ### Option A: Set `firewall_default_deny = false` (recommended)
+# Add this to the poc network terragrunt.hcl. The existing `StatefulDefaultActions: aws:drop_established_app_layer` already provides correct default-deny for domain filtering — it allows TCP handshakes, inspects TLS SNI, then drops non-matching established connections. This is what dev already uses.
+
+# ### Option B: Fix the `drop_all` rule itself
+# Change `drop ip any any -> any any` in network_firewall_rules.tf to use `flow:established,to_server` so TCP SYN packets pass through:
+# ```
+# drop tcp any any -> any any (flow:established,to_server; msg:"Default deny all established traffic"; sid:999999; rev:1;)
+# ```
+
+# **Option A is cleaner** since `aws:drop_established_app_layer` does exactly this already.
+
+# Want me to apply Option A to the poc terragrunt.hcl?

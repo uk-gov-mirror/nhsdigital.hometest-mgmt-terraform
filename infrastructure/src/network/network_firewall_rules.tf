@@ -1,9 +1,9 @@
 ################################################################################
-# Network Firewall Rule Group - Allow Internal VPC Traffic (Scoped)
-# Required: ALB health checks and internal service communication traverse the
-# firewall due to more-specific routes (e.g. 10.0.64.0/19 -> firewall endpoint).
-# Only allows specific ports (8080 for ALB->ECS, 443 for HTTPS) rather than
-# all VPC-to-VPC traffic, to limit lateral movement from compromised hosts.
+# Network Firewall Rule Group - Allow Internal VPC Traffic
+# Required: With symmetric routing (both public->private and private->public
+# traffic traverse the firewall), ALL internal VPC traffic must be passed.
+# Using 'ip' protocol matches all traffic (TCP, UDP, ICMP) in both directions.
+# Internal access control is handled by security groups, not the firewall.
 ################################################################################
 
 resource "aws_networkfirewall_rule_group" "allow_internal" {
@@ -24,10 +24,7 @@ resource "aws_networkfirewall_rule_group" "allow_internal" {
     }
 
     rules_source {
-      rules_string = join("\n", [
-        "pass tcp $HOME_NET any -> $HOME_NET 8080 (msg:\"Allow internal ALB to ECS health checks\"; sid:1; rev:1;)",
-        "pass tcp $HOME_NET any -> $HOME_NET 443 (msg:\"Allow internal HTTPS traffic\"; sid:2; rev:1;)",
-      ])
+      rules_string = "pass ip $HOME_NET any -> $HOME_NET any (msg:\"Allow all internal VPC traffic\"; sid:1; rev:1;)"
     }
 
     stateful_rule_options {
