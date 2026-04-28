@@ -70,6 +70,7 @@ terragrunt apply
   - [File Structure After Creation](#file-structure-after-creation)
   - [How It Works](#how-it-works)
   - [Destroying an Environment](#destroying-an-environment)
+    - [Automated Cleanup of Dev Environments](#automated-cleanup-of-dev-environments)
   - [Checklist](#checklist)
   - [Troubleshooting](#troubleshooting)
     - ["Can't find env.hcl"](#cant-find-envhcl)
@@ -409,14 +410,34 @@ Click **"Run workflow"** and configure the following inputs:
 >   description: "Target environment to deploy"
 >   required: true
 >   type: choice
->   default: dev
+>   default: dev2  # ← add your new environment here
 >   options:
 >     - dev
 >     - uat
 >     - staging
 >     - dev2  # ← add your new environment here
 > ```
+
+> **Important:** All `dev-*` directories are gitignored by default (see the root `.gitignore`):
 >
+> ```gitignore
+> infrastructure/environments/poc/hometest-app/dev-*
+> !infrastructure/environments/poc/hometest-app/dev-example
+> ```
+>
+> If you want your `dev-*` environment to be deployable via the pipeline, you must add a negation rule to `.gitignore` and commit the directory:
+>
+> ```gitignore
+> !infrastructure/environments/poc/hometest-app/dev-myenv
+> ```
+>
+> ```bash
+> git add infrastructure/environments/poc/hometest-app/dev-myenv
+> git commit -m "Add dev-myenv environment"
+> ```
+>
+> Without this exclusion, the pipeline's checkout won't include your environment directory and the deploy will fail with `env path does not exist`.
+
 > **Tip:** For a first deployment of a new environment, use `action: plan` first to review the changes, then re-run with `action: apply`.
 
 Both local and pipeline deployments will:
@@ -646,30 +667,6 @@ You can also run it manually from the GitHub Actions UI:
 - Set **dry_run** to `false` to actually destroy the environments
 
 > **Note:** Scheduled runs always perform the actual destroy (no dry run). If you need your dev environment to persist over the weekend, re-deploy it on Monday using the [Deploy HomeTest App](../../.github/workflows/deploy-hometest-app.yaml) workflow.
-
-### Deploying a Dev Environment via Pipeline
-
-By default, all `dev-*` directories are gitignored (see the root `.gitignore`):
-
-```gitignore
-infrastructure/environments/poc/hometest-app/dev-*
-!infrastructure/environments/poc/hometest-app/dev-example
-```
-
-If you want your `dev-*` environment to be deployable via the GitHub Actions pipeline (e.g. using the **Deploy HomeTest App** workflow), you must add a negation rule to `.gitignore` so the directory is committed to the repo:
-
-```gitignore
-!infrastructure/environments/poc/hometest-app/dev-myenv
-```
-
-Then commit your environment directory:
-
-```bash
-git add infrastructure/environments/poc/hometest-app/dev-myenv
-git commit -m "Add dev-myenv environment"
-```
-
-Without this exclusion, the pipeline's checkout won't include your environment directory and the deploy will fail with `env path does not exist`.
 
 ## Checklist
 
