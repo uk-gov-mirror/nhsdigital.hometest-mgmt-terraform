@@ -647,6 +647,30 @@ You can also run it manually from the GitHub Actions UI:
 
 > **Note:** Scheduled runs always perform the actual destroy (no dry run). If you need your dev environment to persist over the weekend, re-deploy it on Monday using the [Deploy HomeTest App](../../.github/workflows/deploy-hometest-app.yaml) workflow.
 
+### Deploying a Dev Environment via Pipeline
+
+By default, all `dev-*` directories are gitignored (see the root `.gitignore`):
+
+```gitignore
+infrastructure/environments/poc/hometest-app/dev-*
+!infrastructure/environments/poc/hometest-app/dev-example
+```
+
+If you want your `dev-*` environment to be deployable via the GitHub Actions pipeline (e.g. using the **Deploy HomeTest App** workflow), you must add a negation rule to `.gitignore` so the directory is committed to the repo:
+
+```gitignore
+!infrastructure/environments/poc/hometest-app/dev-myenv
+```
+
+Then commit your environment directory:
+
+```bash
+git add infrastructure/environments/poc/hometest-app/dev-myenv
+git commit -m "Add dev-myenv environment"
+```
+
+Without this exclusion, the pipeline's checkout won't include your environment directory and the deploy will fail with `env path does not exist`.
+
 ## Checklist
 
 - [ ] Created `infrastructure/environments/poc/hometest-app/{env}/env.hcl`

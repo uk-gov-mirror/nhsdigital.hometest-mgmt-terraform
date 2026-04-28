@@ -22,9 +22,10 @@ on:
         description: "Target environment to deploy"
         required: true
         type: choice
-        default: dev
+        default: dummy-env
         options:
           # - dev-example
+          - dummy-env
           - dev
           - uat
           - staging
