@@ -105,6 +105,7 @@ inputs = merge(
   local.account_vars.locals,
   local._env_locals,
   {
+    environment = local.environment
     tags = {
       Owner       = "platform-team"
       CostCenter  = "infrastructure"

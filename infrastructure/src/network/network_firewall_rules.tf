@@ -139,7 +139,7 @@ resource "aws_networkfirewall_rule_group" "drop_all" {
     }
 
     rules_source {
-      rules_string = "drop ip any any -> any any (msg:\"Default deny all traffic\"; sid:999999; rev:1;)"
+      rules_string = "drop tcp any any -> any any (flow:established,to_server; msg:\"Default deny all established traffic\"; sid:999999; rev:1;)"
     }
 
     stateful_rule_options {

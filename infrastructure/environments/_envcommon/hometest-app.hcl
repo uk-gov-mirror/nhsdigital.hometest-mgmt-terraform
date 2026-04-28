@@ -107,10 +107,7 @@ locals {
   # SOURCE PATHS
   # Override these in child terragrunt.hcl locals if needed
   # ---------------------------------------------------------------------------
-  hometest_service_dir = trimspace(run_cmd(
-    "bash", "-c",
-    "echo '[hometest-app.hcl] Resolving hometest-service source repo (terragrunt repo root: ${get_repo_root()})' >&2 && realpath '${get_repo_root()}/../hometest-service'"
-  ))
+  hometest_service_dir = "${dirname(get_repo_root())}/hometest-service"
   scripts_dir          = "${get_repo_root()}/scripts"
   lambda_build_cache   = "${get_repo_root()}/.lambda-build-cache"
   spa_build_cache      = "${get_repo_root()}/.spa-build-cache"
@@ -240,6 +237,7 @@ terraform {
     execute = [
       "bash", "-c",
       <<-EOF
+        echo "[hometest-app] hometest-service repo: ${local.hometest_service_dir} (terragrunt repo: ${get_repo_root()})"
         if [[ "$${SKIP_LAMBDAS:-}" == "true" ]]; then
           echo "Skipping lambda build (SKIP_LAMBDAS=true)"
           exit 0
