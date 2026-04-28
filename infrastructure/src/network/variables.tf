@@ -176,6 +176,12 @@ variable "firewall_default_deny" {
   default     = true
 }
 
+variable "enable_ecs_internal_rules" {
+  description = "Enable internal firewall rules for ALB-to-ECS traffic (port 8080) and internal HTTPS (port 443). Set to true only when ECS workloads are deployed behind the firewall."
+  type        = bool
+  default     = false
+}
+
 variable "firewall_delete_protection" {
   description = "Enable deletion protection for the Network Firewall. Set to true in production to prevent accidental deletion."
   type        = bool
@@ -197,6 +203,7 @@ variable "firewall_subnet_change_protection" {
 variable "firewall_rule_group_capacities" {
   description = "Capacity units for each Network Firewall rule group. Capacity CANNOT be changed after creation (requires rule group recreation). Set values higher than your expected rule count to allow headroom for growth."
   type = object({
+    internal      = optional(number, 10)
     aws_services  = optional(number, 50)
     egress_ip     = optional(number, 100)
     egress_domain = optional(number, 100)

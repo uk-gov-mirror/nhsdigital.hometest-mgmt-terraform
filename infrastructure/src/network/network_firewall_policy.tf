@@ -16,6 +16,14 @@ resource "aws_networkfirewall_firewall_policy" "main" {
       rule_order = "STRICT_ORDER"
     }
 
+    dynamic "stateful_rule_group_reference" {
+      for_each = var.enable_ecs_internal_rules ? [1] : []
+      content {
+        priority     = 50
+        resource_arn = aws_networkfirewall_rule_group.allow_internal[0].arn
+      }
+    }
+
     stateful_rule_group_reference {
       priority     = 100
       resource_arn = aws_networkfirewall_rule_group.allow_aws_services[0].arn

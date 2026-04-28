@@ -1,4 +1,46 @@
 ################################################################################
+# Network Firewall Rule Group - Allow Internal VPC Traffic (Scoped)
+# Required: ALB health checks and internal service communication traverse the
+# firewall due to more-specific routes (e.g. 10.0.64.0/19 -> firewall endpoint).
+# Only allows specific ports (8080 for ALB->ECS, 443 for HTTPS) rather than
+# all VPC-to-VPC traffic, to limit lateral movement from compromised hosts.
+################################################################################
+
+resource "aws_networkfirewall_rule_group" "allow_internal" {
+  count = var.enable_network_firewall && var.enable_ecs_internal_rules ? 1 : 0
+
+  capacity = var.firewall_rule_group_capacities.internal
+  name     = "${local.resource_prefix}-allow-internal"
+  type     = "STATEFUL"
+
+  rule_group {
+    rule_variables {
+      ip_sets {
+        key = "HOME_NET"
+        ip_set {
+          definition = [var.vpc_cidr]
+        }
+      }
+    }
+
+    rules_source {
+      rules_string = join("\n", [
+        "pass tcp $HOME_NET any -> $HOME_NET 8080 (msg:\"Allow internal ALB to ECS health checks\"; sid:1; rev:1;)",
+        "pass tcp $HOME_NET any -> $HOME_NET 443 (msg:\"Allow internal HTTPS traffic\"; sid:2; rev:1;)",
+      ])
+    }
+
+    stateful_rule_options {
+      rule_order = "STRICT_ORDER"
+    }
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${local.resource_prefix}-allow-internal"
+  })
+}
+
+################################################################################
 # Network Firewall Rule Group - Allow AWS Services (Required for Lambda)
 ################################################################################
 
@@ -139,7 +181,10 @@ resource "aws_networkfirewall_rule_group" "drop_all" {
     }
 
     rules_source {
-      rules_string = "drop tcp any any -> any any (flow:established,to_server; msg:\"Default deny all established traffic\"; sid:999999; rev:1;)"
+      rules_string = join("\n", [
+        "drop tcp any any -> any any (flow:established,to_server; msg:\"Default deny all established TCP traffic\"; sid:999999; rev:1;)",
+        "drop udp any any -> any any (msg:\"Default deny all UDP traffic\"; sid:999998; rev:1;)",
+      ])
     }
 
     stateful_rule_options {
