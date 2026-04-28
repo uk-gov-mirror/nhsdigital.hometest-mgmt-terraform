@@ -138,7 +138,7 @@ locals {
   nhs_login_base_url                         = local.account_app_vars.locals.nhs_login_base_url
   nhs_login_authorize_url                    = "${local.nhs_login_base_url}/authorize"
   nhs_login_client_id                        = local.account_app_vars.locals.nhs_login_client_id
-  nhs_login_scope                            = local.account_app_vars.locals.nhs_login_scope
+  nhs_login_scope                            = try(local.account_app_vars.locals.nhs_login_scope, "openid profile email phone")
   auth_session_max_duration_minutes          = "60"
   auth_access_token_expiry_duration_minutes  = "60"
   auth_refresh_token_expiry_duration_minutes = "60"

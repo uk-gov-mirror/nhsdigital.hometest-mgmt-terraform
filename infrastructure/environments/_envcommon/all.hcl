@@ -46,4 +46,22 @@ locals {
   enable_cognito        = true
   cognito_callback_urls = ["https://dev.hometest.service.nhs.uk/callback"]
   cognito_logout_urls   = ["https://dev.hometest.service.nhs.uk/logout"]
+
+  # ---------------------------------------------------------------------------
+  # NETWORK FIREWALL - Allowed Egress Domains
+  # Domains required by hometest applications for external API calls
+  # These are configured in Network Firewall allowed_egress_domains
+  # Note: AWS service domains (.amazonaws.com) are automatically allowed
+  # ---------------------------------------------------------------------------
+  allowed_egress_domains = [
+    ".nhs.uk",                # NHS domains
+    ".gov.uk",                # Government domains
+    ".os.uk",                 # Ordnance Survey API (postcode/address lookup)
+    ".github.com",            # GitHub
+    ".githubusercontent.com", # GitHub content
+    ".prevx.io",              # Preventx staging/prod API
+    ".preventx.com",          # Preventx website
+    ".azurewebsites.net",     # Preventx Azure functions
+    ".sh24.org.uk"            # SH24 all environments
+  ]
 }

@@ -89,6 +89,11 @@ firewall_logs_retention_days = 90
 # CAUTION: Ensure all required destinations are in allowed lists before enabling
 firewall_default_deny = true
 
+# Network Firewall protections (recommended: false for dev/staging, true for production)
+firewall_delete_protection           = false # Set to true in production
+firewall_policy_change_protection    = false # Set to true in production
+firewall_subnet_change_protection    = false # Set to true in production
+
 # Specific IP addresses/CIDRs allowed for egress (external APIs, partner networks, etc.)
 allowed_egress_ips = [
   {
@@ -110,6 +115,7 @@ allowed_egress_ips = [
     description = "Third-party Integration Endpoint"
   }
 ]
+
 
 # Specific IP addresses/CIDRs allowed for ingress (inbound traffic to VPC)
 allowed_ingress_ips = [

@@ -278,19 +278,30 @@ output "network_firewall_kms_key_arn" {
   value       = var.enable_network_firewall ? aws_kms_key.network_firewall[0].arn : null
 }
 
-output "egress_filtering_config" {
-  description = "Summary of egress filtering configuration"
+output "firewall_filtering_config" {
+  description = "Summary of Network Firewall filtering configuration (ingress and egress)"
   value = var.enable_network_firewall ? {
-    firewall_enabled  = true
-    default_deny      = var.firewall_default_deny
-    allowed_ips_count = length(var.allowed_egress_ips)
-    allowed_domains   = var.allowed_egress_domains
+    firewall_enabled      = true
+    default_deny          = var.firewall_default_deny
+    allowed_ingress_count = length(var.allowed_ingress_ips)
+    allowed_egress_count  = length(var.allowed_egress_ips)
+    allowed_domains       = var.allowed_egress_domains
     } : {
-    firewall_enabled  = false
-    default_deny      = false
-    allowed_ips_count = 0
-    allowed_domains   = []
+    firewall_enabled      = false
+    default_deny          = false
+    allowed_ingress_count = 0
+    allowed_egress_count  = 0
+    allowed_domains       = []
   }
+}
+
+output "network_firewall_alarm_arns" {
+  description = "ARNs of the Network Firewall CloudWatch alarms"
+  value = var.enable_network_firewall ? {
+    dropped_packets_high  = aws_cloudwatch_metric_alarm.firewall_dropped_packets_high[0].arn
+    passed_packets_zero   = aws_cloudwatch_metric_alarm.firewall_passed_packets_zero[0].arn
+    received_packets_zero = aws_cloudwatch_metric_alarm.firewall_received_packets_zero[0].arn
+  } : {}
 }
 
 #------------------------------------------------------------------------------
